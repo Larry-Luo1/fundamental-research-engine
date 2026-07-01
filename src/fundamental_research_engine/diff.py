@@ -46,9 +46,19 @@ def _diff_keyed_list(
     new_items: list[dict[str, Any]],
     key: str,
     track_fields: list[str] | None = None,
+    display_field: str | None = None,
 ) -> dict[str, Any]:
-    old_by_key = {item[key]: item for item in old_items}
-    new_by_key = {item[key]: item for item in new_items}
+    display_field = display_field or key
+
+    def item_key(item: dict[str, Any]) -> Any:
+        return item.get(key) or item.get(display_field)
+
+    def display_name(item: dict[str, Any]) -> str:
+        value = item.get(display_field) or item_key(item)
+        return str(value)
+
+    old_by_key = {item_key(item): item for item in old_items}
+    new_by_key = {item_key(item): item for item in new_items}
 
     added = [item for k, item in new_by_key.items() if k not in old_by_key]
     removed = [item for k, item in old_by_key.items() if k not in new_by_key]
@@ -65,12 +75,21 @@ def _diff_keyed_list(
             if old_item.get(field) != new_item.get(field)
         ]
         if field_changes:
-            changed.append({key: k, "changes": field_changes})
+            changed.append(
+                {
+                    key: k,
+                    "display_name": display_name(new_item),
+                    "previous_display_name": display_name(old_item),
+                    "changes": field_changes,
+                }
+            )
 
     return {
-        "added": sorted(added, key=lambda item: item[key]),
-        "removed": sorted(removed, key=lambda item: item[key]),
-        "changed": sorted(changed, key=lambda item: item[key]),
+        "key": key,
+        "display_field": display_field,
+        "added": sorted(added, key=lambda item: str(item_key(item))),
+        "removed": sorted(removed, key=lambda item: str(item_key(item))),
+        "changed": sorted(changed, key=lambda item: str(item[key])),
     }
 
 
@@ -106,13 +125,14 @@ def diff_analysis(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
         "bottleneck_scores": _diff_keyed_list(
             old["bottleneck_scores"],
             new["bottleneck_scores"],
+            "id",
+            ["name", "score", "rating", "positive_score", "risk_penalty"],
             "name",
-            ["score", "rating", "positive_score", "risk_penalty"],
         ),
-        "segments": _diff_keyed_list(old["segments"], new["segments"], "name"),
-        "profit_pools": _diff_keyed_list(old["profit_pools"], new["profit_pools"], "name"),
-        "companies": _diff_keyed_list(old["companies"], new["companies"], "name"),
-        "scenarios": _diff_keyed_list(old["scenarios"], new["scenarios"], "name"),
+        "segments": _diff_keyed_list(old["segments"], new["segments"], "id", display_field="name"),
+        "profit_pools": _diff_keyed_list(old["profit_pools"], new["profit_pools"], "id", display_field="name"),
+        "companies": _diff_keyed_list(old["companies"], new["companies"], "id", display_field="name"),
+        "scenarios": _diff_keyed_list(old["scenarios"], new["scenarios"], "id", display_field="name"),
         "evidence": _diff_keyed_list(old["evidence"], new["evidence"], "id"),
         "counter_theses": _diff_string_list(old["counter_theses"], new["counter_theses"]),
         "tracking_signals": _diff_string_list(old["tracking_signals"], new["tracking_signals"]),

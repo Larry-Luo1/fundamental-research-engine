@@ -134,6 +134,58 @@ class StageCliTest(unittest.TestCase):
             self.assertTrue((run_out / "memo.md").exists())
 
 
+class AuditCliTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.project_root = Path(__file__).resolve().parents[1]
+        self.hbm4_path = self.project_root / "configs" / "themes" / "hbm4.json"
+
+    def test_audit_writes_evidence_audit_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out_path = Path(tmp) / "evidence_audit.json"
+
+            exit_code = main(
+                [
+                    "audit",
+                    str(self.hbm4_path),
+                    "--project-root",
+                    str(self.project_root),
+                    "--out",
+                    str(out_path),
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            audit = json.loads(out_path.read_text(encoding="utf-8"))
+            self.assertEqual(audit["inventory"]["evidence_count"], 4)
+            self.assertTrue(audit["coverage"])
+
+
+class EvidenceSyncCliTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.project_root = Path(__file__).resolve().parents[1]
+        self.hbm4_path = self.project_root / "configs" / "themes" / "hbm4.json"
+
+    def test_evidence_sync_writes_store_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            exit_code = main(
+                [
+                    "evidence-sync",
+                    str(self.hbm4_path),
+                    "--project-root",
+                    str(self.project_root),
+                    "--store-root",
+                    tmp,
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            store_root = Path(tmp)
+            self.assertTrue((store_root / "data" / "raw_sources" / "hbm4" / "E1.json").exists())
+            self.assertTrue((store_root / "data" / "normalized" / "hbm4" / "evidence.json").exists())
+            self.assertTrue((store_root / "data" / "evidence" / "hbm4" / "claims.json").exists())
+            self.assertTrue((store_root / "data" / "evidence" / "hbm4" / "manifest.json").exists())
+
+
 class FillCliTest(unittest.TestCase):
     def setUp(self) -> None:
         self.project_root = Path(__file__).resolve().parents[1]
@@ -188,6 +240,67 @@ class FillCliTest(unittest.TestCase):
             self.assertEqual(exit_code, 0)
             stage_data = json.loads((theme_dir / "mechanism_analysis.json").read_text(encoding="utf-8"))
             self.assertEqual(stage_data, {"mechanism": "test mechanism text"})
+            metadata = json.loads((theme_dir / "mechanism_analysis.meta.json").read_text(encoding="utf-8"))
+            self.assertEqual(metadata["stage"], "mechanism_analysis")
+            self.assertEqual(metadata["model"], "openai")
+            self.assertEqual(metadata["model_name"], "gpt-test")
+            self.assertEqual(metadata["attempts"], 1)
+
+    def test_mocked_adapter_accepts_json_inside_markdown_fence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = self._theme_dir_with_definition_only(Path(tmp))
+
+            fake_adapter = unittest.mock.Mock()
+            fake_adapter.complete.return_value = "```json\n{\"mechanism\": \"fenced mechanism text\"}\n```"
+
+            with patch("fundamental_research_engine.cli.get_adapter", return_value=fake_adapter):
+                exit_code = main(
+                    [
+                        "fill",
+                        str(theme_dir),
+                        "--model",
+                        "openai",
+                        "--model-name",
+                        "gpt-test",
+                        "--project-root",
+                        str(self.project_root),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            stage_data = json.loads((theme_dir / "mechanism_analysis.json").read_text(encoding="utf-8"))
+            self.assertEqual(stage_data, {"mechanism": "fenced mechanism text"})
+
+    def test_mocked_adapter_retries_bad_stage_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = self._theme_dir_with_definition_only(Path(tmp))
+
+            fake_adapter = unittest.mock.Mock()
+            fake_adapter.complete.side_effect = [
+                json.dumps({"mechanism": 1}),
+                json.dumps({"mechanism": "corrected mechanism text"}),
+            ]
+
+            with patch("fundamental_research_engine.cli.get_adapter", return_value=fake_adapter):
+                exit_code = main(
+                    [
+                        "fill",
+                        str(theme_dir),
+                        "--model",
+                        "openai",
+                        "--model-name",
+                        "gpt-test",
+                        "--project-root",
+                        str(self.project_root),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(fake_adapter.complete.call_count, 2)
+            stage_data = json.loads((theme_dir / "mechanism_analysis.json").read_text(encoding="utf-8"))
+            self.assertEqual(stage_data, {"mechanism": "corrected mechanism text"})
+            metadata = json.loads((theme_dir / "mechanism_analysis.meta.json").read_text(encoding="utf-8"))
+            self.assertEqual(metadata["attempts"], 2)
 
     def test_mocked_adapter_bad_shape_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -205,6 +318,8 @@ class FillCliTest(unittest.TestCase):
                         "openai",
                         "--model-name",
                         "gpt-test",
+                        "--max-attempts",
+                        "1",
                         "--project-root",
                         str(self.project_root),
                     ]

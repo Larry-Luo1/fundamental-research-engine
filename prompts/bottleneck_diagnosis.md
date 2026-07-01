@@ -32,6 +32,8 @@ Return a single JSON object with exactly this field: {{SCHEMA_FIELDS}}
 
 `bottlenecks` is a non-empty list of objects, each with:
 
+- `id`: stable kebab-case identifier for this bottleneck; keep it unchanged
+  across reruns even if the display name changes.
 - `name`: short bottleneck name.
 - `types`: list of values from `bottleneck_types` in the ontology below.
 - `technical_reason`: 1-3 sentences on why this is structurally scarce.

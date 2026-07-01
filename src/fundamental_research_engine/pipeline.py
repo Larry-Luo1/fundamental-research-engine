@@ -5,6 +5,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from .evidence import build_evidence_audit
 from .io import read_json, write_json, write_text
 from .models import Theme, theme_from_dict
 from .render import render_memo
@@ -29,6 +30,13 @@ def default_run_dir(project_root: Path, theme: Theme) -> Path:
 def build_analysis(theme: Theme, rules: dict[str, Any]) -> dict[str, Any]:
     evidence_by_id = {item.id: item for item in theme.evidence}
     bottleneck_scores = [score_bottleneck(item, rules) for item in theme.bottlenecks]
+    evidence_audit = build_evidence_audit(
+        theme.evidence,
+        {
+            "bottleneck": theme.bottlenecks,
+            "company": theme.companies,
+        },
+    )
 
     return {
         "generated_on": date.today().isoformat(),
@@ -55,6 +63,7 @@ def build_analysis(theme: Theme, rules: dict[str, Any]) -> dict[str, Any]:
             item.name: [evidence_by_id[eid].title for eid in item.evidence_ids if eid in evidence_by_id]
             for item in [*theme.bottlenecks, *theme.companies]
         },
+        "evidence_audit": evidence_audit,
         "counter_theses": theme.counter_theses,
         "tracking_signals": theme.tracking_signals,
     }

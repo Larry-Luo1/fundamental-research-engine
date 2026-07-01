@@ -26,9 +26,9 @@ update, not vague ("watch the market").
 
 Return a single JSON object with exactly these fields: {{SCHEMA_FIELDS}}
 
-- `scenarios`: list of objects with `name` (e.g. `bull`, `bear`),
-  `description`, `implications` (list), `triggers` (list of what would
-  confirm this scenario is playing out).
+- `scenarios`: list of objects with `id` (stable kebab-case identifier),
+  `name` (e.g. `bull`, `bear`), `description`, `implications` (list),
+  `triggers` (list of what would confirm this scenario is playing out).
 - `counter_theses`: list of strings, each a specific reason the thesis could
   be wrong.
 - `tracking_signals`: list of strings, each a concrete, checkable signal.

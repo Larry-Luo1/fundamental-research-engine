@@ -26,6 +26,7 @@ class StagesTest(unittest.TestCase):
         self.theme = json.loads(
             (project_root / "configs" / "themes" / "hbm4.json").read_text(encoding="utf-8")
         )
+        self.ontology = json.loads((project_root / "knowledge" / "ontology.json").read_text(encoding="utf-8"))
 
     def test_split_covers_every_theme_field(self) -> None:
         stages = split_theme_dict(self.theme)
@@ -97,13 +98,37 @@ class StagesTest(unittest.TestCase):
     def test_validate_stage_shape_accepts_well_formed_stage(self) -> None:
         stages = split_theme_dict(self.theme)
         for stage, data in stages.items():
-            self.assertEqual(validate_stage_shape(stage, data), [])
+            self.assertEqual(validate_stage_shape(stage, data, self.ontology), [])
 
     def test_validate_stage_shape_rejects_non_dict(self) -> None:
         self.assertEqual(
             validate_stage_shape("mechanism_analysis", ["not", "a", "dict"]),
             ["mechanism_analysis: expected a JSON object"],
         )
+
+    def test_validate_stage_shape_checks_nested_bottleneck_fields(self) -> None:
+        data = split_theme_dict(self.theme)["bottleneck_diagnosis"]
+        del data["bottlenecks"][0]["scorecard"]["demand_growth_speed"]
+        data["bottlenecks"][0]["scorecard"]["made_up_dimension"] = 2
+        data["bottlenecks"][0]["types"] = ["not_a_real_type"]
+
+        errors = validate_stage_shape("bottleneck_diagnosis", data, self.ontology)
+
+        self.assertTrue(any("demand_growth_speed" in item and "missing" in item for item in errors))
+        self.assertTrue(any("made_up_dimension" in item and "unexpected" in item for item in errors))
+        self.assertTrue(any("not_a_real_type" in item for item in errors))
+
+    def test_validate_stage_shape_checks_scenario_evidence_quality(self) -> None:
+        data = split_theme_dict(self.theme)["scenario_analysis"]
+        data["evidence"][1]["id"] = data["evidence"][0]["id"]
+        data["evidence"][0]["reliability"] = "certain"
+        data["evidence"][0]["date"] = "2026/07/01"
+
+        errors = validate_stage_shape("scenario_analysis", data)
+
+        self.assertTrue(any("duplicate evidence id" in item for item in errors))
+        self.assertTrue(any("reliability" in item and "certain" in item for item in errors))
+        self.assertTrue(any("date" in item and "YYYY-MM-DD" in item for item in errors))
 
 
 if __name__ == "__main__":

@@ -73,6 +73,12 @@ class ValidationTest(unittest.TestCase):
         errors = validate_theme_dict(data, self.ontology)
         self.assertTrue(any("outside 0-5 scale" in item for item in errors))
 
+    def test_duplicate_stable_ids_rejected(self) -> None:
+        data = copy.deepcopy(self.theme)
+        data["companies"][1]["id"] = data["companies"][0]["id"]
+        errors = validate_theme_dict(data, self.ontology)
+        self.assertTrue(any("duplicate id" in item for item in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

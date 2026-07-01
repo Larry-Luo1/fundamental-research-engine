@@ -1,171 +1,273 @@
 {
-  "id": "hbm4",
-  "title": "HBM4 AI Infrastructure Bottleneck",
   "as_of": "2026-07-01",
-  "theme_type": "technology_adoption",
-  "domain": "ai",
+  "bottlenecks": [
+    {
+      "evidence_ids": [
+        "E1",
+        "E2",
+        "E3",
+        "E4"
+      ],
+      "id": "bn-hbm4-capacity-and-qualification",
+      "name": "HBM4 capacity and qualification",
+      "scorecard": {
+        "architecture_bypass_risk": 2,
+        "capacity_expansion_difficulty": 4,
+        "customer_qualification_lock_in": 5,
+        "demand_growth_speed": 5,
+        "rapid_supply_release_risk": 3,
+        "supplier_pricing_power": 4,
+        "technology_substitution_difficulty": 4,
+        "yield_material_equipment_constraint": 4
+      },
+      "technical_reason": "HBM supply is constrained by DRAM die allocation, TSV/stacking yield, thermal and power performance, and qualification with accelerator vendors.",
+      "types": [
+        "capacity",
+        "yield",
+        "qualification",
+        "advanced_packaging_dependency"
+      ]
+    }
+  ],
+  "companies": [
+    {
+      "evidence_ids": [
+        "E2"
+      ],
+      "exposure_quality": "direct revenue and mix upgrade",
+      "id": "co-sk-hynix",
+      "moat": [
+        "customer qualification",
+        "stacking yield learning",
+        "HBM product leadership"
+      ],
+      "name": "SK hynix",
+      "positioning_label": "core bottleneck owner",
+      "product": "HBM3E and HBM4 roadmap",
+      "risks": [
+        "capacity expansion",
+        "Samsung/Micron competition",
+        "memory-cycle normalization"
+      ],
+      "stack_position": "memory"
+    },
+    {
+      "evidence_ids": [
+        "E4"
+      ],
+      "exposure_quality": "direct revenue and mix upgrade",
+      "id": "co-micron",
+      "moat": [
+        "power/performance positioning",
+        "advanced DRAM manufacturing",
+        "AI customer qualification"
+      ],
+      "name": "Micron",
+      "positioning_label": "qualified leader",
+      "product": "HBM3E and HBM4 roadmap",
+      "risks": [
+        "share gap versus SK hynix",
+        "qualification timing",
+        "DRAM pricing cycle"
+      ],
+      "stack_position": "memory"
+    },
+    {
+      "evidence_ids": [
+        "E3"
+      ],
+      "exposure_quality": "capacity leverage",
+      "id": "co-tsmc",
+      "moat": [
+        "advanced packaging ecosystem",
+        "accelerator customer concentration",
+        "process and packaging integration"
+      ],
+      "name": "TSMC",
+      "positioning_label": "capacity enabler",
+      "product": "CoWoS and advanced packaging capacity",
+      "risks": [
+        "customer diversification",
+        "packaging capacity expansion",
+        "alternative integration paths"
+      ],
+      "stack_position": "foundry_packaging"
+    }
+  ],
   "core_question": "Is HBM4 still a core AI infrastructure bottleneck in 2026-2027?",
-  "thesis": "HBM4 should be treated as a high-quality AI bottleneck candidate because next-generation accelerators, long-context inference, and high-throughput serving increase demand for memory bandwidth and capacity. The thesis weakens if capacity expands faster than accelerator demand or if model/runtime efficiency reduces HBM attach-rate pressure.",
-  "mechanism": "AI model scaling and inference workloads increase memory bandwidth, memory capacity, and package-level integration requirements. HBM captures value because it sits close to compute, has strict qualification requirements, and depends on advanced packaging capacity.",
-  "hype_stage": "enlightenment",
-  "technology_readiness_level": 7,
+  "counter_theses": [
+    "HBM capacity expansion could catch up with accelerator demand and weaken pricing.",
+    "Model efficiency, quantization, or architecture changes could reduce memory pressure per token.",
+    "Customer dual-sourcing could reduce supplier pricing power."
+  ],
+  "domain": "ai",
   "drivers": [
     "Long-context inference increases KV-cache memory footprint.",
     "Next-generation accelerator packages require higher memory bandwidth close to compute.",
     "Large-scale multimodal and video workloads raise memory and interconnect pressure.",
     "Hyperscaler AI capex makes qualified HBM capacity strategically scarce."
   ],
-  "bottlenecks": [
+  "evidence": [
     {
-      "name": "HBM4 capacity and qualification",
-      "types": ["capacity", "yield", "qualification", "advanced_packaging_dependency"],
-      "technical_reason": "HBM supply is constrained by DRAM die allocation, TSV/stacking yield, thermal and power performance, and qualification with accelerator vendors.",
-      "scorecard": {
-        "demand_growth_speed": 5,
-        "capacity_expansion_difficulty": 4,
-        "technology_substitution_difficulty": 4,
-        "yield_material_equipment_constraint": 4,
-        "customer_qualification_lock_in": 5,
-        "supplier_pricing_power": 4,
-        "rapid_supply_release_risk": 3,
-        "architecture_bypass_risk": 2
-      },
-      "evidence_ids": ["E1", "E2", "E3", "E4"]
+      "claims": [
+        "Data-center demand remains large and networking growth indicates system-level AI infrastructure pressure."
+      ],
+      "date": "2026-05-27",
+      "id": "E1",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "NVIDIA announces first quarter fiscal 2027 results",
+      "url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-first-quarter-fiscal-2027"
+    },
+    {
+      "claims": [
+        "High-value HBM and server memory demand are tied to AI infrastructure buildout."
+      ],
+      "date": "2026-04-24",
+      "id": "E2",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "SK hynix announces 1Q26 financial results",
+      "url": "https://www.prnewswire.com/news-releases/sk-hynix-announces-1q26-financial-results-302750959.html"
+    },
+    {
+      "claims": [
+        "AI demand creates pressure on advanced wafer processes and 2.5D/3D packaging capacity."
+      ],
+      "date": "2026-04-30",
+      "id": "E3",
+      "reliability": "medium",
+      "source_type": "industry_research",
+      "title": "TrendForce discusses AI-driven advanced packaging constraints",
+      "url": "https://www.trendforce.com/presscenter/news/20260430-13028.html"
+    },
+    {
+      "claims": [
+        "AI-related memory demand is improving revenue mix and profitability."
+      ],
+      "date": "2026-06-24",
+      "id": "E4",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "Micron fiscal 2026 third-quarter results",
+      "url": "https://investors.micron.com/news-releases/news-release-details/micron-technology-inc-reports-record-results-third-quarter"
     }
   ],
-  "segments": [
-    {
-      "name": "HBM suppliers",
-      "layer": "memory",
-      "role": "Manufacture and qualify stacked high-bandwidth memory for AI accelerators.",
-      "beneficiary_class": "first-order",
-      "representative_companies": ["SK hynix", "Micron", "Samsung"]
-    },
-    {
-      "name": "Advanced packaging",
-      "layer": "foundry_packaging",
-      "role": "Integrate accelerators and HBM through 2.5D/3D package technology.",
-      "beneficiary_class": "first-order",
-      "representative_companies": ["TSMC", "Samsung", "Intel Foundry", "ASE", "Amkor"]
-    },
-    {
-      "name": "HBM test and bonding equipment",
-      "layer": "equipment",
-      "role": "Enable yield learning, stack validation, and high-volume qualification.",
-      "beneficiary_class": "enabler",
-      "representative_companies": ["Advantest", "Teradyne", "DISCO", "Applied Materials", "Lam Research"]
-    },
-    {
-      "name": "Accelerator vendors",
-      "layer": "downstream_compute",
-      "role": "Consume qualified HBM capacity in GPU and custom ASIC packages.",
-      "beneficiary_class": "risk hedge",
-      "representative_companies": ["NVIDIA", "AMD", "Broadcom", "Marvell"]
-    }
-  ],
+  "hype_stage": "enlightenment",
+  "id": "hbm4",
+  "mechanism": "AI model scaling and inference workloads increase memory bandwidth, memory capacity, and package-level integration requirements. HBM captures value because it sits close to compute, has strict qualification requirements, and depends on advanced packaging capacity.",
   "profit_pools": [
     {
+      "beneficiaries": [
+        "SK hynix",
+        "Micron",
+        "Samsung"
+      ],
+      "capture_quality": "high",
+      "id": "pool-qualified-hbm-supply",
       "name": "qualified HBM supply",
-      "rationale": "Qualified HBM capacity is directly attached to accelerator shipments and can capture mix and ASP upside when supply is constrained.",
-      "capture_quality": "high",
-      "beneficiaries": ["SK hynix", "Micron", "Samsung"]
+      "rationale": "Qualified HBM capacity is directly attached to accelerator shipments and can capture mix and ASP upside when supply is constrained."
     },
     {
+      "beneficiaries": [
+        "TSMC",
+        "advanced packaging ecosystem"
+      ],
+      "capture_quality": "high",
+      "id": "pool-advanced-packaging-capacity",
       "name": "advanced packaging capacity",
-      "rationale": "HBM value cannot be realized without package-level integration, interposers, substrates, and yield control.",
-      "capture_quality": "high",
-      "beneficiaries": ["TSMC", "advanced packaging ecosystem"]
-    }
-  ],
-  "companies": [
-    {
-      "name": "SK hynix",
-      "product": "HBM3E and HBM4 roadmap",
-      "stack_position": "memory",
-      "positioning_label": "core bottleneck owner",
-      "exposure_quality": "direct revenue and mix upgrade",
-      "moat": ["customer qualification", "stacking yield learning", "HBM product leadership"],
-      "risks": ["capacity expansion", "Samsung/Micron competition", "memory-cycle normalization"],
-      "evidence_ids": ["E2"]
-    },
-    {
-      "name": "Micron",
-      "product": "HBM3E and HBM4 roadmap",
-      "stack_position": "memory",
-      "positioning_label": "qualified leader",
-      "exposure_quality": "direct revenue and mix upgrade",
-      "moat": ["power/performance positioning", "advanced DRAM manufacturing", "AI customer qualification"],
-      "risks": ["share gap versus SK hynix", "qualification timing", "DRAM pricing cycle"],
-      "evidence_ids": ["E4"]
-    },
-    {
-      "name": "TSMC",
-      "product": "CoWoS and advanced packaging capacity",
-      "stack_position": "foundry_packaging",
-      "positioning_label": "capacity enabler",
-      "exposure_quality": "capacity leverage",
-      "moat": ["advanced packaging ecosystem", "accelerator customer concentration", "process and packaging integration"],
-      "risks": ["customer diversification", "packaging capacity expansion", "alternative integration paths"],
-      "evidence_ids": ["E3"]
+      "rationale": "HBM value cannot be realized without package-level integration, interposers, substrates, and yield control."
     }
   ],
   "scenarios": [
     {
-      "name": "bull",
       "description": "HBM qualification remains tight and long-context inference accelerates memory demand.",
-      "implications": ["HBM suppliers retain strong pricing power", "advanced packaging remains constrained"],
-      "triggers": ["sold-out HBM4 capacity", "hyperscaler capex revisions", "higher HBM stack attach rates"]
+      "id": "scn-bull",
+      "implications": [
+        "HBM suppliers retain strong pricing power",
+        "advanced packaging remains constrained"
+      ],
+      "name": "bull",
+      "triggers": [
+        "sold-out HBM4 capacity",
+        "hyperscaler capex revisions",
+        "higher HBM stack attach rates"
+      ]
     },
     {
-      "name": "bear",
       "description": "Capacity ramps faster than accelerator demand or software efficiency reduces memory pressure.",
-      "implications": ["HBM pricing power weakens", "memory-cycle risk returns"],
-      "triggers": ["inventory builds", "ASP declines", "qualification broadens to more suppliers"]
+      "id": "scn-bear",
+      "implications": [
+        "HBM pricing power weakens",
+        "memory-cycle risk returns"
+      ],
+      "name": "bear",
+      "triggers": [
+        "inventory builds",
+        "ASP declines",
+        "qualification broadens to more suppliers"
+      ]
     }
   ],
-  "evidence": [
+  "segments": [
     {
-      "id": "E1",
-      "title": "NVIDIA announces first quarter fiscal 2027 results",
-      "source_type": "company_disclosure",
-      "date": "2026-05-27",
-      "url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-first-quarter-fiscal-2027",
-      "reliability": "high",
-      "claims": ["Data-center demand remains large and networking growth indicates system-level AI infrastructure pressure."]
+      "beneficiary_class": "first-order",
+      "id": "seg-hbm-suppliers",
+      "layer": "memory",
+      "name": "HBM suppliers",
+      "representative_companies": [
+        "SK hynix",
+        "Micron",
+        "Samsung"
+      ],
+      "role": "Manufacture and qualify stacked high-bandwidth memory for AI accelerators."
     },
     {
-      "id": "E2",
-      "title": "SK hynix announces 1Q26 financial results",
-      "source_type": "company_disclosure",
-      "date": "2026-04-24",
-      "url": "https://www.prnewswire.com/news-releases/sk-hynix-announces-1q26-financial-results-302750959.html",
-      "reliability": "high",
-      "claims": ["High-value HBM and server memory demand are tied to AI infrastructure buildout."]
+      "beneficiary_class": "first-order",
+      "id": "seg-advanced-packaging",
+      "layer": "foundry_packaging",
+      "name": "Advanced packaging",
+      "representative_companies": [
+        "TSMC",
+        "Samsung",
+        "Intel Foundry",
+        "ASE",
+        "Amkor"
+      ],
+      "role": "Integrate accelerators and HBM through 2.5D/3D package technology."
     },
     {
-      "id": "E3",
-      "title": "TrendForce discusses AI-driven advanced packaging constraints",
-      "source_type": "industry_research",
-      "date": "2026-04-30",
-      "url": "https://www.trendforce.com/presscenter/news/20260430-13028.html",
-      "reliability": "medium",
-      "claims": ["AI demand creates pressure on advanced wafer processes and 2.5D/3D packaging capacity."]
+      "beneficiary_class": "enabler",
+      "id": "seg-hbm-test-and-bonding-equipment",
+      "layer": "equipment",
+      "name": "HBM test and bonding equipment",
+      "representative_companies": [
+        "Advantest",
+        "Teradyne",
+        "DISCO",
+        "Applied Materials",
+        "Lam Research"
+      ],
+      "role": "Enable yield learning, stack validation, and high-volume qualification."
     },
     {
-      "id": "E4",
-      "title": "Micron fiscal 2026 third-quarter results",
-      "source_type": "company_disclosure",
-      "date": "2026-06-24",
-      "url": "https://investors.micron.com/news-releases/news-release-details/micron-technology-inc-reports-record-results-third-quarter",
-      "reliability": "high",
-      "claims": ["AI-related memory demand is improving revenue mix and profitability."]
+      "beneficiary_class": "risk hedge",
+      "id": "seg-accelerator-vendors",
+      "layer": "downstream_compute",
+      "name": "Accelerator vendors",
+      "representative_companies": [
+        "NVIDIA",
+        "AMD",
+        "Broadcom",
+        "Marvell"
+      ],
+      "role": "Consume qualified HBM capacity in GPU and custom ASIC packages."
     }
   ],
-  "counter_theses": [
-    "HBM capacity expansion could catch up with accelerator demand and weaken pricing.",
-    "Model efficiency, quantization, or architecture changes could reduce memory pressure per token.",
-    "Customer dual-sourcing could reduce supplier pricing power."
-  ],
+  "technology_readiness_level": 7,
+  "theme_type": "technology_adoption",
+  "thesis": "HBM4 should be treated as a high-quality AI bottleneck candidate because next-generation accelerators, long-context inference, and high-throughput serving increase demand for memory bandwidth and capacity. The thesis weakens if capacity expands faster than accelerator demand or if model/runtime efficiency reduces HBM attach-rate pressure.",
+  "title": "HBM4 AI Infrastructure Bottleneck",
   "tracking_signals": [
     "HBM sold-out statements and long-term agreements.",
     "HBM ASP and gross-margin mix commentary.",

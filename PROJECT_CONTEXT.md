@@ -191,6 +191,158 @@ Candidate follow-ups (not yet scoped/agreed):
   `solid-state-battery`, `copper-supply-demand`) into `configs/themes_staged/`
   if the stage-directory format becomes the primary authoring path.
 
+## Follow-Up Session Update (2026-07-01)
+
+Started the next hardening pass after reviewing the Claude-authored commit:
+
+- Strengthened `stages.validate_stage_shape` from top-level field checks into
+  nested stage contract validation. It now checks scorecard dimensions,
+  object/list element types, evidence quality fields, duplicate evidence ids,
+  date formats, and ontology-backed enum values when ontology is provided.
+- Strengthened full `validate_theme_dict` so monolithic theme files receive the
+  same stricter contract for bottlenecks, segments, profit pools, companies,
+  scenarios, evidence, and string-list fields.
+- Made `fre fill` more robust for real model usage:
+  - extracts JSON from plain JSON, fenced markdown JSON, or prose containing a
+    JSON object;
+  - retries failed model output with validation errors included in the retry
+    prompt;
+  - adds `--max-attempts`;
+  - writes `<stage>.meta.json` with model, model name, attempts, timestamp,
+    prompt hash, response hash, and response size.
+- Added tests for nested stage validation, fenced JSON parsing, retry behavior,
+  and metadata emission.
+
+Verification:
+
+```bash
+PYTHONPATH=src python -m unittest discover -s tests
+PYTHONPATH=src python -m fundamental_research_engine validate configs/themes/*.json
+PYTHONPATH=src python -m fundamental_research_engine validate configs/themes_staged/hbm4
+```
+
+Current result: 61 tests pass, and all sample themes validate.
+
+Next recommended implementation steps:
+
+- Introduce an evidence subsystem with source snapshots, normalized evidence,
+  claim-to-evidence links, and evidence coverage scoring.
+- Add a model generation/audit metadata layer to `fre run`, not only `fre fill`.
+- Add a `fre draft`/`fre run-all` workflow that walks stages in order while
+  preserving human review gates.
+- Add CI checks for tests, sample validation, prompt rendering, and a golden
+  memo snapshot.
+
+## Stable ID / Diff Update (2026-07-01)
+
+Implemented the next recommended step: stable ids for research objects and
+id-aware diffs.
+
+- Added optional stable `id` fields to bottlenecks, value-chain segments,
+  profit pools, company positions, and scenarios. Existing configs without ids
+  remain backward-compatible by falling back to `name` when loading models.
+- Added stable ids to all sample monolithic themes and to
+  `configs/themes_staged/hbm4/`.
+- Propagated bottleneck ids into `BottleneckScore` so generated `analysis.json`
+  keeps stable identity after scoring.
+- Updated `fre diff` internals to match these objects by `id` first and fall
+  back to display name only for legacy analyses without ids. Rename changes now
+  show as field changes instead of add/remove churn.
+- Updated diff markdown rendering to show human-readable labels plus ids, e.g.
+  `SK hynix [co-sk-hynix]`.
+- Updated stage prompt templates so future model-authored objects include
+  stable kebab-case ids.
+- Added tests covering id propagation, duplicate-id validation, and rename
+  handling in diff.
+
+Verification:
+
+```bash
+PYTHONPATH=src python -m unittest discover -s tests
+PYTHONPATH=src python -m fundamental_research_engine validate configs/themes/*.json
+PYTHONPATH=src python -m fundamental_research_engine validate configs/themes_staged/hbm4
+```
+
+Current result: 63 tests pass, all sample themes validate, and a smoke run of
+`configs/themes/hbm4.json` emits ids in bottleneck scores, companies, and
+scenarios.
+
+## Evidence Audit Update (2026-07-02)
+
+Implemented the first evidence subsystem slice. This is intentionally an audit
+layer, not an automated source collector yet.
+
+- Added `src/fundamental_research_engine/evidence.py`.
+- `build_evidence_audit` now produces:
+  - source inventory by source type and reliability;
+  - source manifest from theme evidence records;
+  - claim links (`E1.C1`, etc.) from evidence items to their individual claims;
+  - owner-level coverage for bottlenecks and companies;
+  - missing evidence references;
+  - a coverage health score and status (`missing`, `partial`, `thin`,
+    `adequate`, `strong`).
+- `run_pipeline` now embeds `evidence_audit` into `analysis.json`.
+- `memo.md` now includes an `Evidence Audit` section with evidence count,
+  claim count, average coverage score, and a coverage table.
+- Added `fre audit <theme> [--out path]` to build the evidence audit without
+  running the full pipeline.
+- Updated README and tests.
+
+Verification:
+
+```bash
+PYTHONPATH=src python -m unittest discover -s tests
+PYTHONPATH=src python -m fundamental_research_engine validate configs/themes/*.json
+PYTHONPATH=src python -m fundamental_research_engine validate configs/themes_staged/hbm4
+PYTHONPATH=src python -m fundamental_research_engine audit configs/themes/hbm4.json --out /tmp/hbm4-evidence-audit.json
+```
+
+Current result: 66 tests pass, all sample themes validate, HBM4 audit reports
+4 evidence items, 4 claims, and 0.69 average owner coverage.
+
+Direction check:
+
+- The project is still moving in the right direction: deterministic core first,
+  structured model outputs second, auditability before automation.
+- The main risk is over-scoring qualitative research. Treat evidence coverage
+  as process health only, not as thesis truth.
+- The next best step is real evidence storage: raw source snapshots in
+  `data/raw_sources`, normalized records in `data/normalized`, and stable
+  claim ids linked back to thesis/bottleneck/company/scenario objects.
+
+## Evidence Store Sync Update (2026-07-02)
+
+Implemented the first local evidence store writer.
+
+- Added `write_evidence_store` in `src/fundamental_research_engine/evidence.py`.
+- Added `fre evidence-sync <theme> [--store-root <path>]`.
+- `evidence-sync` writes:
+  - `data/raw_sources/<theme_id>/<evidence_id>.json`
+  - `data/normalized/<theme_id>/evidence.json`
+  - `data/evidence/<theme_id>/claims.json`
+  - `data/evidence/<theme_id>/coverage.json`
+  - `data/evidence/<theme_id>/audit.json`
+  - `data/evidence/<theme_id>/manifest.json`
+- Raw source records are currently snapshots of evidence already present in
+  theme configs. This deliberately avoids network collection until the storage
+  and audit contracts are stable.
+- Normalized evidence records include stable claim ids and linked owners
+  (bottlenecks/companies that cite each evidence id).
+- Generated data remains ignored by git under `data/`; only the writer,
+  schemas-by-convention, docs, and tests are committed.
+
+Verification:
+
+```bash
+PYTHONPATH=src python -m unittest discover -s tests
+PYTHONPATH=src python -m fundamental_research_engine evidence-sync configs/themes/hbm4.json --store-root /tmp/fre-store
+```
+
+Current result: the sync command creates raw source snapshots, normalized
+evidence, claims, coverage, audit, and manifest files for HBM4. The next step
+is to add source collectors/fetchers that populate `raw_sources` from URLs
+instead of only copying evidence already present in theme configs.
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:

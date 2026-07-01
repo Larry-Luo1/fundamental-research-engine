@@ -1,136 +1,208 @@
 {
-  "id": "solid-state-battery",
-  "title": "Solid-State Battery Commercialization Theme",
   "as_of": "2026-07-01",
-  "theme_type": "technology_adoption",
-  "domain": "energy_storage",
+  "bottlenecks": [
+    {
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
+      "id": "bn-solid-state-battery-manufacturability-and-qualification",
+      "name": "solid-state battery manufacturability and qualification",
+      "scorecard": {
+        "architecture_bypass_risk": 4,
+        "capacity_expansion_difficulty": 4,
+        "customer_qualification_lock_in": 4,
+        "demand_growth_speed": 4,
+        "rapid_supply_release_risk": 1,
+        "supplier_pricing_power": 2,
+        "technology_substitution_difficulty": 2,
+        "yield_material_equipment_constraint": 5
+      },
+      "technical_reason": "Commercial adoption depends on reliable electrolyte interfaces, dendrite control, cycle life, stack pressure management, scalable manufacturing, and automotive qualification.",
+      "types": [
+        "technology",
+        "yield",
+        "materials",
+        "qualification"
+      ]
+    }
+  ],
+  "companies": [
+    {
+      "evidence_ids": [
+        "E1"
+      ],
+      "exposure_quality": "option value",
+      "id": "co-quantumscape",
+      "moat": [
+        "cell architecture IP",
+        "automotive partner validation path"
+      ],
+      "name": "QuantumScape",
+      "positioning_label": "architecture option",
+      "product": "solid-state lithium-metal battery technology",
+      "risks": [
+        "manufacturing scale-up",
+        "cycle life",
+        "cost and qualification timing"
+      ],
+      "stack_position": "cell_technology"
+    },
+    {
+      "evidence_ids": [
+        "E2"
+      ],
+      "exposure_quality": "option value",
+      "id": "co-toyota",
+      "moat": [
+        "battery R&D scale",
+        "manufacturing discipline",
+        "hybrid and EV platform knowledge"
+      ],
+      "name": "Toyota",
+      "positioning_label": "risk hedge",
+      "product": "solid-state battery vehicle roadmap",
+      "risks": [
+        "commercial timing",
+        "cost",
+        "competing battery chemistries"
+      ],
+      "stack_position": "downstream_oem"
+    }
+  ],
   "core_question": "Is solid-state battery commercialization a near-term investable industrial trend or still mostly an option-value theme?",
-  "thesis": "Solid-state batteries are a high-option-value technology adoption theme, but broad value capture depends on manufacturability, cycle life, safety, cost, and automotive qualification. Near-term beneficiaries are more likely to be materials, pilot-line equipment, and qualified niche applications than mass-market EV volume leaders.",
-  "mechanism": "If solid electrolytes and lithium-metal or high-silicon anodes can improve safety and energy density while reaching manufacturable yields, battery architecture and material demand shift across electrolyte, separator, anode, cathode, equipment, and pack integration layers.",
-  "hype_stage": "inflated_expectations",
-  "technology_readiness_level": 6,
+  "counter_theses": [
+    "Conventional lithium-ion chemistries may improve enough to delay solid-state adoption.",
+    "Manufacturing yield and cost may prevent mass-market scale.",
+    "Early announcements may reflect option value rather than firm volume demand."
+  ],
+  "domain": "energy_storage",
   "drivers": [
     "EV makers seek higher energy density and faster charging.",
     "Safety and thermal runaway concerns create demand for new chemistries.",
     "Premium vehicles, aviation, and specialty applications can tolerate higher early costs.",
     "Governments and OEMs fund domestic battery technology supply chains."
   ],
-  "bottlenecks": [
+  "evidence": [
     {
-      "name": "solid-state battery manufacturability and qualification",
-      "types": ["technology", "yield", "materials", "qualification"],
-      "technical_reason": "Commercial adoption depends on reliable electrolyte interfaces, dendrite control, cycle life, stack pressure management, scalable manufacturing, and automotive qualification.",
-      "scorecard": {
-        "demand_growth_speed": 4,
-        "capacity_expansion_difficulty": 4,
-        "technology_substitution_difficulty": 2,
-        "yield_material_equipment_constraint": 5,
-        "customer_qualification_lock_in": 4,
-        "supplier_pricing_power": 2,
-        "rapid_supply_release_risk": 1,
-        "architecture_bypass_risk": 4
-      },
-      "evidence_ids": ["E1", "E2"]
-    }
-  ],
-  "segments": [
-    {
-      "name": "solid electrolyte materials",
-      "layer": "materials",
-      "role": "Provide sulfide, oxide, polymer, or hybrid electrolytes required for solid-state cells.",
-      "beneficiary_class": "first-order",
-      "representative_companies": ["electrolyte material suppliers", "specialty chemical producers"]
+      "claims": [
+        "Solid-state commercialization depends on pilot progress, customer validation, and manufacturing scale-up."
+      ],
+      "date": "2026-07-01",
+      "id": "E1",
+      "reliability": "medium",
+      "source_type": "company_disclosure",
+      "title": "Company technical roadmap and shareholder disclosures",
+      "url": ""
     },
     {
-      "name": "pilot-line and cell manufacturing equipment",
-      "layer": "equipment",
-      "role": "Enable dry-room, coating, lamination, pressing, inspection, and formation processes for new cell architectures.",
-      "beneficiary_class": "enabler",
-      "representative_companies": ["battery equipment suppliers", "inspection equipment vendors"]
-    },
-    {
-      "name": "automotive and specialty OEMs",
-      "layer": "downstream",
-      "role": "Qualify cells and absorb early cost for premium performance use cases.",
-      "beneficiary_class": "risk hedge",
-      "representative_companies": ["Toyota", "BMW", "Mercedes-Benz", "premium EV makers"]
+      "claims": [
+        "Automotive adoption requires long qualification cycles and cost reduction."
+      ],
+      "date": "2026-07-01",
+      "id": "E2",
+      "reliability": "medium",
+      "source_type": "industry_research",
+      "title": "OEM solid-state battery commercialization roadmaps",
+      "url": ""
     }
   ],
+  "hype_stage": "inflated_expectations",
+  "id": "solid-state-battery",
+  "mechanism": "If solid electrolytes and lithium-metal or high-silicon anodes can improve safety and energy density while reaching manufacturable yields, battery architecture and material demand shift across electrolyte, separator, anode, cathode, equipment, and pack integration layers.",
   "profit_pools": [
     {
+      "beneficiaries": [
+        "materials developers",
+        "cell technology holders"
+      ],
+      "capture_quality": "medium",
+      "id": "pool-qualified-materials-and-process-ip",
       "name": "qualified materials and process IP",
-      "rationale": "If solid-state cells scale, scarce electrolyte know-how and process recipes can capture early margin.",
-      "capture_quality": "medium",
-      "beneficiaries": ["materials developers", "cell technology holders"]
+      "rationale": "If solid-state cells scale, scarce electrolyte know-how and process recipes can capture early margin."
     },
     {
+      "beneficiaries": [
+        "battery equipment suppliers",
+        "inspection vendors"
+      ],
+      "capture_quality": "medium",
+      "id": "pool-manufacturing-equipment-for-pilot-to-scale-transition",
       "name": "manufacturing equipment for pilot-to-scale transition",
-      "rationale": "New processes require specialized equipment before mass adoption is visible in vehicle sales.",
-      "capture_quality": "medium",
-      "beneficiaries": ["battery equipment suppliers", "inspection vendors"]
-    }
-  ],
-  "companies": [
-    {
-      "name": "QuantumScape",
-      "product": "solid-state lithium-metal battery technology",
-      "stack_position": "cell_technology",
-      "positioning_label": "architecture option",
-      "exposure_quality": "option value",
-      "moat": ["cell architecture IP", "automotive partner validation path"],
-      "risks": ["manufacturing scale-up", "cycle life", "cost and qualification timing"],
-      "evidence_ids": ["E1"]
-    },
-    {
-      "name": "Toyota",
-      "product": "solid-state battery vehicle roadmap",
-      "stack_position": "downstream_oem",
-      "positioning_label": "risk hedge",
-      "exposure_quality": "option value",
-      "moat": ["battery R&D scale", "manufacturing discipline", "hybrid and EV platform knowledge"],
-      "risks": ["commercial timing", "cost", "competing battery chemistries"],
-      "evidence_ids": ["E2"]
+      "rationale": "New processes require specialized equipment before mass adoption is visible in vehicle sales."
     }
   ],
   "scenarios": [
     {
-      "name": "bull",
       "description": "Pilot lines validate cycle life and manufacturability for premium applications.",
-      "implications": ["materials and equipment suppliers gain early orders", "OEM qualification accelerates"],
-      "triggers": ["validated pilot yields", "automotive qualification milestones", "firm supply agreements"]
+      "id": "scn-bull",
+      "implications": [
+        "materials and equipment suppliers gain early orders",
+        "OEM qualification accelerates"
+      ],
+      "name": "bull",
+      "triggers": [
+        "validated pilot yields",
+        "automotive qualification milestones",
+        "firm supply agreements"
+      ]
     },
     {
-      "name": "bear",
       "description": "Liquid lithium-ion chemistry improves enough to delay solid-state adoption.",
-      "implications": ["solid-state remains option value", "mass-market EV adoption slips"],
-      "triggers": ["pilot delays", "cost targets missed", "LFP/high-nickel improvements reduce urgency"]
+      "id": "scn-bear",
+      "implications": [
+        "solid-state remains option value",
+        "mass-market EV adoption slips"
+      ],
+      "name": "bear",
+      "triggers": [
+        "pilot delays",
+        "cost targets missed",
+        "LFP/high-nickel improvements reduce urgency"
+      ]
     }
   ],
-  "evidence": [
+  "segments": [
     {
-      "id": "E1",
-      "title": "Company technical roadmap and shareholder disclosures",
-      "source_type": "company_disclosure",
-      "date": "2026-07-01",
-      "url": "",
-      "reliability": "medium",
-      "claims": ["Solid-state commercialization depends on pilot progress, customer validation, and manufacturing scale-up."]
+      "beneficiary_class": "first-order",
+      "id": "seg-solid-electrolyte-materials",
+      "layer": "materials",
+      "name": "solid electrolyte materials",
+      "representative_companies": [
+        "electrolyte material suppliers",
+        "specialty chemical producers"
+      ],
+      "role": "Provide sulfide, oxide, polymer, or hybrid electrolytes required for solid-state cells."
     },
     {
-      "id": "E2",
-      "title": "OEM solid-state battery commercialization roadmaps",
-      "source_type": "industry_research",
-      "date": "2026-07-01",
-      "url": "",
-      "reliability": "medium",
-      "claims": ["Automotive adoption requires long qualification cycles and cost reduction."]
+      "beneficiary_class": "enabler",
+      "id": "seg-pilot-line-and-cell-manufacturing-equipment",
+      "layer": "equipment",
+      "name": "pilot-line and cell manufacturing equipment",
+      "representative_companies": [
+        "battery equipment suppliers",
+        "inspection equipment vendors"
+      ],
+      "role": "Enable dry-room, coating, lamination, pressing, inspection, and formation processes for new cell architectures."
+    },
+    {
+      "beneficiary_class": "risk hedge",
+      "id": "seg-automotive-and-specialty-oems",
+      "layer": "downstream",
+      "name": "automotive and specialty OEMs",
+      "representative_companies": [
+        "Toyota",
+        "BMW",
+        "Mercedes-Benz",
+        "premium EV makers"
+      ],
+      "role": "Qualify cells and absorb early cost for premium performance use cases."
     }
   ],
-  "counter_theses": [
-    "Conventional lithium-ion chemistries may improve enough to delay solid-state adoption.",
-    "Manufacturing yield and cost may prevent mass-market scale.",
-    "Early announcements may reflect option value rather than firm volume demand."
-  ],
+  "technology_readiness_level": 6,
+  "theme_type": "technology_adoption",
+  "thesis": "Solid-state batteries are a high-option-value technology adoption theme, but broad value capture depends on manufacturability, cycle life, safety, cost, and automotive qualification. Near-term beneficiaries are more likely to be materials, pilot-line equipment, and qualified niche applications than mass-market EV volume leaders.",
+  "title": "Solid-State Battery Commercialization Theme",
   "tracking_signals": [
     "Pilot-line yield and throughput.",
     "Cycle-life and safety validation under automotive conditions.",

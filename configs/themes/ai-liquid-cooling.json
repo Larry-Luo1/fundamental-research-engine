@@ -1,154 +1,238 @@
 {
-  "id": "ai-liquid-cooling",
-  "title": "AI Data-Center Liquid Cooling and Power Bottleneck",
   "as_of": "2026-07-01",
-  "theme_type": "technology_adoption",
-  "domain": "ai",
+  "bottlenecks": [
+    {
+      "evidence_ids": [
+        "E1",
+        "E2",
+        "E3",
+        "E4"
+      ],
+      "id": "bn-high-density-power-and-liquid-cooling-deployment",
+      "name": "High-density power and liquid-cooling deployment",
+      "scorecard": {
+        "architecture_bypass_risk": 2,
+        "capacity_expansion_difficulty": 4,
+        "customer_qualification_lock_in": 4,
+        "demand_growth_speed": 5,
+        "rapid_supply_release_risk": 2,
+        "supplier_pricing_power": 3,
+        "technology_substitution_difficulty": 3,
+        "yield_material_equipment_constraint": 3
+      },
+      "technical_reason": "AI data centers require site power, transformers, switchgear, UPS, rack power distribution, CDUs, cold plates, and operational know-how that cannot be deployed instantly.",
+      "types": [
+        "power",
+        "engineering_delivery",
+        "qualification",
+        "capacity"
+      ]
+    }
+  ],
+  "companies": [
+    {
+      "evidence_ids": [
+        "E2"
+      ],
+      "exposure_quality": "direct revenue and backlog growth",
+      "id": "co-vertiv",
+      "moat": [
+        "data-center customer qualification",
+        "thermal management portfolio",
+        "service and deployment know-how"
+      ],
+      "name": "Vertiv",
+      "positioning_label": "qualified leader",
+      "product": "thermal and power infrastructure for data centers",
+      "risks": [
+        "competition",
+        "execution constraints",
+        "data-center capex digestion"
+      ],
+      "stack_position": "cooling_power"
+    },
+    {
+      "evidence_ids": [
+        "E3"
+      ],
+      "exposure_quality": "direct revenue and backlog growth",
+      "id": "co-eaton",
+      "moat": [
+        "electrical equipment portfolio",
+        "customer qualification",
+        "grid and building infrastructure exposure"
+      ],
+      "name": "Eaton",
+      "positioning_label": "capacity enabler",
+      "product": "electrical equipment for data centers and grid infrastructure",
+      "risks": [
+        "cycle normalization",
+        "supply-chain execution",
+        "valuation sensitivity"
+      ],
+      "stack_position": "power"
+    }
+  ],
   "core_question": "Is liquid cooling and power infrastructure a durable AI bottleneck or only a short-term capex beneficiary?",
-  "thesis": "Liquid cooling and power infrastructure should be treated as a durable second-wave AI bottleneck because rack power density and site-level electricity constraints increasingly determine how fast AI capacity can be deployed. The strongest value capture is likely in qualified power, thermal, and electrical infrastructure suppliers rather than generic construction exposure.",
-  "mechanism": "AI clusters raise rack-level heat density and site-level electrical load. Deployment speed becomes constrained by power equipment, grid interconnection, thermal systems, and qualified engineering capacity.",
-  "hype_stage": "enlightenment",
-  "technology_readiness_level": 8,
+  "counter_theses": [
+    "Liquid cooling adoption could be slower if accelerator efficiency improves or rack density moderates.",
+    "Power infrastructure may benefit from broad electrification, making AI-specific attribution harder.",
+    "Lead times could normalize as suppliers expand manufacturing capacity."
+  ],
+  "domain": "ai",
   "drivers": [
     "Higher accelerator power increases rack thermal density.",
     "Large AI clusters need reliable power distribution and cooling at building scale.",
     "Data-center electricity demand is becoming a deployment constraint.",
     "Liquid cooling adoption rises as air cooling becomes insufficient for high-power racks."
   ],
-  "bottlenecks": [
+  "evidence": [
     {
-      "name": "High-density power and liquid-cooling deployment",
-      "types": ["power", "engineering_delivery", "qualification", "capacity"],
-      "technical_reason": "AI data centers require site power, transformers, switchgear, UPS, rack power distribution, CDUs, cold plates, and operational know-how that cannot be deployed instantly.",
-      "scorecard": {
-        "demand_growth_speed": 5,
-        "capacity_expansion_difficulty": 4,
-        "technology_substitution_difficulty": 3,
-        "yield_material_equipment_constraint": 3,
-        "customer_qualification_lock_in": 4,
-        "supplier_pricing_power": 3,
-        "rapid_supply_release_risk": 2,
-        "architecture_bypass_risk": 2
-      },
-      "evidence_ids": ["E1", "E2", "E3", "E4"]
-    }
-  ],
-  "segments": [
-    {
-      "name": "Thermal management",
-      "layer": "cooling",
-      "role": "Remove heat from high-density AI racks through CDU, cold plate, and facility cooling systems.",
-      "beneficiary_class": "first-order",
-      "representative_companies": ["Vertiv", "Schneider Electric", "nVent"]
+      "claims": [
+        "AI and data centers increase electricity demand and create infrastructure planning constraints."
+      ],
+      "date": "2025-04-10",
+      "id": "E1",
+      "reliability": "high",
+      "source_type": "official_report",
+      "title": "IEA Energy and AI report",
+      "url": "https://www.iea.org/reports/energy-and-ai/energy-demand-from-ai"
     },
     {
-      "name": "Electrical infrastructure",
-      "layer": "power",
-      "role": "Provide switchgear, UPS, transformers, and power distribution for AI data centers.",
-      "beneficiary_class": "first-order",
-      "representative_companies": ["Eaton", "Schneider Electric", "Siemens Energy", "GE Vernova"]
+      "claims": [
+        "Data-center infrastructure demand is driving revenue and earnings growth."
+      ],
+      "date": "2026-04-23",
+      "id": "E2",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "Vertiv first quarter 2026 results",
+      "url": "https://investors.vertiv.com/news/news-details/2026/Vertiv-Reports-Strong-First-Quarter-with-Diluted-EPS-Growth-of-136-Adjusted-Diluted-EPS-Growth-of-83-Raises-Full-Year-Guidance/default.aspx"
     },
     {
-      "name": "Data-center operators",
-      "layer": "downstream_infrastructure",
-      "role": "Secure sites, power interconnects, and customer capacity commitments.",
-      "beneficiary_class": "second-order",
-      "representative_companies": ["Equinix", "Digital Realty", "cloud hyperscalers"]
+      "claims": [
+        "Electrical equipment demand and backlog are supported by data-center and electrification trends."
+      ],
+      "date": "2026-05-01",
+      "id": "E3",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "Eaton first quarter 2026 results",
+      "url": "https://www.eaton.com/us/en-us/company/news-insights/news-releases/2026/eaton-reports-record-first-quarter-2026-results.html"
+    },
+    {
+      "claims": [
+        "Hyperscaler capex guidance supports continued AI infrastructure buildout."
+      ],
+      "date": "2026-04-29",
+      "id": "E4",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "Meta first quarter 2026 results",
+      "url": "https://investor.atmeta.com/investor-news/press-release-details/2026/Meta-Reports-First-Quarter-2026-Results/default.aspx"
     }
   ],
+  "hype_stage": "enlightenment",
+  "id": "ai-liquid-cooling",
+  "mechanism": "AI clusters raise rack-level heat density and site-level electrical load. Deployment speed becomes constrained by power equipment, grid interconnection, thermal systems, and qualified engineering capacity.",
   "profit_pools": [
     {
+      "beneficiaries": [
+        "Vertiv",
+        "Schneider Electric",
+        "nVent"
+      ],
+      "capture_quality": "medium-high",
+      "id": "pool-qualified-thermal-systems",
       "name": "qualified thermal systems",
-      "rationale": "High-density AI racks require integrated liquid cooling and deployment know-how, not only generic HVAC capacity.",
-      "capture_quality": "medium-high",
-      "beneficiaries": ["Vertiv", "Schneider Electric", "nVent"]
+      "rationale": "High-density AI racks require integrated liquid cooling and deployment know-how, not only generic HVAC capacity."
     },
     {
+      "beneficiaries": [
+        "Eaton",
+        "Schneider Electric",
+        "Siemens Energy",
+        "GE Vernova"
+      ],
+      "capture_quality": "medium-high",
+      "id": "pool-electrical-infrastructure",
       "name": "electrical infrastructure",
-      "rationale": "Transformers, UPS, switchgear, and distribution systems become gating items for AI data-center delivery.",
-      "capture_quality": "medium-high",
-      "beneficiaries": ["Eaton", "Schneider Electric", "Siemens Energy", "GE Vernova"]
-    }
-  ],
-  "companies": [
-    {
-      "name": "Vertiv",
-      "product": "thermal and power infrastructure for data centers",
-      "stack_position": "cooling_power",
-      "positioning_label": "qualified leader",
-      "exposure_quality": "direct revenue and backlog growth",
-      "moat": ["data-center customer qualification", "thermal management portfolio", "service and deployment know-how"],
-      "risks": ["competition", "execution constraints", "data-center capex digestion"],
-      "evidence_ids": ["E2"]
-    },
-    {
-      "name": "Eaton",
-      "product": "electrical equipment for data centers and grid infrastructure",
-      "stack_position": "power",
-      "positioning_label": "capacity enabler",
-      "exposure_quality": "direct revenue and backlog growth",
-      "moat": ["electrical equipment portfolio", "customer qualification", "grid and building infrastructure exposure"],
-      "risks": ["cycle normalization", "supply-chain execution", "valuation sensitivity"],
-      "evidence_ids": ["E3"]
+      "rationale": "Transformers, UPS, switchgear, and distribution systems become gating items for AI data-center delivery."
     }
   ],
   "scenarios": [
     {
-      "name": "bull",
       "description": "Rack power density and AI data-center capex continue to rise.",
-      "implications": ["cooling and power suppliers see backlog durability", "engineering delivery remains a bottleneck"],
-      "triggers": ["higher rack power roadmaps", "data-center backlog growth", "grid interconnection delays"]
+      "id": "scn-bull",
+      "implications": [
+        "cooling and power suppliers see backlog durability",
+        "engineering delivery remains a bottleneck"
+      ],
+      "name": "bull",
+      "triggers": [
+        "higher rack power roadmaps",
+        "data-center backlog growth",
+        "grid interconnection delays"
+      ]
     },
     {
-      "name": "bear",
       "description": "Accelerator efficiency improves or cloud capex enters a digestion phase.",
-      "implications": ["AI-specific growth decelerates", "suppliers revert to broader electrification cycle exposure"],
-      "triggers": ["capex guide-downs", "cooling attach-rate stalls", "equipment lead times normalize"]
+      "id": "scn-bear",
+      "implications": [
+        "AI-specific growth decelerates",
+        "suppliers revert to broader electrification cycle exposure"
+      ],
+      "name": "bear",
+      "triggers": [
+        "capex guide-downs",
+        "cooling attach-rate stalls",
+        "equipment lead times normalize"
+      ]
     }
   ],
-  "evidence": [
+  "segments": [
     {
-      "id": "E1",
-      "title": "IEA Energy and AI report",
-      "source_type": "official_report",
-      "date": "2025-04-10",
-      "url": "https://www.iea.org/reports/energy-and-ai/energy-demand-from-ai",
-      "reliability": "high",
-      "claims": ["AI and data centers increase electricity demand and create infrastructure planning constraints."]
+      "beneficiary_class": "first-order",
+      "id": "seg-thermal-management",
+      "layer": "cooling",
+      "name": "Thermal management",
+      "representative_companies": [
+        "Vertiv",
+        "Schneider Electric",
+        "nVent"
+      ],
+      "role": "Remove heat from high-density AI racks through CDU, cold plate, and facility cooling systems."
     },
     {
-      "id": "E2",
-      "title": "Vertiv first quarter 2026 results",
-      "source_type": "company_disclosure",
-      "date": "2026-04-23",
-      "url": "https://investors.vertiv.com/news/news-details/2026/Vertiv-Reports-Strong-First-Quarter-with-Diluted-EPS-Growth-of-136-Adjusted-Diluted-EPS-Growth-of-83-Raises-Full-Year-Guidance/default.aspx",
-      "reliability": "high",
-      "claims": ["Data-center infrastructure demand is driving revenue and earnings growth."]
+      "beneficiary_class": "first-order",
+      "id": "seg-electrical-infrastructure",
+      "layer": "power",
+      "name": "Electrical infrastructure",
+      "representative_companies": [
+        "Eaton",
+        "Schneider Electric",
+        "Siemens Energy",
+        "GE Vernova"
+      ],
+      "role": "Provide switchgear, UPS, transformers, and power distribution for AI data centers."
     },
     {
-      "id": "E3",
-      "title": "Eaton first quarter 2026 results",
-      "source_type": "company_disclosure",
-      "date": "2026-05-01",
-      "url": "https://www.eaton.com/us/en-us/company/news-insights/news-releases/2026/eaton-reports-record-first-quarter-2026-results.html",
-      "reliability": "high",
-      "claims": ["Electrical equipment demand and backlog are supported by data-center and electrification trends."]
-    },
-    {
-      "id": "E4",
-      "title": "Meta first quarter 2026 results",
-      "source_type": "company_disclosure",
-      "date": "2026-04-29",
-      "url": "https://investor.atmeta.com/investor-news/press-release-details/2026/Meta-Reports-First-Quarter-2026-Results/default.aspx",
-      "reliability": "high",
-      "claims": ["Hyperscaler capex guidance supports continued AI infrastructure buildout."]
+      "beneficiary_class": "second-order",
+      "id": "seg-data-center-operators",
+      "layer": "downstream_infrastructure",
+      "name": "Data-center operators",
+      "representative_companies": [
+        "Equinix",
+        "Digital Realty",
+        "cloud hyperscalers"
+      ],
+      "role": "Secure sites, power interconnects, and customer capacity commitments."
     }
   ],
-  "counter_theses": [
-    "Liquid cooling adoption could be slower if accelerator efficiency improves or rack density moderates.",
-    "Power infrastructure may benefit from broad electrification, making AI-specific attribution harder.",
-    "Lead times could normalize as suppliers expand manufacturing capacity."
-  ],
+  "technology_readiness_level": 8,
+  "theme_type": "technology_adoption",
+  "thesis": "Liquid cooling and power infrastructure should be treated as a durable second-wave AI bottleneck because rack power density and site-level electricity constraints increasingly determine how fast AI capacity can be deployed. The strongest value capture is likely in qualified power, thermal, and electrical infrastructure suppliers rather than generic construction exposure.",
+  "title": "AI Data-Center Liquid Cooling and Power Bottleneck",
   "tracking_signals": [
     "Rack power density roadmaps from accelerator and server vendors.",
     "Liquid-cooling attach rate for AI servers.",

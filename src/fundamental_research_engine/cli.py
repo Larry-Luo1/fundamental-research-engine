@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
-from .adapters import ManualCompletionPending, get_adapter
+from .adapters import AdapterError, ManualCompletionPending, get_adapter
 from .diff import default_diff_dir, diff_analysis, find_runs_for_theme, resolve_analysis_path
+from .evidence import build_evidence_audit, write_evidence_store
 from .io import read_json, write_json, write_text
-from .pipeline import default_ontology_path, run_pipeline
+from .pipeline import default_ontology_path, load_and_validate_theme, run_pipeline
 from .prompts import default_methodology_path, render_stage_prompt
 from .render import render_diff
 from .stages import (
@@ -36,6 +40,21 @@ def build_parser() -> argparse.ArgumentParser:
     validate.add_argument("theme", type=Path, help="Path to a theme JSON config or a stage directory.")
     validate.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/.")
 
+    audit = subparsers.add_parser("audit", help="Build an evidence audit for a theme config.")
+    audit.add_argument("theme", type=Path, help="Path to a theme JSON config or a stage directory.")
+    audit.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/.")
+    audit.add_argument("--out", type=Path, default=None, help="Optional output path for evidence_audit JSON.")
+
+    evidence_sync = subparsers.add_parser("evidence-sync", help="Sync theme evidence into the local evidence store.")
+    evidence_sync.add_argument("theme", type=Path, help="Path to a theme JSON config or a stage directory.")
+    evidence_sync.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/.")
+    evidence_sync.add_argument(
+        "--store-root",
+        type=Path,
+        default=None,
+        help="Root containing data/raw_sources, data/normalized, and data/evidence. Defaults to --project-root.",
+    )
+
     split = subparsers.add_parser("split", help="Split a monolithic theme JSON into per-stage files.")
     split.add_argument("theme", type=Path, help="Path to a monolithic theme JSON config.")
     split.add_argument("theme_dir", type=Path, help="Output directory for the per-stage JSON files.")
@@ -61,9 +80,79 @@ def build_parser() -> argparse.ArgumentParser:
     fill.add_argument("--stage", choices=STAGE_ORDER, default=None, help="Stage to fill. Defaults to the first missing one.")
     fill.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter to use.")
     fill.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
+    fill.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")
     fill.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/ and prompts/.")
 
     return parser
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _parse_model_json(response: str) -> dict[str, Any]:
+    text = response.strip()
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+        raise ValueError(f"expected JSON object, got {type(parsed).__name__}")
+    except json.JSONDecodeError:
+        pass
+
+    decoder = json.JSONDecoder()
+    candidates: list[str] = []
+    if "```" in text:
+        parts = text.split("```")
+        candidates.extend(part.strip().removeprefix("json").strip() for part in parts[1::2])
+    candidates.append(text)
+
+    for candidate in candidates:
+        for index, char in enumerate(candidate):
+            if char != "{":
+                continue
+            try:
+                parsed, _ = decoder.raw_decode(candidate[index:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(parsed, dict):
+                return parsed
+            raise ValueError(f"expected JSON object, got {type(parsed).__name__}")
+    raise ValueError("model response did not contain a valid JSON object")
+
+
+def _retry_prompt(prompt: str, errors: list[str]) -> str:
+    details = "\n".join(f"- {error}" for error in errors)
+    return (
+        f"{prompt}\n\n"
+        "The previous response was rejected for these issues:\n"
+        f"{details}\n\n"
+        "Return only one corrected JSON object for the requested stage."
+    )
+
+
+def _write_fill_metadata(
+    theme_dir: Path,
+    stage: str,
+    model: str,
+    model_name: str | None,
+    prompt: str,
+    response: str,
+    attempts: int,
+) -> None:
+    write_json(
+        theme_dir / f"{stage}.meta.json",
+        {
+            "stage": stage,
+            "model": model,
+            "model_name": model_name,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "attempts": attempts,
+            "prompt_sha256": _sha256_text(prompt),
+            "response_sha256": _sha256_text(response),
+            "response_chars": len(response),
+        },
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -84,6 +173,36 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"- {error}")
             return 1
         print(f"{args.theme}: OK")
+        return 0
+
+    if args.command == "audit":
+        theme = load_and_validate_theme(args.theme, args.project_root)
+        report = build_evidence_audit(
+            theme.evidence,
+            {
+                "bottleneck": theme.bottlenecks,
+                "company": theme.companies,
+            },
+        )
+        if args.out:
+            write_json(args.out, report)
+            print(args.out)
+        else:
+            print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "evidence-sync":
+        theme = load_and_validate_theme(args.theme, args.project_root)
+        paths = write_evidence_store(
+            theme.id,
+            theme.evidence,
+            {
+                "bottleneck": theme.bottlenecks,
+                "company": theme.companies,
+            },
+            args.store_root or args.project_root,
+        )
+        print(json.dumps(paths, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
 
     if args.command == "split":
@@ -157,21 +276,38 @@ def main(argv: list[str] | None = None) -> int:
             print(f"manual mode: wrote prompt to {prompt_path}")
             print(f"run it through a model, save the JSON reply to {stage_path(theme_dir, stage)}, then rerun")
             return 0
-
-        try:
-            data = json.loads(response)
-        except json.JSONDecodeError as exc:
-            parser.error(f"model response for stage '{stage}' was not valid JSON: {exc}")
-            return 2
-
-        shape_errors = validate_stage_shape(stage, data)
-        if shape_errors:
-            print(f"{stage}: model response has shape problems:")
-            for error in shape_errors:
-                print(f"- {error}")
+        except AdapterError as exc:
+            print(f"{stage}: model adapter failed: {exc}")
             return 1
 
+        max_attempts = max(1, args.max_attempts)
+        attempt = 1
+        last_response = response
+        last_errors: list[str] = []
+        while True:
+            try:
+                data = _parse_model_json(last_response)
+            except ValueError as exc:
+                last_errors = [str(exc)]
+            else:
+                last_errors = validate_stage_shape(stage, data, ontology)
+                if not last_errors:
+                    break
+
+            if attempt >= max_attempts:
+                print(f"{stage}: model response has problems after {attempt} attempt(s):")
+                for error in last_errors:
+                    print(f"- {error}")
+                return 1
+            attempt += 1
+            try:
+                last_response = adapter.complete(_retry_prompt(prompt, last_errors))
+            except AdapterError as exc:
+                print(f"{stage}: model adapter failed on retry {attempt}: {exc}")
+                return 1
+
         write_json(stage_path(theme_dir, stage), data)
+        _write_fill_metadata(theme_dir, stage, args.model, args.model_name, prompt, last_response, attempt)
         print(stage_path(theme_dir, stage))
         return 0
 

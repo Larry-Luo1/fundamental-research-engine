@@ -7,6 +7,7 @@
         "Samsung"
       ],
       "capture_quality": "high",
+      "id": "pool-qualified-hbm-supply",
       "name": "qualified HBM supply",
       "rationale": "Qualified HBM capacity is directly attached to accelerator shipments and can capture mix and ASP upside when supply is constrained."
     },
@@ -16,6 +17,7 @@
         "advanced packaging ecosystem"
       ],
       "capture_quality": "high",
+      "id": "pool-advanced-packaging-capacity",
       "name": "advanced packaging capacity",
       "rationale": "HBM value cannot be realized without package-level integration, interposers, substrates, and yield control."
     }
@@ -23,6 +25,7 @@
   "segments": [
     {
       "beneficiary_class": "first-order",
+      "id": "seg-hbm-suppliers",
       "layer": "memory",
       "name": "HBM suppliers",
       "representative_companies": [
@@ -34,6 +37,7 @@
     },
     {
       "beneficiary_class": "first-order",
+      "id": "seg-advanced-packaging",
       "layer": "foundry_packaging",
       "name": "Advanced packaging",
       "representative_companies": [
@@ -47,6 +51,7 @@
     },
     {
       "beneficiary_class": "enabler",
+      "id": "seg-hbm-test-and-bonding-equipment",
       "layer": "equipment",
       "name": "HBM test and bonding equipment",
       "representative_companies": [
@@ -60,6 +65,7 @@
     },
     {
       "beneficiary_class": "risk hedge",
+      "id": "seg-accelerator-vendors",
       "layer": "downstream_compute",
       "name": "Accelerator vendors",
       "representative_companies": [

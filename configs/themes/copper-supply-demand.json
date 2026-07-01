@@ -1,136 +1,210 @@
 {
-  "id": "copper-supply-demand",
-  "title": "Copper Supply-Demand Cycle",
   "as_of": "2026-07-01",
-  "theme_type": "supply_demand_cycle",
-  "domain": "metals_mining",
+  "bottlenecks": [
+    {
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
+      "id": "bn-mine-supply-response-and-quality-reserve-scarcity",
+      "name": "mine supply response and quality reserve scarcity",
+      "scorecard": {
+        "architecture_bypass_risk": 2,
+        "capacity_expansion_difficulty": 5,
+        "customer_qualification_lock_in": 2,
+        "demand_growth_speed": 4,
+        "rapid_supply_release_risk": 1,
+        "supplier_pricing_power": 3,
+        "technology_substitution_difficulty": 3,
+        "yield_material_equipment_constraint": 4
+      },
+      "technical_reason": "New copper supply requires multi-year mine development, permitting, infrastructure, water and power access, and attractive ore grades.",
+      "types": [
+        "capacity",
+        "materials",
+        "engineering_delivery",
+        "policy"
+      ]
+    }
+  ],
+  "companies": [
+    {
+      "evidence_ids": [
+        "E1"
+      ],
+      "exposure_quality": "direct price and volume leverage",
+      "id": "co-freeport-mcmoran",
+      "moat": [
+        "large reserve base",
+        "operating leverage",
+        "scale"
+      ],
+      "name": "Freeport-McMoRan",
+      "positioning_label": "core bottleneck owner",
+      "product": "copper mining and reserves",
+      "risks": [
+        "commodity price volatility",
+        "country and operating risk",
+        "cost inflation"
+      ],
+      "stack_position": "upstream_mining"
+    },
+    {
+      "evidence_ids": [
+        "E1"
+      ],
+      "exposure_quality": "direct price leverage",
+      "id": "co-southern-copper",
+      "moat": [
+        "low-cost assets",
+        "reserve life",
+        "integrated operations"
+      ],
+      "name": "Southern Copper",
+      "positioning_label": "qualified leader",
+      "product": "low-cost copper mining",
+      "risks": [
+        "permitting",
+        "political risk",
+        "commodity cycle"
+      ],
+      "stack_position": "upstream_mining"
+    }
+  ],
   "core_question": "Is copper a structural supply-demand shortage theme or a cyclical macro trade?",
-  "thesis": "Copper should be analyzed as both a structural electrification constraint and a macro-sensitive commodity. The structural thesis depends on long mine lead times, declining ore grades, grid and data-center demand, and limited rapid supply response; the cyclical risk is that weak construction or manufacturing demand offsets electrification growth.",
-  "mechanism": "Copper demand rises with electrification, grid expansion, data centers, EVs, renewables, and industrial activity, while mine supply responds slowly because permitting, development, ore grade, water, power, and jurisdictional risk constrain new output.",
-  "hype_stage": "productivity",
-  "technology_readiness_level": 9,
+  "counter_theses": [
+    "China property and global manufacturing weakness could offset electrification demand.",
+    "High prices could accelerate substitution, thrift, and recycling.",
+    "New projects or disrupted mines returning to production could loosen supply."
+  ],
+  "domain": "metals_mining",
   "drivers": [
     "Grid expansion and electrification increase copper intensity.",
     "Data-center and AI power infrastructure add incremental electrical demand.",
     "Mine development lead times are long and ore grades are under pressure.",
     "Macro cycles still drive short-term demand through property, construction, and manufacturing."
   ],
-  "bottlenecks": [
+  "evidence": [
     {
-      "name": "mine supply response and quality reserve scarcity",
-      "types": ["capacity", "materials", "engineering_delivery", "policy"],
-      "technical_reason": "New copper supply requires multi-year mine development, permitting, infrastructure, water and power access, and attractive ore grades.",
-      "scorecard": {
-        "demand_growth_speed": 4,
-        "capacity_expansion_difficulty": 5,
-        "technology_substitution_difficulty": 3,
-        "yield_material_equipment_constraint": 4,
-        "customer_qualification_lock_in": 2,
-        "supplier_pricing_power": 3,
-        "rapid_supply_release_risk": 1,
-        "architecture_bypass_risk": 2
-      },
-      "evidence_ids": ["E1", "E2"]
-    }
-  ],
-  "segments": [
-    {
-      "name": "low-cost copper miners",
-      "layer": "upstream_mining",
-      "role": "Produce copper with reserve quality, scale, and operating leverage to price.",
-      "beneficiary_class": "first-order",
-      "representative_companies": ["Freeport-McMoRan", "Southern Copper", "Antofagasta", "First Quantum"]
+      "claims": [
+        "Reserve quality, cost position, and project pipeline determine mining exposure to copper price."
+      ],
+      "date": "2026-07-01",
+      "id": "E1",
+      "reliability": "medium",
+      "source_type": "company_disclosure",
+      "title": "Major copper miner disclosures and reserve reports",
+      "url": ""
     },
     {
-      "name": "smelters and refiners",
-      "layer": "midstream_processing",
-      "role": "Convert concentrate into refined copper, with economics tied to treatment charges and supply balance.",
-      "beneficiary_class": "second-order",
-      "representative_companies": ["global smelters", "regional refiners"]
-    },
-    {
-      "name": "electrical equipment and grid users",
-      "layer": "downstream_demand",
-      "role": "Consume copper in cables, transformers, motors, data centers, EVs, and renewable infrastructure.",
-      "beneficiary_class": "risk hedge",
-      "representative_companies": ["cable producers", "grid equipment suppliers", "EV and renewable developers"]
+      "claims": [
+        "Electrification demand and long mine lead times can create structural tightness."
+      ],
+      "date": "2026-07-01",
+      "id": "E2",
+      "reliability": "medium",
+      "source_type": "industry_research",
+      "title": "Industry copper supply-demand research",
+      "url": ""
     }
   ],
+  "hype_stage": "productivity",
+  "id": "copper-supply-demand",
+  "mechanism": "Copper demand rises with electrification, grid expansion, data centers, EVs, renewables, and industrial activity, while mine supply responds slowly because permitting, development, ore grade, water, power, and jurisdictional risk constrain new output.",
   "profit_pools": [
     {
-      "name": "scarce low-cost reserves",
-      "rationale": "If price rises faster than costs, miners with quality reserves and operating leverage capture the largest profit pool.",
+      "beneficiaries": [
+        "low-cost copper miners"
+      ],
       "capture_quality": "high",
-      "beneficiaries": ["low-cost copper miners"]
+      "id": "pool-scarce-low-cost-reserves",
+      "name": "scarce low-cost reserves",
+      "rationale": "If price rises faster than costs, miners with quality reserves and operating leverage capture the largest profit pool."
     },
     {
-      "name": "recycling and substitution pressure",
-      "rationale": "High prices can increase recycling economics and substitution attempts, limiting upside duration.",
+      "beneficiaries": [
+        "scrap processors",
+        "recycling infrastructure"
+      ],
       "capture_quality": "medium",
-      "beneficiaries": ["scrap processors", "recycling infrastructure"]
-    }
-  ],
-  "companies": [
-    {
-      "name": "Freeport-McMoRan",
-      "product": "copper mining and reserves",
-      "stack_position": "upstream_mining",
-      "positioning_label": "core bottleneck owner",
-      "exposure_quality": "direct price and volume leverage",
-      "moat": ["large reserve base", "operating leverage", "scale"],
-      "risks": ["commodity price volatility", "country and operating risk", "cost inflation"],
-      "evidence_ids": ["E1"]
-    },
-    {
-      "name": "Southern Copper",
-      "product": "low-cost copper mining",
-      "stack_position": "upstream_mining",
-      "positioning_label": "qualified leader",
-      "exposure_quality": "direct price leverage",
-      "moat": ["low-cost assets", "reserve life", "integrated operations"],
-      "risks": ["permitting", "political risk", "commodity cycle"],
-      "evidence_ids": ["E1"]
+      "id": "pool-recycling-and-substitution-pressure",
+      "name": "recycling and substitution pressure",
+      "rationale": "High prices can increase recycling economics and substitution attempts, limiting upside duration."
     }
   ],
   "scenarios": [
     {
-      "name": "bull",
       "description": "Electrification and grid demand exceed supply additions while inventories stay tight.",
-      "implications": ["miners capture price leverage", "recycling economics improve"],
-      "triggers": ["inventory drawdowns", "mine disruptions", "grid and data-center capex acceleration"]
+      "id": "scn-bull",
+      "implications": [
+        "miners capture price leverage",
+        "recycling economics improve"
+      ],
+      "name": "bull",
+      "triggers": [
+        "inventory drawdowns",
+        "mine disruptions",
+        "grid and data-center capex acceleration"
+      ]
     },
     {
-      "name": "bear",
       "description": "Macro demand weakens or substitution/recycling offsets structural growth.",
-      "implications": ["copper behaves more like a cyclical commodity", "miners derate with price"],
-      "triggers": ["manufacturing slowdown", "property weakness", "inventory builds", "price-induced demand destruction"]
+      "id": "scn-bear",
+      "implications": [
+        "copper behaves more like a cyclical commodity",
+        "miners derate with price"
+      ],
+      "name": "bear",
+      "triggers": [
+        "manufacturing slowdown",
+        "property weakness",
+        "inventory builds",
+        "price-induced demand destruction"
+      ]
     }
   ],
-  "evidence": [
+  "segments": [
     {
-      "id": "E1",
-      "title": "Major copper miner disclosures and reserve reports",
-      "source_type": "company_disclosure",
-      "date": "2026-07-01",
-      "url": "",
-      "reliability": "medium",
-      "claims": ["Reserve quality, cost position, and project pipeline determine mining exposure to copper price."]
+      "beneficiary_class": "first-order",
+      "id": "seg-low-cost-copper-miners",
+      "layer": "upstream_mining",
+      "name": "low-cost copper miners",
+      "representative_companies": [
+        "Freeport-McMoRan",
+        "Southern Copper",
+        "Antofagasta",
+        "First Quantum"
+      ],
+      "role": "Produce copper with reserve quality, scale, and operating leverage to price."
     },
     {
-      "id": "E2",
-      "title": "Industry copper supply-demand research",
-      "source_type": "industry_research",
-      "date": "2026-07-01",
-      "url": "",
-      "reliability": "medium",
-      "claims": ["Electrification demand and long mine lead times can create structural tightness."]
+      "beneficiary_class": "second-order",
+      "id": "seg-smelters-and-refiners",
+      "layer": "midstream_processing",
+      "name": "smelters and refiners",
+      "representative_companies": [
+        "global smelters",
+        "regional refiners"
+      ],
+      "role": "Convert concentrate into refined copper, with economics tied to treatment charges and supply balance."
+    },
+    {
+      "beneficiary_class": "risk hedge",
+      "id": "seg-electrical-equipment-and-grid-users",
+      "layer": "downstream_demand",
+      "name": "electrical equipment and grid users",
+      "representative_companies": [
+        "cable producers",
+        "grid equipment suppliers",
+        "EV and renewable developers"
+      ],
+      "role": "Consume copper in cables, transformers, motors, data centers, EVs, and renewable infrastructure."
     }
   ],
-  "counter_theses": [
-    "China property and global manufacturing weakness could offset electrification demand.",
-    "High prices could accelerate substitution, thrift, and recycling.",
-    "New projects or disrupted mines returning to production could loosen supply."
-  ],
+  "technology_readiness_level": 9,
+  "theme_type": "supply_demand_cycle",
+  "thesis": "Copper should be analyzed as both a structural electrification constraint and a macro-sensitive commodity. The structural thesis depends on long mine lead times, declining ore grades, grid and data-center demand, and limited rapid supply response; the cyclical risk is that weak construction or manufacturing demand offsets electrification growth.",
+  "title": "Copper Supply-Demand Cycle",
   "tracking_signals": [
     "LME/COMEX inventories.",
     "Treatment and refining charges.",

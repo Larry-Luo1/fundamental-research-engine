@@ -45,11 +45,37 @@ Outputs are written under `runs/<as_of>-<theme_id>/`:
 - `analysis.json`: structured pipeline output
 - `memo.md`: human-readable research memo
 
+`analysis.json` includes an `evidence_audit` section with source inventory,
+claim links, owner-level evidence coverage, missing evidence references, and a
+coverage health score. The score is an audit signal, not a truth score for the
+investment thesis.
+
 Validate a theme config without running the pipeline:
 
 ```bash
 PYTHONPATH=src python3 -m fundamental_research_engine validate configs/themes/hbm4.json
 ```
+
+Build only the evidence audit for a theme:
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine audit configs/themes/hbm4.json --out /tmp/hbm4-evidence-audit.json
+```
+
+Sync a theme's evidence into the local evidence store:
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine evidence-sync configs/themes/hbm4.json
+```
+
+This writes deterministic local records under `data/`:
+
+- `data/raw_sources/<theme_id>/<evidence_id>.json`: source snapshots from the theme config
+- `data/normalized/<theme_id>/evidence.json`: normalized evidence records
+- `data/evidence/<theme_id>/claims.json`: stable claim records such as `E1.C1`
+- `data/evidence/<theme_id>/coverage.json`: owner-level evidence coverage
+- `data/evidence/<theme_id>/audit.json`: full evidence audit report
+- `data/evidence/<theme_id>/manifest.json`: generated file manifest
 
 Once a theme has been run more than once (e.g. after updating its `as_of` date
 and evidence), diff the two most recent runs to see what changed:
@@ -150,7 +176,7 @@ configs/themes_staged/  Theme inputs split into per-stage JSON files.
 knowledge/              Ontology, scoring rules, and methodology packs.
 domains/                Domain-specific knowledge packs.
 prompts/                LLM-assisted stage prompt templates.
-src/                    Pipeline implementation.
+src/                    Pipeline implementation, diff, validation, and evidence audit.
 data/                   Future source snapshots and normalized evidence.
 runs/                   Generated run artifacts.
 reports/                Curated report outputs.

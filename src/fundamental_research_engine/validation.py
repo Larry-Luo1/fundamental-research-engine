@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .stages import SCORECARD_FIELDS
+
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 _REQUIRED_TOP_LEVEL: dict[str, type] = {
@@ -72,6 +74,17 @@ def _validate_evidence(items: Any, errors: list[str]) -> set[str]:
         date = item.get("date")
         if isinstance(date, str) and not _DATE_RE.match(date):
             errors.append(f"{prefix}.date: '{date}' is not in YYYY-MM-DD format")
+        if "url" in item:
+            _check_type(item["url"], str, f"{prefix}.url", errors)
+        reliability = item.get("reliability")
+        if isinstance(reliability, str) and reliability not in {"high", "medium", "low"}:
+            errors.append(f"{prefix}.reliability: unknown value '{reliability}'")
+        if "claims" in item and not isinstance(item["claims"], list):
+            errors.append(f"{prefix}.claims: expected list")
+        elif isinstance(item.get("claims"), list):
+            for claim_index, claim in enumerate(item["claims"]):
+                if not isinstance(claim, str):
+                    errors.append(f"{prefix}.claims[{claim_index}]: expected str, got {type(claim).__name__}")
     return ids
 
 
@@ -84,29 +97,60 @@ def _validate_evidence_ids(owner_prefix: str, evidence_ids: Any, known_ids: set[
             errors.append(f"{owner_prefix}.evidence_ids: unknown evidence id '{eid}'")
 
 
+def _validate_optional_id(item: dict[str, Any], prefix: str, errors: list[str]) -> None:
+    if "id" in item:
+        _check_type(item["id"], str, f"{prefix}.id", errors)
+
+
+def _validate_unique_ids(items: Any, prefix: str, errors: list[str]) -> None:
+    if not isinstance(items, list):
+        return
+    seen: set[str] = set()
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            continue
+        item_id = item.get("id")
+        if not isinstance(item_id, str):
+            continue
+        if item_id in seen:
+            errors.append(f"{prefix}[{index}].id: duplicate id '{item_id}'")
+        seen.add(item_id)
+
+
 def _validate_bottlenecks(items: Any, ontology: dict[str, Any], known_evidence_ids: set[str], errors: list[str]) -> None:
     if not isinstance(items, list):
         errors.append("bottlenecks: expected list")
         return
     if not items:
         errors.append("bottlenecks: at least one bottleneck is required")
+    _validate_unique_ids(items, "bottlenecks", errors)
     bottleneck_types = set(ontology.get("bottleneck_types", []))
     for index, item in enumerate(items):
         prefix = f"bottlenecks[{index}]"
         if not isinstance(item, dict):
             errors.append(f"{prefix}: expected object")
             continue
+        _validate_optional_id(item, prefix, errors)
         _check_required_fields(
             item,
-            {"name": str, "technical_reason": str, "scorecard": dict},
+            {"name": str, "types": list, "technical_reason": str, "scorecard": dict, "evidence_ids": list},
             prefix,
             errors,
         )
-        for type_name in item.get("types", []):
-            if type_name not in bottleneck_types:
-                errors.append(f"{prefix}.types: unknown bottleneck type '{type_name}'")
+        if isinstance(item.get("types"), list):
+            for type_index, type_name in enumerate(item.get("types", [])):
+                if not isinstance(type_name, str):
+                    errors.append(f"{prefix}.types[{type_index}]: expected str, got {type(type_name).__name__}")
+                elif type_name not in bottleneck_types:
+                    errors.append(f"{prefix}.types: unknown bottleneck type '{type_name}'")
         scorecard = item.get("scorecard", {})
         if isinstance(scorecard, dict):
+            missing = sorted(set(SCORECARD_FIELDS) - set(scorecard))
+            unexpected = sorted(set(scorecard) - set(SCORECARD_FIELDS))
+            for key in missing:
+                errors.append(f"{prefix}.scorecard.{key}: missing")
+            for key in unexpected:
+                errors.append(f"{prefix}.scorecard.{key}: unexpected dimension")
             for key, value in scorecard.items():
                 if not isinstance(value, (int, float)) or isinstance(value, bool):
                     errors.append(f"{prefix}.scorecard.{key}: expected numeric value")
@@ -119,54 +163,68 @@ def _validate_segments(items: Any, ontology: dict[str, Any], errors: list[str]) 
     if not isinstance(items, list):
         errors.append("segments: expected list")
         return
+    _validate_unique_ids(items, "segments", errors)
     beneficiary_layers = set(ontology.get("beneficiary_layers", []))
     for index, item in enumerate(items):
         prefix = f"segments[{index}]"
         if not isinstance(item, dict):
             errors.append(f"{prefix}: expected object")
             continue
+        _validate_optional_id(item, prefix, errors)
         _check_required_fields(
             item,
-            {"name": str, "layer": str, "role": str, "beneficiary_class": str},
+            {"name": str, "layer": str, "role": str, "beneficiary_class": str, "representative_companies": list},
             prefix,
             errors,
         )
         beneficiary_class = item.get("beneficiary_class")
         if isinstance(beneficiary_class, str) and beneficiary_class not in beneficiary_layers:
             errors.append(f"{prefix}.beneficiary_class: unknown value '{beneficiary_class}'")
+        if isinstance(item.get("representative_companies"), list):
+            for company_index, company in enumerate(item["representative_companies"]):
+                if not isinstance(company, str):
+                    errors.append(f"{prefix}.representative_companies[{company_index}]: expected str, got {type(company).__name__}")
 
 
 def _validate_profit_pools(items: Any, ontology: dict[str, Any], errors: list[str]) -> None:
     if not isinstance(items, list):
         errors.append("profit_pools: expected list")
         return
+    _validate_unique_ids(items, "profit_pools", errors)
     capture_qualities = set(ontology.get("capture_qualities", []))
     for index, item in enumerate(items):
         prefix = f"profit_pools[{index}]"
         if not isinstance(item, dict):
             errors.append(f"{prefix}: expected object")
             continue
+        _validate_optional_id(item, prefix, errors)
         _check_required_fields(
             item,
-            {"name": str, "rationale": str, "capture_quality": str},
+            {"name": str, "rationale": str, "capture_quality": str, "beneficiaries": list},
             prefix,
             errors,
         )
         capture_quality = item.get("capture_quality")
         if capture_qualities and isinstance(capture_quality, str) and capture_quality not in capture_qualities:
             errors.append(f"{prefix}.capture_quality: unknown value '{capture_quality}'")
+        if isinstance(item.get("beneficiaries"), list):
+            for beneficiary_index, beneficiary in enumerate(item["beneficiaries"]):
+                if not isinstance(beneficiary, str):
+                    errors.append(f"{prefix}.beneficiaries[{beneficiary_index}]: expected str, got {type(beneficiary).__name__}")
 
 
 def _validate_companies(items: Any, ontology: dict[str, Any], known_evidence_ids: set[str], errors: list[str]) -> None:
     if not isinstance(items, list):
         errors.append("companies: expected list")
         return
+    _validate_unique_ids(items, "companies", errors)
     positioning_labels = set(ontology.get("company_positioning_labels", []))
     for index, item in enumerate(items):
         prefix = f"companies[{index}]"
         if not isinstance(item, dict):
             errors.append(f"{prefix}: expected object")
             continue
+        _validate_optional_id(item, prefix, errors)
         _check_required_fields(
             item,
             {
@@ -175,6 +233,9 @@ def _validate_companies(items: Any, ontology: dict[str, Any], known_evidence_ids
                 "stack_position": str,
                 "positioning_label": str,
                 "exposure_quality": str,
+                "moat": list,
+                "risks": list,
+                "evidence_ids": list,
             },
             prefix,
             errors,
@@ -182,6 +243,11 @@ def _validate_companies(items: Any, ontology: dict[str, Any], known_evidence_ids
         label = item.get("positioning_label")
         if isinstance(label, str) and label not in positioning_labels:
             errors.append(f"{prefix}.positioning_label: unknown value '{label}'")
+        for field in ["moat", "risks"]:
+            if isinstance(item.get(field), list):
+                for value_index, value in enumerate(item[field]):
+                    if not isinstance(value, str):
+                        errors.append(f"{prefix}.{field}[{value_index}]: expected str, got {type(value).__name__}")
         _validate_evidence_ids(prefix, item.get("evidence_ids", []), known_evidence_ids, errors)
 
 
@@ -189,12 +255,19 @@ def _validate_scenarios(items: Any, errors: list[str]) -> None:
     if not isinstance(items, list):
         errors.append("scenarios: expected list")
         return
+    _validate_unique_ids(items, "scenarios", errors)
     for index, item in enumerate(items):
         prefix = f"scenarios[{index}]"
         if not isinstance(item, dict):
             errors.append(f"{prefix}: expected object")
             continue
-        _check_required_fields(item, {"name": str, "description": str}, prefix, errors)
+        _validate_optional_id(item, prefix, errors)
+        _check_required_fields(item, {"name": str, "description": str, "implications": list, "triggers": list}, prefix, errors)
+        for field in ["implications", "triggers"]:
+            if isinstance(item.get(field), list):
+                for value_index, value in enumerate(item[field]):
+                    if not isinstance(value, str):
+                        errors.append(f"{prefix}.{field}[{value_index}]: expected str, got {type(value).__name__}")
 
 
 def validate_theme_dict(data: dict[str, Any], ontology: dict[str, Any]) -> list[str]:
@@ -225,6 +298,11 @@ def validate_theme_dict(data: dict[str, Any], ontology: dict[str, Any]) -> list[
     for field in _LIST_FIELDS:
         if field in data and not isinstance(data[field], list):
             errors.append(f"theme.{field}: expected list")
+    for field in ["drivers", "counter_theses", "tracking_signals"]:
+        if isinstance(data.get(field), list):
+            for index, value in enumerate(data[field]):
+                if not isinstance(value, str):
+                    errors.append(f"theme.{field}[{index}]: expected str, got {type(value).__name__}")
 
     known_evidence_ids = _validate_evidence(data.get("evidence", []), errors)
     _validate_bottlenecks(data.get("bottlenecks", []), ontology, known_evidence_ids, errors)

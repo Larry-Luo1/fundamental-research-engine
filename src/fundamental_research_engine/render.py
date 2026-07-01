@@ -16,6 +16,36 @@ def _table(headers: list[str], rows: list[list[str]]) -> str:
     return "\n".join([header_line, separator, *row_lines])
 
 
+def _render_evidence_audit(analysis: dict[str, Any]) -> list[str]:
+    audit = analysis.get("evidence_audit")
+    if not audit:
+        return []
+
+    inventory = audit["inventory"]
+    summary = audit["summary"]
+    rows = [
+        [
+            item["owner_type"],
+            item["owner_name"],
+            item["status"],
+            f'{item["coverage_score"]:.2f}',
+            str(item["evidence_count"]),
+            str(item["claim_count"]),
+        ]
+        for item in audit["coverage"]
+    ]
+    return [
+        "## Evidence Audit",
+        "",
+        f"- Evidence items: `{inventory['evidence_count']}`",
+        f"- Evidence claims: `{inventory['claim_count']}`",
+        f"- Average owner coverage score: `{summary['average_coverage_score']:.2f}`",
+        "",
+        _table(["Owner type", "Owner", "Status", "Coverage", "Evidence", "Claims"], rows),
+        "",
+    ]
+
+
 def render_memo(analysis: dict[str, Any]) -> str:
     theme = analysis["theme"]
     bottleneck_rows = [
@@ -135,6 +165,7 @@ def render_memo(analysis: dict[str, Any]) -> str:
             "",
             "\n".join(evidence_lines) if evidence_lines else "- None stated",
             "",
+            *_render_evidence_audit(analysis),
         ]
     )
 
@@ -158,20 +189,34 @@ def _render_string_diff_section(title: str, section: dict[str, Any]) -> list[str
 def _render_keyed_diff_section(title: str, key: str, section: dict[str, Any]) -> list[str]:
     lines = [f"## {title}", ""]
     added, removed, changed = section["added"], section["removed"], section["changed"]
+    key = section.get("key", key)
+    display_field = section.get("display_field", key)
+
+    def label(item: dict[str, Any]) -> str:
+        display_value = str(item.get(display_field) or item.get(key))
+        key_value = item.get(key)
+        if display_field != key and key_value:
+            return f"{display_value} [{key_value}]"
+        return display_value
+
     if not added and not removed and not changed:
         lines.append("- No changes.")
         lines.append("")
         return lines
     if added:
         lines.append("**Added:**")
-        lines.extend(f"- {item[key]}" for item in added)
+        lines.extend(f"- {label(item)}" for item in added)
     if removed:
         lines.append("**Removed:**")
-        lines.extend(f"- {item[key]}" for item in removed)
+        lines.extend(f"- {label(item)}" for item in removed)
     if changed:
         lines.append("**Changed:**")
         for item in changed:
-            lines.append(f"- {item[key]}:")
+            display_name = item.get("display_name", item[key])
+            if section.get("display_field") != key:
+                lines.append(f"- {display_name} [{item[key]}]:")
+            else:
+                lines.append(f"- {display_name}:")
             for change in item["changes"]:
                 lines.append(f'  - {change["field"]}: `{change["from"]}` -> `{change["to"]}`')
     lines.append("")

@@ -26,12 +26,16 @@ Return a single JSON object with exactly these fields: {{SCHEMA_FIELDS}}
 
 `segments` is a list of objects, each with:
 
+- `id`: stable kebab-case identifier for this segment; keep it unchanged
+  across reruns even if the display name changes.
 - `name`, `layer` (a short slug for this part of the chain), `role` (1
   sentence), `beneficiary_class` (one of `beneficiary_layers` in the ontology
   below), `representative_companies` (list of company names).
 
 `profit_pools` is a list of objects, each with:
 
+- `id`: stable kebab-case identifier for this profit pool; keep it unchanged
+  across reruns even if the display name changes.
 - `name`, `rationale` (why value concentrates here), `capture_quality` (one
   of `capture_qualities` in the ontology below), `beneficiaries` (list of
   company or segment names).

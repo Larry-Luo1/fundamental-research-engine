@@ -8,6 +8,7 @@ from .models import Bottleneck
 
 @dataclass(frozen=True)
 class BottleneckScore:
+    id: str
     name: str
     score: float
     rating: str
@@ -44,6 +45,7 @@ def score_bottleneck(bottleneck: Bottleneck, rules: dict[str, Any]) -> Bottlenec
     # Keep the score on the same 0-5 scale while letting major bypass/supply risks matter.
     score = max(0.0, min(5.0, positive_score - risk_penalty * 0.35))
     return BottleneckScore(
+        id=bottleneck.id,
         name=bottleneck.name,
         score=round(score, 2),
         rating=_rating(score, rules),

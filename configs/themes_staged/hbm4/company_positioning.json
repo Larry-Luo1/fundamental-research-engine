@@ -5,6 +5,7 @@
         "E2"
       ],
       "exposure_quality": "direct revenue and mix upgrade",
+      "id": "co-sk-hynix",
       "moat": [
         "customer qualification",
         "stacking yield learning",
@@ -25,6 +26,7 @@
         "E4"
       ],
       "exposure_quality": "direct revenue and mix upgrade",
+      "id": "co-micron",
       "moat": [
         "power/performance positioning",
         "advanced DRAM manufacturing",
@@ -45,6 +47,7 @@
         "E3"
       ],
       "exposure_quality": "capacity leverage",
+      "id": "co-tsmc",
       "moat": [
         "advanced packaging ecosystem",
         "accelerator customer concentration",

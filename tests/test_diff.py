@@ -26,6 +26,7 @@ def _base_analysis() -> dict:
         },
         "bottleneck_scores": [
             {
+                "id": "bn-b1",
                 "name": "B1",
                 "score": 3.0,
                 "rating": "clear",
@@ -36,6 +37,7 @@ def _base_analysis() -> dict:
         ],
         "segments": [
             {
+                "id": "seg-s1",
                 "name": "S1",
                 "layer": "l",
                 "role": "r",
@@ -44,10 +46,11 @@ def _base_analysis() -> dict:
             }
         ],
         "profit_pools": [
-            {"name": "P1", "rationale": "r1", "capture_quality": "high", "beneficiaries": []}
+            {"id": "pool-p1", "name": "P1", "rationale": "r1", "capture_quality": "high", "beneficiaries": []}
         ],
         "companies": [
             {
+                "id": "co-c1",
                 "name": "C1",
                 "product": "p",
                 "stack_position": "s",
@@ -58,7 +61,7 @@ def _base_analysis() -> dict:
                 "evidence_ids": [],
             }
         ],
-        "scenarios": [{"name": "bull", "description": "d", "implications": [], "triggers": []}],
+        "scenarios": [{"id": "scn-bull", "name": "bull", "description": "d", "implications": [], "triggers": []}],
         "evidence": [
             {
                 "id": "E1",
@@ -106,9 +109,25 @@ class DiffTest(unittest.TestCase):
 
         changed = report["bottleneck_scores"]["changed"]
         self.assertEqual(len(changed), 1)
-        self.assertEqual(changed[0]["name"], "B1")
+        self.assertEqual(changed[0]["id"], "bn-b1")
         changed_fields = {change["field"] for change in changed[0]["changes"]}
         self.assertEqual(changed_fields, {"score", "rating"})
+
+    def test_stable_id_treats_rename_as_change(self) -> None:
+        old = _base_analysis()
+        new = copy.deepcopy(old)
+        new["companies"][0]["name"] = "C1 renamed"
+
+        report = diff_analysis(old, new)
+
+        self.assertEqual(report["companies"]["added"], [])
+        self.assertEqual(report["companies"]["removed"], [])
+        changed = report["companies"]["changed"]
+        self.assertEqual(len(changed), 1)
+        self.assertEqual(changed[0]["id"], "co-c1")
+        self.assertEqual(changed[0]["display_name"], "C1 renamed")
+        self.assertEqual(changed[0]["previous_display_name"], "C1")
+        self.assertEqual(changed[0]["changes"][0]["field"], "name")
 
     def test_added_evidence(self) -> None:
         old = _base_analysis()
@@ -138,7 +157,7 @@ class DiffTest(unittest.TestCase):
 
         report = diff_analysis(old, new)
 
-        self.assertEqual([item["name"] for item in report["scenarios"]["removed"]], ["bull"])
+        self.assertEqual([item["id"] for item in report["scenarios"]["removed"]], ["scn-bull"])
 
     def test_tracking_signal_and_counter_thesis_diff(self) -> None:
         old = _base_analysis()

@@ -26,6 +26,8 @@ Return a single JSON object with exactly this field: {{SCHEMA_FIELDS}}
 
 `companies` is a list of objects, each with:
 
+- `id`: stable kebab-case identifier for this company/exposure; keep it
+  unchanged across reruns even if the display name changes.
 - `name`, `product`, `stack_position`, `positioning_label` (one of
   `company_positioning_labels` in the ontology below), `exposure_quality`
   (short phrase), `moat` (list of strings), `risks` (list of strings),

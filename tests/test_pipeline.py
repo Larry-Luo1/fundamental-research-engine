@@ -43,8 +43,14 @@ class PipelineTest(unittest.TestCase):
 
             analysis = json.loads(analysis_path.read_text(encoding="utf-8"))
             self.assertEqual(analysis["theme"]["id"], "hbm4")
+            self.assertEqual(analysis["bottleneck_scores"][0]["id"], "bn-hbm4-capacity-and-qualification")
+            self.assertEqual(analysis["companies"][0]["id"], "co-sk-hynix")
+            self.assertEqual(analysis["evidence_audit"]["inventory"]["evidence_count"], 4)
+            self.assertTrue(analysis["evidence_audit"]["coverage"])
             self.assertIn(analysis["bottleneck_scores"][0]["rating"], {"strong", "critical"})
-            self.assertIn("HBM4", memo_path.read_text(encoding="utf-8"))
+            memo = memo_path.read_text(encoding="utf-8")
+            self.assertIn("HBM4", memo)
+            self.assertIn("Evidence Audit", memo)
 
     def test_run_pipeline_rejects_invalid_theme(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

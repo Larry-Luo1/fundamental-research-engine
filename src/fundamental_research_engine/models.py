@@ -17,6 +17,7 @@ class Evidence:
 
 @dataclass(frozen=True)
 class Bottleneck:
+    id: str
     name: str
     types: list[str]
     technical_reason: str
@@ -26,6 +27,7 @@ class Bottleneck:
 
 @dataclass(frozen=True)
 class Segment:
+    id: str
     name: str
     layer: str
     role: str
@@ -35,6 +37,7 @@ class Segment:
 
 @dataclass(frozen=True)
 class ProfitPool:
+    id: str
     name: str
     rationale: str
     capture_quality: str
@@ -43,6 +46,7 @@ class ProfitPool:
 
 @dataclass(frozen=True)
 class CompanyPosition:
+    id: str
     name: str
     product: str
     stack_position: str
@@ -55,6 +59,7 @@ class CompanyPosition:
 
 @dataclass(frozen=True)
 class Scenario:
+    id: str
     name: str
     description: str
     implications: list[str] = field(default_factory=list)
@@ -98,6 +103,7 @@ def evidence_from_dict(data: dict[str, Any]) -> Evidence:
 
 def bottleneck_from_dict(data: dict[str, Any]) -> Bottleneck:
     return Bottleneck(
+        id=str(data.get("id", data["name"])),
         name=str(data["name"]),
         types=[str(item) for item in data.get("types", [])],
         technical_reason=str(data["technical_reason"]),
@@ -108,6 +114,7 @@ def bottleneck_from_dict(data: dict[str, Any]) -> Bottleneck:
 
 def segment_from_dict(data: dict[str, Any]) -> Segment:
     return Segment(
+        id=str(data.get("id", data["name"])),
         name=str(data["name"]),
         layer=str(data["layer"]),
         role=str(data["role"]),
@@ -118,6 +125,7 @@ def segment_from_dict(data: dict[str, Any]) -> Segment:
 
 def profit_pool_from_dict(data: dict[str, Any]) -> ProfitPool:
     return ProfitPool(
+        id=str(data.get("id", data["name"])),
         name=str(data["name"]),
         rationale=str(data["rationale"]),
         capture_quality=str(data["capture_quality"]),
@@ -127,6 +135,7 @@ def profit_pool_from_dict(data: dict[str, Any]) -> ProfitPool:
 
 def company_from_dict(data: dict[str, Any]) -> CompanyPosition:
     return CompanyPosition(
+        id=str(data.get("id", data["name"])),
         name=str(data["name"]),
         product=str(data["product"]),
         stack_position=str(data["stack_position"]),
@@ -140,6 +149,7 @@ def company_from_dict(data: dict[str, Any]) -> CompanyPosition:
 
 def scenario_from_dict(data: dict[str, Any]) -> Scenario:
     return Scenario(
+        id=str(data.get("id", data["name"])),
         name=str(data["name"]),
         description=str(data["description"]),
         implications=[str(item) for item in data.get("implications", [])],
