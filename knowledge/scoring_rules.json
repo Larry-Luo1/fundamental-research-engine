@@ -1,0 +1,45 @@
+{
+  "version": "0.1",
+  "scale": {
+    "min": 0,
+    "max": 5,
+    "meaning": {
+      "0": "not present",
+      "1": "weak",
+      "2": "watch",
+      "3": "clear",
+      "4": "strong",
+      "5": "critical"
+    }
+  },
+  "positive_dimensions": {
+    "demand_growth_speed": 1.2,
+    "capacity_expansion_difficulty": 1.2,
+    "technology_substitution_difficulty": 1.0,
+    "yield_material_equipment_constraint": 1.0,
+    "customer_qualification_lock_in": 0.9,
+    "supplier_pricing_power": 0.9
+  },
+  "negative_dimensions": {
+    "rapid_supply_release_risk": 1.0,
+    "architecture_bypass_risk": 1.0
+  },
+  "ratings": [
+    {
+      "label": "critical",
+      "min_score": 4.1
+    },
+    {
+      "label": "strong",
+      "min_score": 3.2
+    },
+    {
+      "label": "watch",
+      "min_score": 2.2
+    },
+    {
+      "label": "weak",
+      "min_score": 0
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+from __future__ import annotations
+
+from dataclasses import asdict
+from datetime import date
+from pathlib import Path
+from typing import Any
+
+from .io import load_theme, read_json, write_json, write_text
+from .models import Theme
+from .render import render_memo
+from .scoring import score_bottleneck
+
+
+def default_rules_path(project_root: Path) -> Path:
+    return project_root / "knowledge" / "scoring_rules.json"
+
+
+def default_run_dir(project_root: Path, theme: Theme) -> Path:
+    safe_id = theme.id.replace("/", "-").replace(" ", "-")
+    return project_root / "runs" / f"{theme.as_of}-{safe_id}"
+
+
+def build_analysis(theme: Theme, rules: dict[str, Any]) -> dict[str, Any]:
+    evidence_by_id = {item.id: item for item in theme.evidence}
+    bottleneck_scores = [score_bottleneck(item, rules) for item in theme.bottlenecks]
+
+    return {
+        "generated_on": date.today().isoformat(),
+        "theme": {
+            "id": theme.id,
+            "title": theme.title,
+            "as_of": theme.as_of,
+            "core_question": theme.core_question,
+            "thesis": theme.thesis,
+            "hype_stage": theme.hype_stage,
+            "technology_readiness_level": theme.technology_readiness_level,
+            "workload_drivers": theme.workload_drivers,
+        },
+        "bottleneck_scores": [asdict(item) for item in bottleneck_scores],
+        "segments": [asdict(item) for item in theme.segments],
+        "companies": [asdict(item) for item in theme.companies],
+        "evidence": [asdict(item) for item in theme.evidence],
+        "evidence_coverage": {
+            item.name: [evidence_by_id[eid].title for eid in item.evidence_ids if eid in evidence_by_id]
+            for item in [*theme.bottlenecks, *theme.companies]
+        },
+        "counter_theses": theme.counter_theses,
+        "tracking_signals": theme.tracking_signals,
+    }
+
+
+def run_pipeline(theme_path: Path, project_root: Path, out_dir: Path | None = None) -> Path:
+    theme = load_theme(theme_path)
+    rules = read_json(default_rules_path(project_root))
+    analysis = build_analysis(theme, rules)
+    output_dir = out_dir or default_run_dir(project_root, theme)
+    write_json(output_dir / "analysis.json", analysis)
+    write_text(output_dir / "memo.md", render_memo(analysis))
+    return output_dir

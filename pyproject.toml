@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=69,<81"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fundamental-research-engine"
+version = "0.1.0"
+description = "Reusable pipeline for industry, theme, and technology-trend fundamental analysis."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+fre = "fundamental_research_engine.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

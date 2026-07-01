@@ -1,0 +1,117 @@
+{
+  "id": "cowos",
+  "title": "CoWoS and Advanced Packaging Bottleneck",
+  "as_of": "2026-07-01",
+  "core_question": "Does advanced packaging remain a structural AI bottleneck after the initial GPU shortage phase?",
+  "thesis": "Advanced packaging remains a structural AI bottleneck because high-end accelerators increasingly depend on close integration of compute die, HBM stacks, interposers, substrates, and high-speed package interconnect. The bottleneck can migrate from foundry packaging slots to tools, substrates, inspection, and thermal/mechanical integration.",
+  "hype_stage": "productivity",
+  "technology_readiness_level": 8,
+  "workload_drivers": [
+    "Larger accelerator packages increase HBM attach and interposer area.",
+    "Chiplet architectures require dense package-level interconnect.",
+    "Training and inference clusters require higher performance per package and per watt.",
+    "HBM growth couples memory bottlenecks to package capacity."
+  ],
+  "bottlenecks": [
+    {
+      "name": "2.5D advanced packaging capacity",
+      "types": ["capacity", "yield", "equipment", "materials"],
+      "technical_reason": "AI accelerators require advanced integration that depends on constrained packaging capacity, substrates, interposers, bonding, inspection, and yield learning.",
+      "scorecard": {
+        "demand_growth_speed": 5,
+        "capacity_expansion_difficulty": 5,
+        "technology_substitution_difficulty": 4,
+        "yield_material_equipment_constraint": 4,
+        "customer_qualification_lock_in": 4,
+        "supplier_pricing_power": 4,
+        "rapid_supply_release_risk": 2,
+        "architecture_bypass_risk": 2
+      },
+      "evidence_ids": ["E1", "E2"]
+    }
+  ],
+  "segments": [
+    {
+      "name": "Foundry advanced packaging",
+      "layer": "foundry_packaging",
+      "role": "Provide CoWoS-like integration for accelerators, HBM, and chiplets.",
+      "beneficiary_class": "first-order",
+      "representative_companies": ["TSMC", "Samsung", "Intel Foundry"]
+    },
+    {
+      "name": "OSAT and assembly",
+      "layer": "packaging_integration",
+      "role": "Support assembly, test, and packaging expansion outside leading foundries.",
+      "beneficiary_class": "second-order",
+      "representative_companies": ["ASE", "Amkor"]
+    },
+    {
+      "name": "Substrates and interposers",
+      "layer": "materials",
+      "role": "Provide physical package foundations and signal routing.",
+      "beneficiary_class": "enabler",
+      "representative_companies": ["ABF substrate suppliers", "silicon interposer suppliers", "glass substrate ecosystem"]
+    },
+    {
+      "name": "Packaging equipment and inspection",
+      "layer": "equipment",
+      "role": "Enable capacity expansion and yield control for advanced packages.",
+      "beneficiary_class": "enabler",
+      "representative_companies": ["Applied Materials", "Lam Research", "KLA", "DISCO"]
+    }
+  ],
+  "companies": [
+    {
+      "name": "TSMC",
+      "product": "CoWoS advanced packaging",
+      "stack_position": "foundry_packaging",
+      "positioning_label": "core bottleneck owner",
+      "exposure_quality": "direct revenue and capacity leverage",
+      "moat": ["leading accelerator customer base", "advanced-node and packaging integration", "ecosystem scale"],
+      "risks": ["capacity catch-up", "customer push for alternatives", "geographic concentration"],
+      "evidence_ids": ["E1", "E2"]
+    },
+    {
+      "name": "ASE",
+      "product": "advanced packaging and assembly services",
+      "stack_position": "packaging_integration",
+      "positioning_label": "capacity enabler",
+      "exposure_quality": "capacity leverage",
+      "moat": ["OSAT scale", "assembly know-how", "customer relationships"],
+      "risks": ["less direct exposure to leading-edge AI packages", "pricing pressure"],
+      "evidence_ids": ["E2"]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "title": "TrendForce discusses AI-driven advanced packaging constraints",
+      "source_type": "industry_research",
+      "date": "2026-04-30",
+      "url": "https://www.trendforce.com/presscenter/news/20260430-13028.html",
+      "reliability": "medium",
+      "claims": ["AI demand has created pressure on advanced process nodes and 2.5D/3D packaging."]
+    },
+    {
+      "id": "E2",
+      "title": "NVIDIA first quarter fiscal 2027 results",
+      "source_type": "company_disclosure",
+      "date": "2026-05-27",
+      "url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-first-quarter-fiscal-2027",
+      "reliability": "high",
+      "claims": ["AI accelerator and networking demand implies continued pressure on package-level integration capacity."]
+    }
+  ],
+  "counter_theses": [
+    "Capacity additions could shift the bottleneck away from CoWoS to downstream deployment.",
+    "Alternative package architectures could reduce dependence on one packaging flow.",
+    "Customer bargaining power could limit margin expansion for enablers."
+  ],
+  "tracking_signals": [
+    "Foundry advanced packaging capex and capacity targets.",
+    "Lead-time commentary for CoWoS-like packaging.",
+    "ABF substrate and interposer supply conditions.",
+    "Packaging equipment order trends.",
+    "Accelerator package roadmap and HBM stack count."
+  ]
+}

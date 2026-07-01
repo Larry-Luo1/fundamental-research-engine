@@ -1,0 +1,128 @@
+{
+  "id": "ai-liquid-cooling",
+  "title": "AI Data-Center Liquid Cooling and Power Bottleneck",
+  "as_of": "2026-07-01",
+  "core_question": "Is liquid cooling and power infrastructure a durable AI bottleneck or only a short-term capex beneficiary?",
+  "thesis": "Liquid cooling and power infrastructure should be treated as a durable second-wave AI bottleneck because rack power density and site-level electricity constraints increasingly determine how fast AI capacity can be deployed. The strongest value capture is likely in qualified power, thermal, and electrical infrastructure suppliers rather than generic construction exposure.",
+  "hype_stage": "enlightenment",
+  "technology_readiness_level": 8,
+  "workload_drivers": [
+    "Higher accelerator power increases rack thermal density.",
+    "Large AI clusters need reliable power distribution and cooling at building scale.",
+    "Data-center electricity demand is becoming a deployment constraint.",
+    "Liquid cooling adoption rises as air cooling becomes insufficient for high-power racks."
+  ],
+  "bottlenecks": [
+    {
+      "name": "High-density power and liquid-cooling deployment",
+      "types": ["power", "engineering_delivery", "qualification", "capacity"],
+      "technical_reason": "AI data centers require site power, transformers, switchgear, UPS, rack power distribution, CDUs, cold plates, and operational know-how that cannot be deployed instantly.",
+      "scorecard": {
+        "demand_growth_speed": 5,
+        "capacity_expansion_difficulty": 4,
+        "technology_substitution_difficulty": 3,
+        "yield_material_equipment_constraint": 3,
+        "customer_qualification_lock_in": 4,
+        "supplier_pricing_power": 3,
+        "rapid_supply_release_risk": 2,
+        "architecture_bypass_risk": 2
+      },
+      "evidence_ids": ["E1", "E2", "E3", "E4"]
+    }
+  ],
+  "segments": [
+    {
+      "name": "Thermal management",
+      "layer": "cooling",
+      "role": "Remove heat from high-density AI racks through CDU, cold plate, and facility cooling systems.",
+      "beneficiary_class": "first-order",
+      "representative_companies": ["Vertiv", "Schneider Electric", "nVent"]
+    },
+    {
+      "name": "Electrical infrastructure",
+      "layer": "power",
+      "role": "Provide switchgear, UPS, transformers, and power distribution for AI data centers.",
+      "beneficiary_class": "first-order",
+      "representative_companies": ["Eaton", "Schneider Electric", "Siemens Energy", "GE Vernova"]
+    },
+    {
+      "name": "Data-center operators",
+      "layer": "downstream_infrastructure",
+      "role": "Secure sites, power interconnects, and customer capacity commitments.",
+      "beneficiary_class": "second-order",
+      "representative_companies": ["Equinix", "Digital Realty", "cloud hyperscalers"]
+    }
+  ],
+  "companies": [
+    {
+      "name": "Vertiv",
+      "product": "thermal and power infrastructure for data centers",
+      "stack_position": "cooling_power",
+      "positioning_label": "qualified leader",
+      "exposure_quality": "direct revenue and backlog growth",
+      "moat": ["data-center customer qualification", "thermal management portfolio", "service and deployment know-how"],
+      "risks": ["competition", "execution constraints", "data-center capex digestion"],
+      "evidence_ids": ["E2"]
+    },
+    {
+      "name": "Eaton",
+      "product": "electrical equipment for data centers and grid infrastructure",
+      "stack_position": "power",
+      "positioning_label": "capacity enabler",
+      "exposure_quality": "direct revenue and backlog growth",
+      "moat": ["electrical equipment portfolio", "customer qualification", "grid and building infrastructure exposure"],
+      "risks": ["cycle normalization", "supply-chain execution", "valuation sensitivity"],
+      "evidence_ids": ["E3"]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E1",
+      "title": "IEA Energy and AI report",
+      "source_type": "official_report",
+      "date": "2025-04-10",
+      "url": "https://www.iea.org/reports/energy-and-ai/energy-demand-from-ai",
+      "reliability": "high",
+      "claims": ["AI and data centers increase electricity demand and create infrastructure planning constraints."]
+    },
+    {
+      "id": "E2",
+      "title": "Vertiv first quarter 2026 results",
+      "source_type": "company_disclosure",
+      "date": "2026-04-23",
+      "url": "https://investors.vertiv.com/news/news-details/2026/Vertiv-Reports-Strong-First-Quarter-with-Diluted-EPS-Growth-of-136-Adjusted-Diluted-EPS-Growth-of-83-Raises-Full-Year-Guidance/default.aspx",
+      "reliability": "high",
+      "claims": ["Data-center infrastructure demand is driving revenue and earnings growth."]
+    },
+    {
+      "id": "E3",
+      "title": "Eaton first quarter 2026 results",
+      "source_type": "company_disclosure",
+      "date": "2026-05-01",
+      "url": "https://www.eaton.com/us/en-us/company/news-insights/news-releases/2026/eaton-reports-record-first-quarter-2026-results.html",
+      "reliability": "high",
+      "claims": ["Electrical equipment demand and backlog are supported by data-center and electrification trends."]
+    },
+    {
+      "id": "E4",
+      "title": "Meta first quarter 2026 results",
+      "source_type": "company_disclosure",
+      "date": "2026-04-29",
+      "url": "https://investor.atmeta.com/investor-news/press-release-details/2026/Meta-Reports-First-Quarter-2026-Results/default.aspx",
+      "reliability": "high",
+      "claims": ["Hyperscaler capex guidance supports continued AI infrastructure buildout."]
+    }
+  ],
+  "counter_theses": [
+    "Liquid cooling adoption could be slower if accelerator efficiency improves or rack density moderates.",
+    "Power infrastructure may benefit from broad electrification, making AI-specific attribution harder.",
+    "Lead times could normalize as suppliers expand manufacturing capacity."
+  ],
+  "tracking_signals": [
+    "Rack power density roadmaps from accelerator and server vendors.",
+    "Liquid-cooling attach rate for AI servers.",
+    "Data-center electrical equipment backlog and book-to-bill.",
+    "Hyperscaler capex guidance revisions.",
+    "Grid interconnection delays and transformer lead times."
+  ]
+}

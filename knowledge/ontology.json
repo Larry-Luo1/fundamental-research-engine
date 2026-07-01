@@ -1,0 +1,45 @@
+{
+  "version": "0.1",
+  "entities": [
+    "Theme",
+    "Technology",
+    "Workload",
+    "Bottleneck",
+    "SupplyChainSegment",
+    "Company",
+    "Product",
+    "Evidence",
+    "Claim",
+    "Signal",
+    "Thesis",
+    "CounterThesis"
+  ],
+  "company_positioning_labels": [
+    "core bottleneck owner",
+    "qualified leader",
+    "capacity enabler",
+    "capex beneficiary",
+    "architecture option",
+    "theme-only"
+  ],
+  "beneficiary_layers": [
+    "first-order",
+    "second-order",
+    "enabler",
+    "substitute",
+    "risk hedge",
+    "theme-only"
+  ],
+  "bottleneck_types": [
+    "technology",
+    "capacity",
+    "yield",
+    "materials",
+    "equipment",
+    "qualification",
+    "power",
+    "engineering_delivery",
+    "software_ecosystem",
+    "customer_certification"
+  ]
+}
