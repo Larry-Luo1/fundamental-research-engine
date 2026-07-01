@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import hashlib
+import html as html_module
+import re
+import urllib.error
+import urllib.request
+import urllib.robotparser
 from collections import Counter
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
+from urllib.parse import urlparse
 
 from .io import write_json
 from .models import Evidence
@@ -14,6 +21,10 @@ _RELIABILITY_WEIGHTS = {
     "medium": 0.7,
     "low": 0.4,
 }
+
+DEFAULT_FETCH_TIMEOUT_SECONDS = 15.0
+DEFAULT_FETCH_MAX_BYTES = 2_000_000
+DEFAULT_FETCH_USER_AGENT = "fundamental-research-engine-evidence-fetcher/0.1 (+lawful-sources-only)"
 
 
 class EvidenceOwner(Protocol):
@@ -28,6 +39,84 @@ def _reliability_weight(value: str) -> float:
 
 def _round_score(value: float) -> float:
     return round(max(0.0, min(1.0, value)), 2)
+
+
+@dataclass
+class FetchResult:
+    ok: bool
+    status: str  # "fetched" | "skipped_scheme" | "skipped_robots" | "error"
+    content_type: str | None = None
+    text: str | None = None
+    content_sha256: str | None = None
+    http_status: int | None = None
+    fetched_at: str | None = None
+    error: str | None = None
+
+
+Fetcher = Callable[[str], FetchResult]
+
+
+def _strip_html(text: str) -> str:
+    text = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", text)
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    text = html_module.unescape(text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _robots_allowed(url: str, user_agent: str, timeout: float) -> bool:
+    parsed = urlparse(url)
+    robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
+    parser = urllib.robotparser.RobotFileParser()
+    try:
+        request = urllib.request.Request(robots_url, headers={"User-Agent": user_agent})
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            content = response.read().decode("utf-8", "replace")
+        parser.parse(content.splitlines())
+    except Exception:
+        # No robots.txt, or it's unreachable: default to allow, matching standard crawler behavior.
+        return True
+    return parser.can_fetch(user_agent, url)
+
+
+def default_fetch(
+    url: str,
+    timeout: float = DEFAULT_FETCH_TIMEOUT_SECONDS,
+    max_bytes: int = DEFAULT_FETCH_MAX_BYTES,
+    user_agent: str = DEFAULT_FETCH_USER_AGENT,
+) -> FetchResult:
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        return FetchResult(ok=False, status="skipped_scheme", error=f"unsupported scheme '{parsed.scheme}'")
+
+    if not _robots_allowed(url, user_agent, timeout):
+        return FetchResult(ok=False, status="skipped_robots", error="disallowed by robots.txt")
+
+    try:
+        request = urllib.request.Request(url, headers={"User-Agent": user_agent})
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            raw = response.read(max_bytes + 1)
+            content_type = response.headers.get("Content-Type", "")
+            http_status = response.status
+    except urllib.error.HTTPError as exc:
+        return FetchResult(ok=False, status="error", error=f"HTTP {exc.code}", http_status=exc.code)
+    except urllib.error.URLError as exc:
+        return FetchResult(ok=False, status="error", error=str(exc.reason))
+    except TimeoutError:
+        return FetchResult(ok=False, status="error", error="request timed out")
+
+    raw = raw[:max_bytes]
+    decoded = raw.decode("utf-8", "replace")
+    text = _strip_html(decoded) if "html" in content_type else decoded.strip()
+
+    return FetchResult(
+        ok=True,
+        status="fetched",
+        content_type=content_type,
+        text=text,
+        content_sha256=hashlib.sha256(raw).hexdigest(),
+        http_status=http_status,
+        fetched_at=datetime.now(timezone.utc).isoformat(),
+    )
 
 
 def evidence_claims(evidence: list[Evidence]) -> list[dict[str, Any]]:
@@ -206,23 +295,57 @@ def write_evidence_store(
     evidence: list[Evidence],
     owners_by_type: dict[str, list[EvidenceOwner]],
     store_root: Path,
+    fetch_sources: bool = False,
+    fetch: Fetcher = default_fetch,
 ) -> dict[str, str]:
     raw_dir = store_root / "data" / "raw_sources" / theme_id
     normalized_dir = store_root / "data" / "normalized" / theme_id
     evidence_dir = store_root / "data" / "evidence" / theme_id
 
     generated_at = datetime.now(timezone.utc).isoformat()
+    fetch_results: list[dict[str, Any]] = []
     for item in evidence:
-        write_json(
-            raw_dir / f"{item.id}.json",
-            {
-                "theme_id": theme_id,
-                "evidence_id": item.id,
-                "ingested_at": generated_at,
-                "source_snapshot_type": "theme_config_record",
-                "source": asdict(item),
-            },
-        )
+        result = fetch(item.url) if fetch_sources and item.url else None
+        if result and result.ok:
+            write_json(
+                raw_dir / f"{item.id}.json",
+                {
+                    "theme_id": theme_id,
+                    "evidence_id": item.id,
+                    "ingested_at": generated_at,
+                    "source_snapshot_type": "fetched_url",
+                    "url": item.url,
+                    "http_status": result.http_status,
+                    "content_type": result.content_type,
+                    "content_sha256": result.content_sha256,
+                    "fetched_at": result.fetched_at,
+                    "fetched_text": result.text,
+                    "source": asdict(item),
+                },
+            )
+        else:
+            write_json(
+                raw_dir / f"{item.id}.json",
+                {
+                    "theme_id": theme_id,
+                    "evidence_id": item.id,
+                    "ingested_at": generated_at,
+                    "source_snapshot_type": "theme_config_record",
+                    "fetch_attempted": result is not None,
+                    "fetch_status": result.status if result else "not_attempted",
+                    "fetch_error": result.error if result else None,
+                    "source": asdict(item),
+                },
+            )
+        if result is not None:
+            fetch_results.append(
+                {
+                    "evidence_id": item.id,
+                    "url": item.url,
+                    "status": result.status,
+                    "error": result.error,
+                }
+            )
 
     owners_by_evidence = _owner_links(owners_by_type)
     normalized = normalized_evidence_records(theme_id, evidence, owners_by_type)
@@ -238,6 +361,8 @@ def write_evidence_store(
         "audit_path": str(evidence_dir / "audit.json"),
         "evidence_count": len(evidence),
         "claim_count": len(claims),
+        "fetch_attempted": fetch_sources,
+        "fetch_results": fetch_results,
         "linked_evidence_count": sum(1 for item in evidence if item.id in owners_by_evidence),
     }
 

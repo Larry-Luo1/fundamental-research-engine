@@ -343,6 +343,87 @@ evidence, claims, coverage, audit, and manifest files for HBM4. The next step
 is to add source collectors/fetchers that populate `raw_sources` from URLs
 instead of only copying evidence already present in theme configs.
 
+## Multi-Agent Hardening Pass (2026-07-01, Claude)
+
+Reviewed the Codex commit above (`fee46fe`, "Harden research pipeline
+evidence workflow") in full: fast-forward merged cleanly, 68 tests passed,
+all sample themes and the staged HBM4 directory still validated, and a manual
+smoke test of `audit`/`evidence-sync`/`diff`/`fill` confirmed the documented
+behavior. No architectural conflicts with the prior Claude session — direction
+assessed as on track (deterministic core -> structured model output ->
+auditability, in that order, before automation).
+
+Then implemented the agreed next steps, in priority order:
+
+- **CI** (`.github/workflows/ci.yml`): matrix on Python 3.10/3.12, runs the
+  full unit test suite, validates every monolithic sample theme and every
+  staged theme directory, and runs the pipeline end to end on each monolithic
+  sample. This is the safety net two independently-committing agents (Claude
+  and Codex) were missing.
+- **Golden memo snapshot** (`tests/golden/hbm4_memo.md`,
+  `tests/test_golden_memo.py`): regression guard for `render_memo`. Confirmed
+  `memo.md` is fully deterministic run-to-run (no leaked timestamps) before
+  relying on an exact-match test. Regeneration steps are in the test's
+  docstring.
+- **`fre draft`** (`cli.py`): builds on `fre fill`'s per-stage primitive
+  (extracted into `_fill_stage`/`_report_fill_result`) to add a multi-stage
+  orchestrator. Default behavior drafts one stage and stops with a checkpoint
+  message (same as calling `fre fill` once, but auto-runs `validate`+`run`
+  once every stage is present); `--auto` walks every remaining stage
+  unattended (rejects `--model manual`, since manual mode can't proceed
+  without a human) and still auto-finishes at the end. Verified with a fake
+  adapter end to end: 5 stages drafted, `.meta.json` written per stage, memo
+  produced.
+- **`fre critique`** (`prompts/critique.md`, `critique.py`, `cli.py`):
+  standalone adversarial review of one already-drafted stage. A second model
+  call, explicitly told to default to skepticism, flags ungrounded scorecard
+  numbers, strawman counter-theses, unverifiable tracking signals, and
+  inconsistencies with upstream stages. Writes `<stage>.critique.json`
+  (`concerns` with severity/field/issue/suggested_fix, `overall_assessment`,
+  `recommendation`: `accept`/`revise`). Deliberately does not block or modify
+  `fre fill`/`fre draft` output — a human acts on it or doesn't. The shared
+  `_complete_json_with_retry` retry-on-validation-error helper was factored
+  out of `_fill_stage` so `critique` reuses the same JSON-extraction and
+  retry behavior instead of duplicating it.
+- **Real evidence fetching** (`evidence.py`): `default_fetch(url)` is a real,
+  stdlib-only (`urllib`) fetcher — http/https only, checks `robots.txt` via
+  `urllib.robotparser` before fetching (defaults to allow if robots.txt is
+  unreachable, matching standard crawler convention), caps timeout and
+  response size, strips HTML to text with no external dependencies. Wired
+  into `write_evidence_store`/`fre evidence-sync` behind a new
+  `--fetch-sources` flag (default off, so existing behavior and tests are
+  unchanged). Any fetch failure (robots-disallowed, network error, timeout)
+  falls back to the existing config-snapshot behavior for that evidence item
+  rather than failing the whole sync; `manifest.json` records per-item fetch
+  outcomes. Manually verified against real URLs (anthropic.com/robots.txt,
+  api.github.com, example.com, and 3 of 4 real URLs in `configs/themes/hbm4.json`
+  — the 4th timed out and fell back cleanly, exactly as designed). No test
+  depends on live network (only `_strip_html` and the scheme-rejection path,
+  plus `write_evidence_store` with an injected fake fetcher, are unit tested),
+  so CI stays hermetic.
+
+Verification:
+
+```bash
+PYTHONPATH=src python -m unittest discover -s tests
+PYTHONPATH=src python -m fundamental_research_engine validate configs/themes/*.json
+PYTHONPATH=src python -m fundamental_research_engine validate configs/themes_staged/hbm4
+```
+
+Current result: 94 tests pass.
+
+Not done in this pass (deliberately deferred, not forgotten):
+
+- Branch protection / required-status-check settings on the GitHub repo
+  itself were not changed — that's a shared-infrastructure setting, not a
+  code change, and should be confirmed with the repo owner before flipping.
+  The Collaboration Rule below documents the recommended practice in the
+  meantime.
+- No claim-extraction LLM stage yet (turning fetched raw text into structured
+  claims automatically) — `evidence-sync --fetch-sources` only stores the
+  fetched text; a human or a future stage still has to turn it into
+  `evidence[].claims` entries in `scenario_analysis.json`.
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:
@@ -351,3 +432,22 @@ Before ending a meaningful work session:
 2. Update this file with current state and next steps.
 3. Commit and push to `origin/main` unless there is a reason to keep work local.
 4. Mention any known failing tests, unresolved assumptions, or uncommitted local artifacts.
+
+### Multi-agent note
+
+This repository is now being worked on by more than one independent agent
+session (Claude and Codex have both committed directly to `main`). Direct
+pushes to `main` have worked so far because sessions have been sequential,
+not concurrent, but that's luck, not a guarantee. Recommended practice going
+forward, once more than one agent/session might be active around the same
+time:
+
+- Work on a short-lived feature branch per session instead of committing
+  straight to `main`.
+- Before merging, pull `origin/main`, re-run the full test suite and sample
+  validation locally (or let CI do it), and resolve any conflicts by reading
+  both sides rather than blindly taking one.
+- Still fine to skip the branch for a genuinely solo, sequential session (as
+  every session so far has been) — this is a recommendation to reduce risk
+  as concurrency increases, not a hard rule retroactively applied to past
+  work.

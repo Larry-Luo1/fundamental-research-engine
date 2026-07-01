@@ -77,6 +77,22 @@ This writes deterministic local records under `data/`:
 - `data/evidence/<theme_id>/audit.json`: full evidence audit report
 - `data/evidence/<theme_id>/manifest.json`: generated file manifest
 
+By default the raw source snapshot is just a copy of the evidence record
+already in the theme config (`source_snapshot_type: "theme_config_record"`).
+Add `--fetch-sources` to actually fetch each item's `url`:
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine evidence-sync configs/themes/hbm4.json --fetch-sources
+```
+
+Fetching only happens for `http`/`https` URLs, checks `robots.txt` first and
+skips (falling back to the config snapshot) if disallowed, and caps response
+size and timeout. Any fetch failure — blocked by robots.txt, network error,
+timeout — falls back to the config snapshot for that item rather than failing
+the whole sync; `manifest.json`'s `fetch_results` records the outcome (and any
+error) per evidence id, so you can see exactly what was actually retrieved
+versus what's still only a hand-typed claim.
+
 Once a theme has been run more than once (e.g. after updating its `as_of` date
 and evidence), diff the two most recent runs to see what changed:
 
@@ -141,7 +157,50 @@ PYTHONPATH=src python3 -m fundamental_research_engine fill configs/themes_staged
 `fre fill` picks the first stage file missing from the directory unless
 `--stage` is given. Structured JSON stays the source of record: the model
 never writes prose directly into a memo, only one stage's fixed-shape JSON,
-which `fre validate`/`fre run` still check afterward.
+which `fre validate`/`fre run` still check afterward. If the model's response
+isn't clean JSON (e.g. it's wrapped in a markdown fence or has stray prose),
+`fre fill` extracts the JSON object; if the shape is still wrong, it retries
+with the validation errors appended to the prompt, up to `--max-attempts`
+(default 2). Every accepted stage gets a `<stage>.meta.json` audit record
+(model, attempts, prompt/response hashes, timestamp).
+
+`fre draft` builds on `fre fill` to walk multiple stages in one command:
+
+```bash
+# Same as one `fre fill` call, but once every stage is present it also runs
+# validate + run automatically and prints the memo path.
+PYTHONPATH=src python3 -m fundamental_research_engine draft configs/themes_staged/hbm4 \
+  --model claude --model-name claude-sonnet-5
+
+# Unattended: walks every remaining stage back-to-back (no per-stage pause),
+# then validates, runs, and prints the memo path. Requires a real adapter —
+# manual mode can't proceed without a human, so --auto rejects it.
+PYTHONPATH=src python3 -m fundamental_research_engine draft configs/themes_staged/hbm4 \
+  --model claude --model-name claude-sonnet-5 --auto
+```
+
+Without `--auto`, `fre draft` is a checkpointed workflow: it drafts one stage,
+then stops with a message telling you to review it before rerunning `fre
+draft` for the next one. This is deliberate — for research content, a human
+checkpoint after each stage catches problems before they compound into later
+stages, rather than trusting a fully autonomous multi-step run.
+
+To pressure-test an already-drafted stage instead of just accepting it,
+`fre critique` runs a second, adversarial model pass over it:
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine critique configs/themes_staged/hbm4 \
+  --stage bottleneck_diagnosis --model claude --model-name claude-sonnet-5
+```
+
+The critique model is told to default to skepticism — unsupported scorecard
+numbers, strawman counter-theses, vague tracking signals, and inconsistencies
+with the upstream stages are all in scope. It writes `<stage>.critique.json`
+(`concerns` with a severity, the specific field, the issue, and a suggested
+fix; an `overall_assessment`; and a `recommendation` of `accept` or `revise`)
+next to the stage file. This is a standalone check — it never blocks or
+rewrites `fre fill`/`fre draft` output on its own; a human decides whether to
+act on it.
 
 ## Methodology
 

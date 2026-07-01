@@ -43,3 +43,37 @@ def render_stage_prompt(
     for key, value in substitutions.items():
         rendered = rendered.replace(f"{{{{{key}}}}}", value)
     return rendered
+
+
+def render_critique_prompt(
+    stage: str,
+    stage_data: dict[str, Any],
+    prompts_dir: Path,
+    completed_stages: dict[str, dict[str, Any]],
+    ontology: dict[str, Any],
+    methodology: dict[str, Any] | None = None,
+) -> str:
+    if stage not in STAGE_FIELDS:
+        raise ValueError(f"unknown stage '{stage}'")
+
+    template_path = prompts_dir / "critique.md"
+    if not template_path.exists():
+        raise FileNotFoundError(f"no critique template at {template_path}")
+    template = template_path.read_text(encoding="utf-8")
+
+    upstream = {
+        name: completed_stages[name] for name in STAGE_ORDER if name in completed_stages and name != stage
+    }
+
+    substitutions = {
+        "TARGET_STAGE": stage,
+        "TARGET_STAGE_JSON": _json_block(stage_data),
+        "UPSTREAM_CONTEXT_JSON": _json_block(upstream) if upstream else "{}",
+        "ONTOLOGY_JSON": _json_block(ontology),
+        "METHODOLOGY_JSON": _json_block(methodology) if methodology else "null",
+    }
+
+    rendered = template
+    for key, value in substitutions.items():
+        rendered = rendered.replace(f"{{{{{key}}}}}", value)
+    return rendered

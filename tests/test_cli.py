@@ -186,23 +186,118 @@ class EvidenceSyncCliTest(unittest.TestCase):
             self.assertTrue((store_root / "data" / "evidence" / "hbm4" / "manifest.json").exists())
 
 
+def _theme_dir_with_definition_only(hbm4_path: Path, tmp_path: Path) -> Path:
+    theme_dir = tmp_path / "hbm4"
+    assert main(["split", str(hbm4_path), str(theme_dir)]) == 0
+    for stage in [
+        "mechanism_analysis",
+        "bottleneck_diagnosis",
+        "value_chain_map",
+        "company_positioning",
+        "scenario_analysis",
+    ]:
+        (theme_dir / f"{stage}.json").unlink()
+    return theme_dir
+
+
+_DRAFT_STAGE_RESPONSES = {
+    "mechanism_analysis": {
+        "mechanism": "Demo driver increases scarcity, forcing slow capacity expansion and upstream pricing power."
+    },
+    "bottleneck_diagnosis": {
+        "bottlenecks": [
+            {
+                "name": "Demo bottleneck",
+                "types": ["capacity"],
+                "technical_reason": "Capacity cannot expand quickly.",
+                "scorecard": {
+                    "demand_growth_speed": 4,
+                    "capacity_expansion_difficulty": 4,
+                    "technology_substitution_difficulty": 3,
+                    "yield_material_equipment_constraint": 3,
+                    "customer_qualification_lock_in": 3,
+                    "supplier_pricing_power": 4,
+                    "rapid_supply_release_risk": 2,
+                    "architecture_bypass_risk": 1,
+                },
+                "evidence_ids": ["E1"],
+            }
+        ]
+    },
+    "value_chain_map": {
+        "segments": [
+            {
+                "name": "Demo suppliers",
+                "layer": "upstream",
+                "role": "Supply the scarce resource.",
+                "beneficiary_class": "first-order",
+                "representative_companies": ["DemoCo"],
+            }
+        ],
+        "profit_pools": [
+            {
+                "name": "Demo pool",
+                "rationale": "Scarce capacity captures pricing power.",
+                "capture_quality": "high",
+                "beneficiaries": ["DemoCo"],
+            }
+        ],
+    },
+    "company_positioning": {
+        "companies": [
+            {
+                "name": "DemoCo",
+                "product": "Demo widgets",
+                "stack_position": "upstream",
+                "positioning_label": "core bottleneck owner",
+                "exposure_quality": "direct revenue upside",
+                "moat": ["scale"],
+                "risks": ["new entrants"],
+                "evidence_ids": ["E1"],
+            }
+        ]
+    },
+    "scenario_analysis": {
+        "scenarios": [
+            {
+                "name": "bull",
+                "description": "Demand keeps outrunning supply.",
+                "implications": ["pricing power persists"],
+                "triggers": ["sold-out capacity"],
+            }
+        ],
+        "counter_theses": ["Capacity could expand faster than expected."],
+        "tracking_signals": ["watch capacity announcements"],
+        "evidence": [
+            {
+                "id": "E1",
+                "title": "Demo source",
+                "source_type": "industry_research",
+                "date": "2026-06-01",
+                "url": "",
+                "reliability": "medium",
+                "claims": ["demo claim"],
+            }
+        ],
+    },
+}
+
+
+class _FakeStageAdapter:
+    def complete(self, prompt: str) -> str:
+        for stage, payload in _DRAFT_STAGE_RESPONSES.items():
+            if f"# Stage: {stage}" in prompt:
+                return json.dumps(payload)
+        raise AssertionError(f"unexpected prompt (no matching stage marker): {prompt[:200]}")
+
+
 class FillCliTest(unittest.TestCase):
     def setUp(self) -> None:
         self.project_root = Path(__file__).resolve().parents[1]
         self.hbm4_path = self.project_root / "configs" / "themes" / "hbm4.json"
 
     def _theme_dir_with_definition_only(self, tmp_path: Path) -> Path:
-        theme_dir = tmp_path / "hbm4"
-        self.assertEqual(main(["split", str(self.hbm4_path), str(theme_dir)]), 0)
-        for stage in [
-            "mechanism_analysis",
-            "bottleneck_diagnosis",
-            "value_chain_map",
-            "company_positioning",
-            "scenario_analysis",
-        ]:
-            (theme_dir / f"{stage}.json").unlink()
-        return theme_dir
+        return _theme_dir_with_definition_only(self.hbm4_path, tmp_path)
 
     def test_manual_mode_writes_prompt_without_writing_stage_json(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -352,6 +447,240 @@ class FillCliTest(unittest.TestCase):
             exit_code = main(["fill", str(theme_dir), "--project-root", str(self.project_root)])
 
             self.assertEqual(exit_code, 0)
+
+
+class DraftCliTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.project_root = Path(__file__).resolve().parents[1]
+        self.hbm4_path = self.project_root / "configs" / "themes" / "hbm4.json"
+
+    def test_draft_on_complete_stage_dir_runs_the_pipeline(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = Path(tmp) / "hbm4"
+            self.assertEqual(main(["split", str(self.hbm4_path), str(theme_dir)]), 0)
+
+            exit_code = main(["draft", str(theme_dir), "--project-root", str(self.project_root)])
+
+            self.assertEqual(exit_code, 0)
+            run_dir = self.project_root / "runs" / "2026-07-01-hbm4"
+            try:
+                self.assertTrue((run_dir / "memo.md").exists())
+            finally:
+                import shutil
+
+                shutil.rmtree(run_dir, ignore_errors=True)
+
+    def test_default_mode_stops_after_one_stage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = _theme_dir_with_definition_only(self.hbm4_path, Path(tmp))
+
+            exit_code = main(["draft", str(theme_dir), "--project-root", str(self.project_root)])
+
+            self.assertEqual(exit_code, 0)
+            self.assertTrue((theme_dir / "mechanism_analysis.prompt.md").exists())
+            self.assertFalse((theme_dir / "mechanism_analysis.json").exists())
+            self.assertFalse((theme_dir / "bottleneck_diagnosis.json").exists())
+
+    def test_auto_mode_walks_every_remaining_stage_and_finishes_pipeline(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = _theme_dir_with_definition_only(self.hbm4_path, Path(tmp))
+
+            with patch("fundamental_research_engine.cli.get_adapter", return_value=_FakeStageAdapter()):
+                exit_code = main(
+                    [
+                        "draft",
+                        str(theme_dir),
+                        "--model",
+                        "openai",
+                        "--model-name",
+                        "gpt-test",
+                        "--auto",
+                        "--project-root",
+                        str(self.project_root),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            for stage in [
+                "mechanism_analysis",
+                "bottleneck_diagnosis",
+                "value_chain_map",
+                "company_positioning",
+                "scenario_analysis",
+            ]:
+                self.assertTrue((theme_dir / f"{stage}.json").exists())
+                self.assertTrue((theme_dir / f"{stage}.meta.json").exists())
+
+            run_dir = self.project_root / "runs" / "2026-07-01-hbm4"
+            try:
+                self.assertTrue((run_dir / "memo.md").exists())
+            finally:
+                import shutil
+
+                shutil.rmtree(run_dir, ignore_errors=True)
+
+    def test_auto_requires_non_manual_model(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = _theme_dir_with_definition_only(self.hbm4_path, Path(tmp))
+            with self.assertRaises(SystemExit):
+                main(["draft", str(theme_dir), "--auto", "--project-root", str(self.project_root)])
+
+    def test_auto_rejects_explicit_stage(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = _theme_dir_with_definition_only(self.hbm4_path, Path(tmp))
+            with self.assertRaises(SystemExit):
+                main(
+                    [
+                        "draft",
+                        str(theme_dir),
+                        "--auto",
+                        "--stage",
+                        "mechanism_analysis",
+                        "--model",
+                        "openai",
+                        "--model-name",
+                        "gpt-test",
+                        "--project-root",
+                        str(self.project_root),
+                    ]
+                )
+
+    def test_auto_mode_stops_on_bad_stage_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = _theme_dir_with_definition_only(self.hbm4_path, Path(tmp))
+
+            fake_adapter = unittest.mock.Mock()
+            fake_adapter.complete.return_value = json.dumps({"mechanism": "ok", "extra_field": 1})
+
+            with patch("fundamental_research_engine.cli.get_adapter", return_value=fake_adapter):
+                exit_code = main(
+                    [
+                        "draft",
+                        str(theme_dir),
+                        "--model",
+                        "openai",
+                        "--model-name",
+                        "gpt-test",
+                        "--max-attempts",
+                        "1",
+                        "--auto",
+                        "--project-root",
+                        str(self.project_root),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 1)
+            self.assertFalse((theme_dir / "mechanism_analysis.json").exists())
+            self.assertFalse((theme_dir / "bottleneck_diagnosis.json").exists())
+
+
+class CritiqueCliTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.project_root = Path(__file__).resolve().parents[1]
+        self.hbm4_path = self.project_root / "configs" / "themes" / "hbm4.json"
+
+    def test_manual_mode_writes_critique_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = Path(tmp) / "hbm4"
+            self.assertEqual(main(["split", str(self.hbm4_path), str(theme_dir)]), 0)
+
+            exit_code = main(
+                [
+                    "critique",
+                    str(theme_dir),
+                    "--stage",
+                    "bottleneck_diagnosis",
+                    "--project-root",
+                    str(self.project_root),
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            prompt_path = theme_dir / "bottleneck_diagnosis.critique.prompt.md"
+            self.assertTrue(prompt_path.exists())
+            self.assertIn("Critique: bottleneck_diagnosis", prompt_path.read_text(encoding="utf-8"))
+            self.assertFalse((theme_dir / "bottleneck_diagnosis.critique.json").exists())
+
+    def test_mocked_adapter_writes_critique_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = Path(tmp) / "hbm4"
+            self.assertEqual(main(["split", str(self.hbm4_path), str(theme_dir)]), 0)
+
+            fake_adapter = unittest.mock.Mock()
+            fake_adapter.complete.return_value = json.dumps(
+                {
+                    "concerns": [],
+                    "overall_assessment": "Looks solid.",
+                    "recommendation": "accept",
+                }
+            )
+
+            with patch("fundamental_research_engine.cli.get_adapter", return_value=fake_adapter):
+                exit_code = main(
+                    [
+                        "critique",
+                        str(theme_dir),
+                        "--stage",
+                        "bottleneck_diagnosis",
+                        "--model",
+                        "openai",
+                        "--model-name",
+                        "gpt-test",
+                        "--project-root",
+                        str(self.project_root),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            critique_data = json.loads(
+                (theme_dir / "bottleneck_diagnosis.critique.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(critique_data["recommendation"], "accept")
+
+    def test_mocked_adapter_bad_shape_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = Path(tmp) / "hbm4"
+            self.assertEqual(main(["split", str(self.hbm4_path), str(theme_dir)]), 0)
+
+            fake_adapter = unittest.mock.Mock()
+            fake_adapter.complete.return_value = json.dumps({"recommendation": "accept"})
+
+            with patch("fundamental_research_engine.cli.get_adapter", return_value=fake_adapter):
+                exit_code = main(
+                    [
+                        "critique",
+                        str(theme_dir),
+                        "--stage",
+                        "bottleneck_diagnosis",
+                        "--model",
+                        "openai",
+                        "--model-name",
+                        "gpt-test",
+                        "--max-attempts",
+                        "1",
+                        "--project-root",
+                        str(self.project_root),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 1)
+            self.assertFalse((theme_dir / "bottleneck_diagnosis.critique.json").exists())
+
+    def test_critique_requires_stage_to_already_be_drafted(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = _theme_dir_with_definition_only(self.hbm4_path, Path(tmp))
+
+            with self.assertRaises(SystemExit):
+                main(
+                    [
+                        "critique",
+                        str(theme_dir),
+                        "--stage",
+                        "mechanism_analysis",
+                        "--project-root",
+                        str(self.project_root),
+                    ]
+                )
 
 
 if __name__ == "__main__":
