@@ -1,0 +1,74 @@
+{
+  "profit_pools": [
+    {
+      "beneficiaries": [
+        "SK hynix",
+        "Micron",
+        "Samsung"
+      ],
+      "capture_quality": "high",
+      "name": "qualified HBM supply",
+      "rationale": "Qualified HBM capacity is directly attached to accelerator shipments and can capture mix and ASP upside when supply is constrained."
+    },
+    {
+      "beneficiaries": [
+        "TSMC",
+        "advanced packaging ecosystem"
+      ],
+      "capture_quality": "high",
+      "name": "advanced packaging capacity",
+      "rationale": "HBM value cannot be realized without package-level integration, interposers, substrates, and yield control."
+    }
+  ],
+  "segments": [
+    {
+      "beneficiary_class": "first-order",
+      "layer": "memory",
+      "name": "HBM suppliers",
+      "representative_companies": [
+        "SK hynix",
+        "Micron",
+        "Samsung"
+      ],
+      "role": "Manufacture and qualify stacked high-bandwidth memory for AI accelerators."
+    },
+    {
+      "beneficiary_class": "first-order",
+      "layer": "foundry_packaging",
+      "name": "Advanced packaging",
+      "representative_companies": [
+        "TSMC",
+        "Samsung",
+        "Intel Foundry",
+        "ASE",
+        "Amkor"
+      ],
+      "role": "Integrate accelerators and HBM through 2.5D/3D package technology."
+    },
+    {
+      "beneficiary_class": "enabler",
+      "layer": "equipment",
+      "name": "HBM test and bonding equipment",
+      "representative_companies": [
+        "Advantest",
+        "Teradyne",
+        "DISCO",
+        "Applied Materials",
+        "Lam Research"
+      ],
+      "role": "Enable yield learning, stack validation, and high-volume qualification."
+    },
+    {
+      "beneficiary_class": "risk hedge",
+      "layer": "downstream_compute",
+      "name": "Accelerator vendors",
+      "representative_companies": [
+        "NVIDIA",
+        "AMD",
+        "Broadcom",
+        "Marvell"
+      ],
+      "role": "Consume qualified HBM capacity in GPU and custom ASIC packages."
+    }
+  ]
+}

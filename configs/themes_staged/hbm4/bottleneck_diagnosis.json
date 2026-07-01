@@ -1,0 +1,30 @@
+{
+  "bottlenecks": [
+    {
+      "evidence_ids": [
+        "E1",
+        "E2",
+        "E3",
+        "E4"
+      ],
+      "name": "HBM4 capacity and qualification",
+      "scorecard": {
+        "architecture_bypass_risk": 2,
+        "capacity_expansion_difficulty": 4,
+        "customer_qualification_lock_in": 5,
+        "demand_growth_speed": 5,
+        "rapid_supply_release_risk": 3,
+        "supplier_pricing_power": 4,
+        "technology_substitution_difficulty": 4,
+        "yield_material_equipment_constraint": 4
+      },
+      "technical_reason": "HBM supply is constrained by DRAM die allocation, TSV/stacking yield, thermal and power performance, and qualification with accelerator vendors.",
+      "types": [
+        "capacity",
+        "yield",
+        "qualification",
+        "advanced_packaging_dependency"
+      ]
+    }
+  ]
+}

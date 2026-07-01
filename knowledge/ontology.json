@@ -36,6 +36,7 @@
     "capacity enabler",
     "capex beneficiary",
     "architecture option",
+    "risk hedge",
     "theme-only"
   ],
   "beneficiary_layers": [
@@ -57,6 +58,20 @@
     "power",
     "engineering_delivery",
     "software_ecosystem",
-    "customer_certification"
+    "customer_certification",
+    "advanced_packaging_dependency"
+  ],
+  "hype_stages": [
+    "trigger",
+    "inflated_expectations",
+    "disillusionment",
+    "enlightenment",
+    "productivity"
+  ],
+  "capture_qualities": [
+    "low",
+    "medium",
+    "medium-high",
+    "high"
   ]
 }

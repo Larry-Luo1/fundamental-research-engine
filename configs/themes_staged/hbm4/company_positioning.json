@@ -1,0 +1,64 @@
+{
+  "companies": [
+    {
+      "evidence_ids": [
+        "E2"
+      ],
+      "exposure_quality": "direct revenue and mix upgrade",
+      "moat": [
+        "customer qualification",
+        "stacking yield learning",
+        "HBM product leadership"
+      ],
+      "name": "SK hynix",
+      "positioning_label": "core bottleneck owner",
+      "product": "HBM3E and HBM4 roadmap",
+      "risks": [
+        "capacity expansion",
+        "Samsung/Micron competition",
+        "memory-cycle normalization"
+      ],
+      "stack_position": "memory"
+    },
+    {
+      "evidence_ids": [
+        "E4"
+      ],
+      "exposure_quality": "direct revenue and mix upgrade",
+      "moat": [
+        "power/performance positioning",
+        "advanced DRAM manufacturing",
+        "AI customer qualification"
+      ],
+      "name": "Micron",
+      "positioning_label": "qualified leader",
+      "product": "HBM3E and HBM4 roadmap",
+      "risks": [
+        "share gap versus SK hynix",
+        "qualification timing",
+        "DRAM pricing cycle"
+      ],
+      "stack_position": "memory"
+    },
+    {
+      "evidence_ids": [
+        "E3"
+      ],
+      "exposure_quality": "capacity leverage",
+      "moat": [
+        "advanced packaging ecosystem",
+        "accelerator customer concentration",
+        "process and packaging integration"
+      ],
+      "name": "TSMC",
+      "positioning_label": "capacity enabler",
+      "product": "CoWoS and advanced packaging capacity",
+      "risks": [
+        "customer diversification",
+        "packaging capacity expansion",
+        "alternative integration paths"
+      ],
+      "stack_position": "foundry_packaging"
+    }
+  ]
+}

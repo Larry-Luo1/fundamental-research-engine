@@ -5,14 +5,20 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from .io import load_theme, read_json, write_json, write_text
-from .models import Theme
+from .io import read_json, write_json, write_text
+from .models import Theme, theme_from_dict
 from .render import render_memo
 from .scoring import score_bottleneck
+from .stages import load_theme_source
+from .validation import ThemeValidationError, validate_theme_dict
 
 
 def default_rules_path(project_root: Path) -> Path:
     return project_root / "knowledge" / "scoring_rules.json"
+
+
+def default_ontology_path(project_root: Path) -> Path:
+    return project_root / "knowledge" / "ontology.json"
 
 
 def default_run_dir(project_root: Path, theme: Theme) -> Path:
@@ -54,8 +60,17 @@ def build_analysis(theme: Theme, rules: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def load_and_validate_theme(theme_path: Path, project_root: Path) -> Theme:
+    raw_theme = load_theme_source(theme_path)
+    ontology = read_json(default_ontology_path(project_root))
+    errors = validate_theme_dict(raw_theme, ontology)
+    if errors:
+        raise ThemeValidationError(str(theme_path), errors)
+    return theme_from_dict(raw_theme)
+
+
 def run_pipeline(theme_path: Path, project_root: Path, out_dir: Path | None = None) -> Path:
-    theme = load_theme(theme_path)
+    theme = load_and_validate_theme(theme_path, project_root)
     rules = read_json(default_rules_path(project_root))
     analysis = build_analysis(theme, rules)
     output_dir = out_dir or default_run_dir(project_root, theme)

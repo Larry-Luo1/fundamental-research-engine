@@ -1,0 +1,17 @@
+{
+  "as_of": "2026-07-01",
+  "core_question": "Is HBM4 still a core AI infrastructure bottleneck in 2026-2027?",
+  "domain": "ai",
+  "drivers": [
+    "Long-context inference increases KV-cache memory footprint.",
+    "Next-generation accelerator packages require higher memory bandwidth close to compute.",
+    "Large-scale multimodal and video workloads raise memory and interconnect pressure.",
+    "Hyperscaler AI capex makes qualified HBM capacity strategically scarce."
+  ],
+  "hype_stage": "enlightenment",
+  "id": "hbm4",
+  "technology_readiness_level": 7,
+  "theme_type": "technology_adoption",
+  "thesis": "HBM4 should be treated as a high-quality AI bottleneck candidate because next-generation accelerators, long-context inference, and high-throughput serving increase demand for memory bandwidth and capacity. The thesis weakens if capacity expands faster than accelerator demand or if model/runtime efficiency reduces HBM attach-rate pressure.",
+  "title": "HBM4 AI Infrastructure Bottleneck"
+}

@@ -137,3 +137,74 @@ def render_memo(analysis: dict[str, Any]) -> str:
             "",
         ]
     )
+
+
+def _render_string_diff_section(title: str, section: dict[str, Any]) -> list[str]:
+    lines = [f"## {title}", ""]
+    if not section["added"] and not section["removed"]:
+        lines.append("- No changes.")
+        lines.append("")
+        return lines
+    if section["added"]:
+        lines.append("**Added:**")
+        lines.extend(f"- {item}" for item in section["added"])
+    if section["removed"]:
+        lines.append("**Removed:**")
+        lines.extend(f"- {item}" for item in section["removed"])
+    lines.append("")
+    return lines
+
+
+def _render_keyed_diff_section(title: str, key: str, section: dict[str, Any]) -> list[str]:
+    lines = [f"## {title}", ""]
+    added, removed, changed = section["added"], section["removed"], section["changed"]
+    if not added and not removed and not changed:
+        lines.append("- No changes.")
+        lines.append("")
+        return lines
+    if added:
+        lines.append("**Added:**")
+        lines.extend(f"- {item[key]}" for item in added)
+    if removed:
+        lines.append("**Removed:**")
+        lines.extend(f"- {item[key]}" for item in removed)
+    if changed:
+        lines.append("**Changed:**")
+        for item in changed:
+            lines.append(f"- {item[key]}:")
+            for change in item["changes"]:
+                lines.append(f'  - {change["field"]}: `{change["from"]}` -> `{change["to"]}`')
+    lines.append("")
+    return lines
+
+
+def render_diff(report: dict[str, Any]) -> str:
+    lines = [
+        f"# Diff: {report['theme_id']}",
+        "",
+        f"**From:** {report['from_as_of']}",
+        f"**To:** {report['to_as_of']}",
+        "",
+        "## Theme-Level Changes",
+        "",
+    ]
+    if report["theme_changes"]:
+        for change in report["theme_changes"]:
+            lines.append(f'- **{change["field"]}**')
+            lines.append(f'  - from: {change["from"]}')
+            lines.append(f'  - to: {change["to"]}')
+    else:
+        lines.append("- No changes.")
+    lines.append("")
+
+    lines.extend(_render_string_diff_section("Drivers", report["drivers"]))
+    lines.extend(_render_keyed_diff_section("Bottleneck Diagnosis", "name", report["bottleneck_scores"]))
+    lines.extend(_render_keyed_diff_section("Industry Chain", "name", report["segments"]))
+    lines.extend(_render_keyed_diff_section("Profit Pools", "name", report["profit_pools"]))
+    lines.extend(_render_keyed_diff_section("Company Positioning", "name", report["companies"]))
+    lines.extend(_render_keyed_diff_section("Scenarios", "name", report["scenarios"]))
+    lines.extend(_render_keyed_diff_section("Evidence", "id", report["evidence"]))
+    lines.extend(_render_string_diff_section("Counter-Theses", report["counter_theses"]))
+    lines.extend(_render_string_diff_section("Tracking Signals", report["tracking_signals"]))
+
+    return "\n".join(lines)

@@ -1,0 +1,88 @@
+{
+  "counter_theses": [
+    "HBM capacity expansion could catch up with accelerator demand and weaken pricing.",
+    "Model efficiency, quantization, or architecture changes could reduce memory pressure per token.",
+    "Customer dual-sourcing could reduce supplier pricing power."
+  ],
+  "evidence": [
+    {
+      "claims": [
+        "Data-center demand remains large and networking growth indicates system-level AI infrastructure pressure."
+      ],
+      "date": "2026-05-27",
+      "id": "E1",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "NVIDIA announces first quarter fiscal 2027 results",
+      "url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-first-quarter-fiscal-2027"
+    },
+    {
+      "claims": [
+        "High-value HBM and server memory demand are tied to AI infrastructure buildout."
+      ],
+      "date": "2026-04-24",
+      "id": "E2",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "SK hynix announces 1Q26 financial results",
+      "url": "https://www.prnewswire.com/news-releases/sk-hynix-announces-1q26-financial-results-302750959.html"
+    },
+    {
+      "claims": [
+        "AI demand creates pressure on advanced wafer processes and 2.5D/3D packaging capacity."
+      ],
+      "date": "2026-04-30",
+      "id": "E3",
+      "reliability": "medium",
+      "source_type": "industry_research",
+      "title": "TrendForce discusses AI-driven advanced packaging constraints",
+      "url": "https://www.trendforce.com/presscenter/news/20260430-13028.html"
+    },
+    {
+      "claims": [
+        "AI-related memory demand is improving revenue mix and profitability."
+      ],
+      "date": "2026-06-24",
+      "id": "E4",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "Micron fiscal 2026 third-quarter results",
+      "url": "https://investors.micron.com/news-releases/news-release-details/micron-technology-inc-reports-record-results-third-quarter"
+    }
+  ],
+  "scenarios": [
+    {
+      "description": "HBM qualification remains tight and long-context inference accelerates memory demand.",
+      "implications": [
+        "HBM suppliers retain strong pricing power",
+        "advanced packaging remains constrained"
+      ],
+      "name": "bull",
+      "triggers": [
+        "sold-out HBM4 capacity",
+        "hyperscaler capex revisions",
+        "higher HBM stack attach rates"
+      ]
+    },
+    {
+      "description": "Capacity ramps faster than accelerator demand or software efficiency reduces memory pressure.",
+      "implications": [
+        "HBM pricing power weakens",
+        "memory-cycle risk returns"
+      ],
+      "name": "bear",
+      "triggers": [
+        "inventory builds",
+        "ASP declines",
+        "qualification broadens to more suppliers"
+      ]
+    }
+  ],
+  "tracking_signals": [
+    "HBM sold-out statements and long-term agreements.",
+    "HBM ASP and gross-margin mix commentary.",
+    "HBM4 qualification timing with leading accelerator vendors.",
+    "CoWoS and advanced packaging capacity additions.",
+    "Hyperscaler capex revisions and accelerator shipment plans."
+  ]
+}

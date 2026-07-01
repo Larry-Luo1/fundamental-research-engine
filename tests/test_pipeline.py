@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fundamental_research_engine.io import load_theme
 from fundamental_research_engine.pipeline import run_pipeline
+from fundamental_research_engine.validation import ThemeValidationError
 
 
 class PipelineTest(unittest.TestCase):
@@ -44,6 +45,18 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(analysis["theme"]["id"], "hbm4")
             self.assertIn(analysis["bottleneck_scores"][0]["rating"], {"strong", "critical"})
             self.assertIn("HBM4", memo_path.read_text(encoding="utf-8"))
+
+    def test_run_pipeline_rejects_invalid_theme(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            broken = json.loads(
+                (self.project_root / "configs" / "themes" / "hbm4.json").read_text(encoding="utf-8")
+            )
+            del broken["core_question"]
+            broken_path = Path(tmp) / "broken.json"
+            broken_path.write_text(json.dumps(broken), encoding="utf-8")
+
+            with self.assertRaises(ThemeValidationError):
+                run_pipeline(broken_path, self.project_root, Path(tmp) / "out")
 
 
 if __name__ == "__main__":
