@@ -11,6 +11,51 @@ Every conclusion should answer four questions:
 3. Which part of the value chain can capture value from the bottleneck?
 4. What evidence would confirm or falsify the thesis?
 
+## Universal Pipeline
+
+Use this sequence for any theme:
+
+1. Define the theme boundary: what is included, what is excluded, and what would be a false mapping.
+2. Classify the driver: technology, supply-demand, policy, consumer, healthcare, macro, or geopolitics.
+3. Explain the mechanism chain: how the driver transmits into orders, price, volume, margins, budgets, or adoption.
+4. Assess maturity: hype stage, technical readiness, commercial deployment, or cycle position.
+5. Map the value chain: upstream, midstream, downstream, enablers, substitutes, and risk hedges.
+6. Diagnose bottlenecks: scarcity, lead time, qualification, yield, capital intensity, regulation, or behavior.
+7. Identify profit pools: who captures value rather than merely participates.
+8. Position companies: first-order beneficiary, capacity enabler, capex beneficiary, option, or theme-only.
+9. Build scenarios and counter-theses.
+10. Define tracking signals for the next research update.
+
+## Theme-Type Modules
+
+### Technology adoption
+
+Use for AI, robotics, solid-state batteries, CPO, new materials, and commercial space. Emphasize TRL, Hype Cycle, S-curve adoption, learning curves, customer qualification, and ecosystem readiness.
+
+### Supply-demand cycle
+
+Use for resources, memory cycles, shipping, power equipment, transformers, and other shortage themes. Emphasize inventory, capacity lead time, utilization, price elasticity, substitution, and demand destruction.
+
+### Policy driven
+
+Use for low-altitude economy, defense, localization, carbon policy, healthcare reform, and subsidies. Emphasize policy instrument, budget flow, implementation body, procurement path, and enforcement.
+
+### Consumer adoption
+
+Use for consumer brands, channel shifts, demographic themes, and behavior changes. Emphasize penetration, frequency, pricing/mix, channel economics, retention, and brand durability.
+
+### Healthcare clinical
+
+Use for GLP-1, ADC, cell therapy, medical devices, and clinical platforms. Emphasize efficacy, safety, stage, standard of care, addressable population, regulatory path, and reimbursement.
+
+### Macro cycle
+
+Use for gold, banks, real estate, brokers, exporters, and rate-sensitive assets. Emphasize rates, credit, currency, inflation, fiscal impulse, balance sheets, and risk appetite.
+
+### Geopolitics security
+
+Use for defense, energy security, supply-chain localization, food security, and strategic reserves. Emphasize scenarios, budgets, chokepoints, export controls, localization, and stockpiling.
+
 ## Adapted Frameworks
 
 ### Mosaic research
@@ -74,11 +119,13 @@ Use Wright's Law qualitatively when cumulative production can reduce cost, impro
 Each run should produce:
 
 - concise thesis
-- technology mechanism
+- driver classification and mechanism chain
 - maturity and hype-stage assessment
 - bottleneck score
-- industry-chain map
+- value-chain map
+- profit-pool analysis
 - company positioning
+- scenario analysis
 - evidence list
 - counter-thesis and falsification triggers
 - tracking signals

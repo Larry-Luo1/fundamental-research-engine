@@ -1,0 +1,20 @@
+{
+  "theme_type": "healthcare_clinical",
+  "description": "Analyze healthcare themes driven by clinical efficacy, regulation, reimbursement, and adoption.",
+  "primary_frameworks": ["clinical_stage", "standard_of_care", "addressable_population", "regulatory_path", "reimbursement"],
+  "core_questions": [
+    "What clinical problem is being solved?",
+    "What stage is the asset or technology in?",
+    "How does efficacy, safety, convenience, or cost compare to standard of care?",
+    "Who pays and what reimbursement path matters?",
+    "What trial, safety, or pricing result would invalidate the thesis?"
+  ],
+  "default_signals": [
+    "trial readout",
+    "regulatory filing",
+    "approval decision",
+    "guideline inclusion",
+    "reimbursement coverage",
+    "physician adoption"
+  ]
+}

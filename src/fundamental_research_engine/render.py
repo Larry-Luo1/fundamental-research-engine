@@ -48,6 +48,24 @@ def render_memo(analysis: dict[str, Any]) -> str:
         ]
         for item in analysis["companies"]
     ]
+    profit_pool_rows = [
+        [
+            item["name"],
+            item["capture_quality"],
+            item["rationale"],
+            ", ".join(item["beneficiaries"]),
+        ]
+        for item in analysis["profit_pools"]
+    ]
+    scenario_rows = [
+        [
+            item["name"],
+            item["description"],
+            "; ".join(item["implications"]),
+            "; ".join(item["triggers"]),
+        ]
+        for item in analysis["scenarios"]
+    ]
     evidence_lines = []
     for item in analysis["evidence"]:
         title = item["title"]
@@ -62,20 +80,28 @@ def render_memo(analysis: dict[str, Any]) -> str:
             "",
             f"**As of:** {theme['as_of']}",
             "",
+            f"**Type:** `{theme['theme_type']}`",
+            "",
+            f"**Domain:** `{theme['domain']}`",
+            "",
             f"**Core question:** {theme['core_question']}",
             "",
             "## Thesis",
             "",
             theme["thesis"],
             "",
-            "## Technology Context",
+            "## Mechanism",
+            "",
+            theme["mechanism"] or "No mechanism stated.",
+            "",
+            "## Maturity Context",
             "",
             f"- Hype stage: `{theme['hype_stage']}`",
             f"- Technology readiness level: `{theme['technology_readiness_level']}`",
             "",
-            "### Workload Drivers",
+            "### Drivers",
             "",
-            _bullet(theme["workload_drivers"]),
+            _bullet(theme["drivers"]),
             "",
             "## Bottleneck Diagnosis",
             "",
@@ -85,9 +111,17 @@ def render_memo(analysis: dict[str, Any]) -> str:
             "",
             _table(["Segment", "Layer", "Class", "Role", "Representative companies"], segment_rows),
             "",
+            "## Profit Pools",
+            "",
+            _table(["Pool", "Capture quality", "Rationale", "Beneficiaries"], profit_pool_rows),
+            "",
             "## Company Positioning",
             "",
             _table(["Company", "Product", "Stack position", "Label", "Exposure quality"], company_rows),
+            "",
+            "## Scenarios",
+            "",
+            _table(["Scenario", "Description", "Implications", "Triggers"], scenario_rows),
             "",
             "## Counter-Theses",
             "",

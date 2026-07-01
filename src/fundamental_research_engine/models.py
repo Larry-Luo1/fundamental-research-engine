@@ -34,6 +34,14 @@ class Segment:
 
 
 @dataclass(frozen=True)
+class ProfitPool:
+    name: str
+    rationale: str
+    capture_quality: str
+    beneficiaries: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class CompanyPosition:
     name: str
     product: str
@@ -46,18 +54,31 @@ class CompanyPosition:
 
 
 @dataclass(frozen=True)
+class Scenario:
+    name: str
+    description: str
+    implications: list[str] = field(default_factory=list)
+    triggers: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class Theme:
     id: str
     title: str
     as_of: str
+    theme_type: str
+    domain: str
     core_question: str
     thesis: str
+    mechanism: str
     hype_stage: str
     technology_readiness_level: int
-    workload_drivers: list[str]
+    drivers: list[str]
     bottlenecks: list[Bottleneck]
     segments: list[Segment]
+    profit_pools: list[ProfitPool]
     companies: list[CompanyPosition]
+    scenarios: list[Scenario]
     evidence: list[Evidence]
     counter_theses: list[str]
     tracking_signals: list[str]
@@ -95,6 +116,15 @@ def segment_from_dict(data: dict[str, Any]) -> Segment:
     )
 
 
+def profit_pool_from_dict(data: dict[str, Any]) -> ProfitPool:
+    return ProfitPool(
+        name=str(data["name"]),
+        rationale=str(data["rationale"]),
+        capture_quality=str(data["capture_quality"]),
+        beneficiaries=[str(item) for item in data.get("beneficiaries", [])],
+    )
+
+
 def company_from_dict(data: dict[str, Any]) -> CompanyPosition:
     return CompanyPosition(
         name=str(data["name"]),
@@ -108,19 +138,34 @@ def company_from_dict(data: dict[str, Any]) -> CompanyPosition:
     )
 
 
+def scenario_from_dict(data: dict[str, Any]) -> Scenario:
+    return Scenario(
+        name=str(data["name"]),
+        description=str(data["description"]),
+        implications=[str(item) for item in data.get("implications", [])],
+        triggers=[str(item) for item in data.get("triggers", [])],
+    )
+
+
 def theme_from_dict(data: dict[str, Any]) -> Theme:
+    drivers = data.get("drivers", data.get("workload_drivers", []))
     return Theme(
         id=str(data["id"]),
         title=str(data["title"]),
         as_of=str(data["as_of"]),
+        theme_type=str(data.get("theme_type", "technology_adoption")),
+        domain=str(data.get("domain", "ai")),
         core_question=str(data["core_question"]),
         thesis=str(data["thesis"]),
+        mechanism=str(data.get("mechanism", "")),
         hype_stage=str(data["hype_stage"]),
         technology_readiness_level=int(data["technology_readiness_level"]),
-        workload_drivers=[str(item) for item in data.get("workload_drivers", [])],
+        drivers=[str(item) for item in drivers],
         bottlenecks=[bottleneck_from_dict(item) for item in data.get("bottlenecks", [])],
         segments=[segment_from_dict(item) for item in data.get("segments", [])],
+        profit_pools=[profit_pool_from_dict(item) for item in data.get("profit_pools", [])],
         companies=[company_from_dict(item) for item in data.get("companies", [])],
+        scenarios=[scenario_from_dict(item) for item in data.get("scenarios", [])],
         evidence=[evidence_from_dict(item) for item in data.get("evidence", [])],
         counter_theses=[str(item) for item in data.get("counter_theses", [])],
         tracking_signals=[str(item) for item in data.get("tracking_signals", [])],

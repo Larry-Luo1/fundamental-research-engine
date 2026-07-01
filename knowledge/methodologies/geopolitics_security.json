@@ -1,0 +1,20 @@
+{
+  "theme_type": "geopolitics_security",
+  "description": "Analyze themes driven by security, geopolitical rivalry, supply-chain resilience, and strategic stockpiling.",
+  "primary_frameworks": ["scenario_planning", "supply_chain_resilience", "strategic_inventory", "budget_flow", "localization"],
+  "core_questions": [
+    "What security risk or geopolitical shift created demand?",
+    "Which supply chains are being localized, diversified, or stockpiled?",
+    "Who controls chokepoints and substitute capacity?",
+    "Which companies have qualification, licenses, or strategic relevance?",
+    "What de-escalation, budget shift, or substitution would weaken the theme?"
+  ],
+  "default_signals": [
+    "defense budget",
+    "export controls",
+    "sanctions",
+    "localization mandates",
+    "strategic reserves",
+    "procurement awards"
+  ]
+}

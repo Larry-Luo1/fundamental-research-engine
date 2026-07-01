@@ -1,0 +1,32 @@
+{
+  "domain": "ai",
+  "description": "AI infrastructure and application-chain research domain pack.",
+  "segments": [
+    "accelerator_compute",
+    "memory_hbm",
+    "foundry_advanced_packaging",
+    "networking_optical",
+    "servers_racks",
+    "power_cooling",
+    "software_utilization",
+    "data_pipeline"
+  ],
+  "common_bottlenecks": [
+    "HBM capacity and qualification",
+    "advanced packaging capacity",
+    "cluster networking bandwidth",
+    "optical module transition",
+    "rack-level power density",
+    "liquid cooling deployment",
+    "data-center power interconnection",
+    "custom ASIC qualification"
+  ],
+  "typical_drivers": [
+    "pretraining scale",
+    "large-scale inference",
+    "long-context and Agent workloads",
+    "multimodal and video generation",
+    "hyperscaler capex",
+    "rack power density"
+  ]
+}

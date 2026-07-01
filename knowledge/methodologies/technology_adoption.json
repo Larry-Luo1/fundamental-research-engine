@@ -1,0 +1,20 @@
+{
+  "theme_type": "technology_adoption",
+  "description": "Analyze themes driven by new technologies moving from concept to deployment.",
+  "primary_frameworks": ["hype_cycle", "technology_readiness_level", "s_curve", "value_chain", "learning_curve"],
+  "core_questions": [
+    "What technical capability changed?",
+    "Is the technology in lab validation, pilot deployment, or scaled commercial adoption?",
+    "Which bottleneck controls the pace of deployment?",
+    "Which value-chain segments capture profit as adoption scales?",
+    "What would prove the technology is not ready or not economic?"
+  ],
+  "default_signals": [
+    "customer qualification",
+    "pilot-to-production conversion",
+    "unit cost decline",
+    "capacity expansion",
+    "standards adoption",
+    "ecosystem support"
+  ]
+}

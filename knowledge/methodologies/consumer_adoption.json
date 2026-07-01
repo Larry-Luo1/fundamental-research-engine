@@ -1,0 +1,20 @@
+{
+  "theme_type": "consumer_adoption",
+  "description": "Analyze themes driven by consumer behavior, penetration, channel change, and brand adoption.",
+  "primary_frameworks": ["diffusion_of_innovations", "penetration_curve", "cohort_analysis", "channel_mix", "brand_power"],
+  "core_questions": [
+    "Which consumer behavior is changing?",
+    "Is adoption led by penetration, frequency, price/mix, or channel shift?",
+    "What drives repeat purchase and brand durability?",
+    "Where does margin accrue across brand, platform, distributor, and manufacturer?",
+    "What would show the theme is fad-like rather than structural?"
+  ],
+  "default_signals": [
+    "penetration rate",
+    "repeat purchase",
+    "same-store or same-channel growth",
+    "gross margin by channel",
+    "search/social trend",
+    "inventory and discounting"
+  ]
+}

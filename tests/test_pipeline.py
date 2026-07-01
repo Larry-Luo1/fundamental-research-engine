@@ -16,7 +16,17 @@ class PipelineTest(unittest.TestCase):
     def test_load_theme(self) -> None:
         theme = load_theme(self.project_root / "configs" / "themes" / "hbm4.json")
         self.assertEqual(theme.id, "hbm4")
+        self.assertEqual(theme.theme_type, "technology_adoption")
+        self.assertEqual(theme.domain, "ai")
         self.assertEqual(theme.bottlenecks[0].name, "HBM4 capacity and qualification")
+        self.assertTrue(theme.profit_pools)
+        self.assertTrue(theme.scenarios)
+
+    def test_load_non_ai_theme(self) -> None:
+        theme = load_theme(self.project_root / "configs" / "themes" / "copper-supply-demand.json")
+        self.assertEqual(theme.theme_type, "supply_demand_cycle")
+        self.assertEqual(theme.domain, "metals_mining")
+        self.assertIn("electrification", theme.mechanism)
 
     def test_run_pipeline_writes_outputs(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

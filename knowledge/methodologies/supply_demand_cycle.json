@@ -1,0 +1,21 @@
+{
+  "theme_type": "supply_demand_cycle",
+  "description": "Analyze themes driven by shortage, inventory, capacity, and price cycles.",
+  "primary_frameworks": ["capacity_cycle", "inventory_cycle", "price_elasticity", "cost_curve", "value_chain"],
+  "core_questions": [
+    "What demand shock or supply constraint created the imbalance?",
+    "How long does new supply take to arrive?",
+    "Where are inventories in the cycle?",
+    "Who has pricing power and who is a volume beneficiary only?",
+    "What supply response or demand destruction would end the cycle?"
+  ],
+  "default_signals": [
+    "spot price",
+    "contract price",
+    "inventory days",
+    "capacity additions",
+    "utilization rate",
+    "order backlog",
+    "customer prepayments"
+  ]
+}

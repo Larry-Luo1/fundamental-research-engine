@@ -1,0 +1,20 @@
+{
+  "theme_type": "policy_driven",
+  "description": "Analyze themes driven by regulation, subsidies, budgets, mandates, or industrial policy.",
+  "primary_frameworks": ["policy_chain", "budget_flow", "implementation_path", "stakeholder_mapping", "scenario_planning"],
+  "core_questions": [
+    "Which policy instrument matters: subsidy, regulation, procurement, mandate, tariff, or standard?",
+    "Who pays, who implements, and who receives orders?",
+    "Is the policy binding or aspirational?",
+    "Which companies have qualification, licenses, channels, or local access?",
+    "What policy delay or reversal would weaken the theme?"
+  ],
+  "default_signals": [
+    "official policy text",
+    "budget allocation",
+    "tender and procurement",
+    "implementation rules",
+    "local pilot programs",
+    "compliance deadlines"
+  ]
+}

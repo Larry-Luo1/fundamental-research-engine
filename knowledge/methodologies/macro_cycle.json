@@ -1,0 +1,21 @@
+{
+  "theme_type": "macro_cycle",
+  "description": "Analyze themes driven by rates, credit, currency, inflation, fiscal policy, and balance sheets.",
+  "primary_frameworks": ["liquidity_cycle", "credit_cycle", "rates_fx_transmission", "balance_sheet_channel", "scenario_planning"],
+  "core_questions": [
+    "Which macro variable is the true driver?",
+    "How does it transmit to revenue, margins, funding cost, asset values, or risk appetite?",
+    "Is the theme early-cycle, mid-cycle, late-cycle, or recessionary?",
+    "Which companies are leveraged to the driver and which are hedged?",
+    "What macro print or policy shift would reverse the theme?"
+  ],
+  "default_signals": [
+    "policy rate",
+    "real yield",
+    "credit spread",
+    "currency",
+    "PMI",
+    "fiscal impulse",
+    "bank lending"
+  ]
+}

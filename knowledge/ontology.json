@@ -2,17 +2,33 @@
   "version": "0.1",
   "entities": [
     "Theme",
+    "ThemeType",
+    "Domain",
+    "Driver",
+    "Mechanism",
+    "Maturity",
     "Technology",
     "Workload",
     "Bottleneck",
     "SupplyChainSegment",
+    "ProfitPool",
     "Company",
     "Product",
     "Evidence",
     "Claim",
     "Signal",
     "Thesis",
-    "CounterThesis"
+    "CounterThesis",
+    "Scenario"
+  ],
+  "theme_types": [
+    "technology_adoption",
+    "supply_demand_cycle",
+    "policy_driven",
+    "consumer_adoption",
+    "healthcare_clinical",
+    "macro_cycle",
+    "geopolitics_security"
   ],
   "company_positioning_labels": [
     "core bottleneck owner",
@@ -37,6 +53,7 @@
     "materials",
     "equipment",
     "qualification",
+    "policy",
     "power",
     "engineering_delivery",
     "software_ecosystem",

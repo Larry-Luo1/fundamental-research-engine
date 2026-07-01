@@ -2,11 +2,14 @@
   "id": "cowos",
   "title": "CoWoS and Advanced Packaging Bottleneck",
   "as_of": "2026-07-01",
+  "theme_type": "technology_adoption",
+  "domain": "ai",
   "core_question": "Does advanced packaging remain a structural AI bottleneck after the initial GPU shortage phase?",
   "thesis": "Advanced packaging remains a structural AI bottleneck because high-end accelerators increasingly depend on close integration of compute die, HBM stacks, interposers, substrates, and high-speed package interconnect. The bottleneck can migrate from foundry packaging slots to tools, substrates, inspection, and thermal/mechanical integration.",
+  "mechanism": "AI accelerators require dense package-level integration of compute, memory, and chiplets. As package size, HBM stack count, and interconnect density rise, packaging capacity and yield learning become deployment constraints.",
   "hype_stage": "productivity",
   "technology_readiness_level": 8,
-  "workload_drivers": [
+  "drivers": [
     "Larger accelerator packages increase HBM attach and interposer area.",
     "Chiplet architectures require dense package-level interconnect.",
     "Training and inference clusters require higher performance per package and per watt.",
@@ -60,6 +63,20 @@
       "representative_companies": ["Applied Materials", "Lam Research", "KLA", "DISCO"]
     }
   ],
+  "profit_pools": [
+    {
+      "name": "leading-edge package integration",
+      "rationale": "Packaging slots that can support AI accelerator and HBM integration are scarce and customer-qualified.",
+      "capture_quality": "high",
+      "beneficiaries": ["TSMC", "Samsung", "Intel Foundry"]
+    },
+    {
+      "name": "equipment and inspection for yield expansion",
+      "rationale": "Capacity growth requires tools and inspection processes that improve yield and throughput.",
+      "capture_quality": "medium",
+      "beneficiaries": ["KLA", "Applied Materials", "Lam Research", "DISCO"]
+    }
+  ],
   "companies": [
     {
       "name": "TSMC",
@@ -80,6 +97,20 @@
       "moat": ["OSAT scale", "assembly know-how", "customer relationships"],
       "risks": ["less direct exposure to leading-edge AI packages", "pricing pressure"],
       "evidence_ids": ["E2"]
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "bull",
+      "description": "Accelerator package complexity rises faster than packaging capacity.",
+      "implications": ["foundry packaging retains scarcity premium", "substrate and equipment enablers benefit"],
+      "triggers": ["CoWoS lead times stay elevated", "accelerator package area and HBM stack counts rise"]
+    },
+    {
+      "name": "bear",
+      "description": "Capacity additions and alternative packaging paths reduce scarcity.",
+      "implications": ["pricing power shifts downstream", "enabler growth becomes more cyclical"],
+      "triggers": ["lead times normalize", "new packaging suppliers qualify", "customer concentration falls"]
     }
   ],
   "evidence": [
