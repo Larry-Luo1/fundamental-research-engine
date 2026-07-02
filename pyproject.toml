@@ -10,6 +10,14 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
 
+[project.optional-dependencies]
+# Optional web UI layer. The core engine stays dependency-free; only the web
+# front end needs these. Install with:  pip install -e ".[web]"
+web = [
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+]
+
 [project.scripts]
 fre = "fundamental_research_engine.cli:main"
 

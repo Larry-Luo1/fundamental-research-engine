@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fundamental Research Engine</title>
+<style>
+  :root { --bg:#0f1216; --panel:#171c23; --line:#2a323d; --fg:#e6eaf0; --muted:#93a0b0; --accent:#4f9cf0; --good:#3fb27f; --warn:#e0a53a; --bad:#e06666; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 -apple-system,Segoe UI,Roboto,"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--fg); }
+  a { color:var(--accent); }
+  button { font:inherit; cursor:pointer; border:1px solid var(--line); background:var(--panel); color:var(--fg); border-radius:6px; padding:6px 12px; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#06121f; font-weight:600; }
+  button:disabled { opacity:.5; cursor:default; }
+  textarea, input { font:inherit; width:100%; background:#0c0f13; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:8px; }
+  .hidden { display:none !important; }
+  header { display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:15px; margin:0; }
+  header .sp { flex:1; }
+  header .muted { color:var(--muted); font-size:12px; }
+  #layout { display:flex; height:calc(100vh - 49px); }
+  #side { width:290px; border-right:1px solid var(--line); padding:12px; overflow:auto; }
+  #main { flex:1; overflow:auto; padding:18px 24px; }
+  .sess { padding:8px 10px; border:1px solid var(--line); border-radius:6px; margin-bottom:8px; cursor:pointer; }
+  .sess:hover { border-color:var(--accent); }
+  .sess .brief { font-size:13px; }
+  .sess .meta { color:var(--muted); font-size:11px; margin-top:4px; }
+  .badge { display:inline-block; font-size:11px; padding:1px 7px; border-radius:10px; border:1px solid var(--line); }
+  .badge.done{color:var(--good);border-color:var(--good);} .badge.error{color:var(--bad);border-color:var(--bad);}
+  .badge.running,.badge.pending{color:var(--warn);border-color:var(--warn);}
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin-bottom:14px; }
+  .card h3 { margin:0 0 8px; font-size:14px; }
+  table { width:100%; border-collapse:collapse; }
+  th,td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); font-size:13px; vertical-align:top; }
+  th { color:var(--muted); font-weight:500; }
+  .rate-critical{color:var(--bad);font-weight:600;} .rate-strong{color:var(--warn);font-weight:600;}
+  .rate-watch{color:var(--accent);} .rate-weak{color:var(--muted);}
+  pre { white-space:pre-wrap; word-wrap:break-word; background:#0c0f13; border:1px solid var(--line); border-radius:6px; padding:12px; max-height:520px; overflow:auto; font-size:12.5px; }
+  .prog { font-family:ui-monospace,monospace; font-size:12.5px; }
+  .prog .row { padding:2px 0; }
+  .tag { color:var(--muted); }
+  .stagebar { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
+  .chip { font-size:11px; padding:2px 8px; border-radius:10px; border:1px solid var(--line); color:var(--muted); }
+  .center { max-width:420px; margin:12vh auto; }
+  .err { color:var(--bad); }
+  .ok { color:var(--good); }
+  small.muted { color:var(--muted); }
+  ul.tight { margin:6px 0; padding-left:18px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="center hidden">
+  <div class="card">
+    <h3>登录</h3>
+    <p class="muted">输入共享口令以访问基本面研究引擎。</p>
+    <input id="pw" type="password" placeholder="共享口令" />
+    <p id="loginerr" class="err"></p>
+    <button class="primary" onclick="doLogin()">进入</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header>
+    <h1>Fundamental Research Engine</h1>
+    <span id="modelinfo" class="muted"></span>
+    <span class="sp"></span>
+    <button onclick="doLogout()">退出</button>
+  </header>
+  <div id="layout">
+    <div id="side">
+      <button class="primary" style="width:100%" onclick="showNew()">+ 新建分析</button>
+      <div id="sessions" style="margin-top:12px"></div>
+    </div>
+    <div id="main"></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+async function api(path, opts={}) {
+  const r = await fetch(path, {credentials:"same-origin", headers:{"Content-Type":"application/json"}, ...opts});
+  if (r.status === 401) { showLogin(); throw new Error("unauth"); }
+  if (!r.ok) { let d; try{d=await r.json();}catch(e){} throw new Error((d&&d.detail)||("HTTP "+r.status)); }
+  return r.status===204 ? null : r.json();
+}
+function esc(s){ return (s==null?"":String(s)).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+// ---- auth ----
+async function boot(){
+  const me = await (await fetch("/api/me",{credentials:"same-origin"})).json();
+  if (me.authenticated) showApp(); else showLogin();
+}
+function showLogin(){ $("#login").classList.remove("hidden"); $("#app").classList.add("hidden"); }
+async function showApp(){
+  $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
+  try { const c = await api("/api/config"); $("#modelinfo").textContent = c.model_name + (c.has_key?"":"（未配置 API Key）"); } catch(e){}
+  refreshSessions(); showNew();
+}
+async function doLogin(){
+  $("#loginerr").textContent="";
+  try { await api("/api/login",{method:"POST",body:JSON.stringify({password:$("#pw").value})}); showApp(); }
+  catch(e){ $("#loginerr").textContent = "口令错误"; }
+}
+async function doLogout(){ await api("/api/logout",{method:"POST"}); location.reload(); }
+
+// ---- sessions ----
+async function refreshSessions(){
+  const items = await api("/api/analyses");
+  $("#sessions").innerHTML = items.map(s => `
+    <div class="sess" onclick="openSession('${s.id}')">
+      <div class="brief">${esc((s.brief||"").slice(0,90))}</div>
+      <div class="meta"><span class="badge ${s.status}">${s.status}</span> · ${s.runs} run · ${esc((s.created_at||"").slice(0,16).replace("T"," "))}</div>
+    </div>`).join("") || '<p class="muted">还没有分析。</p>';
+}
+
+// ---- new analysis ----
+function showNew(){
+  $("#main").innerHTML = `
+    <div class="card">
+      <h3>新建基本面分析</h3>
+      <p class="muted">描述你要研究的主题/行业/趋势，引擎会分 6 个阶段构建结构化分析并生成研究备忘录。</p>
+      <textarea id="brief" rows="5" placeholder="例如：HBM4 在 2026-2027 是否仍是 AI 基础设施的核心瓶颈？关注供给、认证锁定与先进封装。"></textarea>
+      <p><button class="primary" onclick="startNew()">开始分析</button></p>
+    </div>`;
+}
+async function startNew(){
+  const brief = $("#brief").value.trim();
+  if(!brief) return;
+  const {id} = await api("/api/analyses",{method:"POST",body:JSON.stringify({brief})});
+  await refreshSessions();
+  runStream(id, brief);
+}
+
+const STAGES = ["theme_definition","mechanism_analysis","bottleneck_diagnosis","value_chain_map","company_positioning","scenario_analysis"];
+function runStream(id, brief){
+  $("#main").innerHTML = `
+    <div class="card">
+      <h3>正在分析</h3>
+      <p class="muted">${esc(brief)}</p>
+      <div class="stagebar" id="chips">${STAGES.map(s=>`<span class="chip" id="c-${s}">${s}</span>`).join("")}</div>
+      <div class="prog" id="prog"></div>
+    </div>`;
+  const log = (html,cls="") => { const d=document.createElement("div"); d.className="row "+cls; d.innerHTML=html; $("#prog").appendChild(d); };
+  const es = new EventSource(`/api/analyses/${id}/stream`);
+  es.onmessage = ev => {
+    const e = JSON.parse(ev.data);
+    if(e.event==="queued"){ log('<span class="tag">已连接，等待空闲槽位/准备中 …</span>');
+    } else if(e.event==="stage"){
+      const chip=$("#c-"+e.stage);
+      if(e.status==="drafting"){ log(`<span class="tag">[${e.index}/${e.total}]</span> 起草 ${e.stage} …`); if(chip)chip.style.borderColor="var(--warn)"; }
+      if(e.status==="done"||e.status==="kept"){ if(chip){chip.style.color="var(--good)";chip.style.borderColor="var(--good)";} }
+    } else if(e.event==="validating"){ log("校验主题结构 …");
+    } else if(e.event==="running"){ log("运行流水线、生成备忘录 …");
+    } else if(e.event==="done"){ log("完成 ✓","ok"); es.close(); refreshSessions(); openSession(id);
+    } else if(e.event==="error"){ log("错误：" + esc(e.message),"err"); es.close(); refreshSessions();
+    } else if(e.event==="info"){ log(esc(e.message)); }
+  };
+  es.onerror = () => { log("连接中断（可刷新会话查看结果）","err"); es.close(); };
+}
+
+// ---- open + render results ----
+async function openSession(id){
+  const data = await api("/api/analyses/"+id);
+  const m = data.meta, a = data.analysis;
+  let html = `<div class="card"><h3>分析详情 <span class="badge ${m.status}">${m.status}</span></h3>
+    <p class="muted">${esc(m.brief)}</p>`;
+  if(m.status==="error") html += `<p class="err">${esc(m.error||"")}</p>`;
+  if(m.status==="pending"||m.status==="running") html += `<p><button class="primary" onclick="runStream('${id}', ${JSON.stringify(esc(m.brief))})">继续/查看进度</button></p>`;
+  html += `</div>`;
+
+  if(a){
+    const t=a.theme||{};
+    html += `<div class="card"><h3>${esc(t.title||"")}</h3>
+      <p><b>核心问题：</b>${esc(t.core_question||"")}</p>
+      <p><b>论点：</b>${esc(t.thesis||"")}</p>
+      <p><small class="muted">类型 ${esc(t.theme_type)} · 领域 ${esc(t.domain)} · Hype ${esc(t.hype_stage)} · TRL ${esc(t.technology_readiness_level)} · as_of ${esc(t.as_of)}</small></p>
+      ${(t.drivers||[]).length?`<b>驱动：</b><ul class="tight">${t.drivers.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
+    </div>`;
+
+    const bs=a.bottleneck_scores||[];
+    if(bs.length) html += `<div class="card"><h3>瓶颈评分</h3><table><tr><th>瓶颈</th><th>分数</th><th>评级</th></tr>
+      ${bs.map(b=>`<tr><td>${esc(b.name)}</td><td>${esc(b.score)}</td><td class="rate-${esc(b.rating)}">${esc(b.rating)}</td></tr>`).join("")}</table></div>`;
+
+    const co=a.companies||[];
+    if(co.length) html += `<div class="card"><h3>公司卡位</h3><table><tr><th>公司</th><th>卡位</th><th>敞口质量</th></tr>
+      ${co.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.positioning_label)}</td><td>${esc(c.exposure_quality)}</td></tr>`).join("")}</table></div>`;
+
+    const ea=a.evidence_audit||{}; const su=ea.summary||{};
+    const evc=(ea.raw_evidence||[]).length, clc=(ea.claims||[]).length;
+    html += `<div class="card"><h3>证据审计</h3>
+      <p class="muted">证据 ${evc} · 声明 ${clc} · 平均覆盖 ${esc(su.average_coverage_score)} · owners ${esc(su.owners_count)}（缺 ${esc(su.missing_owners_count)} / 部分 ${esc(su.partial_owners_count)}）</p>
+      <small class="muted">覆盖率是研究流程健康信号，不是论点真值。</small></div>`;
+
+    const stageCards = STAGES.map(s => `
+      <div style="margin:6px 0">
+        <b>${s}</b>
+        <button onclick="doCritique('${id}','${s}')">审阅(critique)</button>
+        <button onclick="doRefine('${id}','${s}')">优化(refine)</button>
+        <div id="crit-${s}"></div>
+      </div>`).join("");
+    html += `<div class="card"><h3>逐阶段操作</h3>${stageCards}</div>`;
+
+    if(data.memo) html += `<div class="card"><h3>研究备忘录 (memo.md)</h3><pre>${esc(data.memo)}</pre></div>`;
+  }
+  $("#main").innerHTML = html;
+}
+
+async function doCritique(id, stage){
+  const box = $("#crit-"+stage); box.innerHTML = '<small class="muted">审阅中…</small>';
+  try {
+    const c = await api(`/api/analyses/${id}/critique`,{method:"POST",body:JSON.stringify({stage})});
+    const concerns = c.concerns||[];
+    box.innerHTML = `<div style="margin-top:6px"><small class="ok">建议：${esc(c.recommendation||"")}</small>
+      <ul class="tight">${concerns.map(x=>`<li><b>${esc(x.severity)}</b> ${esc(x.field)}：${esc(x.issue)} <small class="muted">→ ${esc(x.suggested_fix)}</small></li>`).join("")||"<li>无重大问题</li>"}</ul></div>`;
+  } catch(e){ box.innerHTML = `<small class="err">${esc(e.message)}</small>`; }
+}
+async function doRefine(id, stage){
+  const instruction = prompt("对该阶段的优化说明（例如：补充良率约束的量化证据）：","");
+  if(instruction===null) return;
+  const box = $("#crit-"+stage); box.innerHTML = '<small class="muted">重新起草并重跑…</small>';
+  try {
+    const r = await api(`/api/analyses/${id}/refine`,{method:"POST",body:JSON.stringify({stage,instruction})});
+    box.innerHTML = `<small class="ok">已生成 ${esc(r.run.run_id)}${r.diff?"（含 diff）":""}</small>`;
+    openSession(id);
+  } catch(e){ box.innerHTML = `<small class="err">${esc(e.message)}</small>`; }
+}
+
+boot();
+</script>
+</body>
+</html>

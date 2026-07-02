@@ -197,6 +197,12 @@ def _theme_dir_with_definition_only(hbm4_path: Path, tmp_path: Path) -> Path:
         "scenario_analysis",
     ]:
         (theme_dir / f"{stage}.json").unlink()
+    # The fake adapter drafts a self-contained demo world (only evidence E1), so drop
+    # the real theme's optional thesis_evidence_ids, which reference E2/E4.
+    definition_path = theme_dir / "theme_definition.json"
+    definition = json.loads(definition_path.read_text(encoding="utf-8"))
+    definition.pop("thesis_evidence_ids", None)
+    definition_path.write_text(json.dumps(definition), encoding="utf-8")
     return theme_dir
 
 
@@ -681,6 +687,146 @@ class CritiqueCliTest(unittest.TestCase):
                         str(self.project_root),
                     ]
                 )
+
+
+class QcCliTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.project_root = Path(__file__).resolve().parents[1]
+        self.hbm4_path = self.project_root / "configs" / "themes" / "hbm4.json"
+
+    def _valid_review(self) -> dict:
+        return {
+            "lenses": {
+                "premortem": {"findings": []},
+                "steelman_bear": {"counter_thesis_strength": "moderate", "strongest_disconfirmers": [], "assessment": "ok"},
+                "consistency": {"issues": []},
+                "unsupported_claims": {"items": []},
+            },
+            "open_concerns": [{"severity": "high", "target": "thesis", "issue": "unsupported ASP", "suggested_fix": "add source"}],
+            "recommendation": "revise",
+        }
+
+    def test_grounding_only_writes_scorecard_without_model(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "qc.json"
+            exit_code = main(
+                ["qc", str(self.hbm4_path), "--grounding-only", "--project-root", str(self.project_root), "--out", str(out)]
+            )
+            self.assertEqual(exit_code, 0)
+            report = json.loads(out.read_text(encoding="utf-8"))
+            self.assertIsNone(report["review"])
+            self.assertIn("grounding_score", report["quality_scorecard"])
+            self.assertFalse(report["quality_scorecard"]["disconfirmation"]["premortem_done"])
+
+    def test_mocked_adapter_runs_adversarial_review(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "qc.json"
+            fake_adapter = unittest.mock.Mock()
+            fake_adapter.complete.return_value = json.dumps(self._valid_review())
+            with patch("fundamental_research_engine.cli.get_adapter", return_value=fake_adapter):
+                exit_code = main(
+                    [
+                        "qc",
+                        str(self.hbm4_path),
+                        "--model",
+                        "openai",
+                        "--model-name",
+                        "gpt-test",
+                        "--project-root",
+                        str(self.project_root),
+                        "--out",
+                        str(out),
+                    ]
+                )
+            self.assertEqual(exit_code, 0)
+            report = json.loads(out.read_text(encoding="utf-8"))
+            self.assertEqual(report["review"]["recommendation"], "revise")
+            disc = report["quality_scorecard"]["disconfirmation"]
+            self.assertTrue(disc["premortem_done"] and disc["steelman_done"])
+            self.assertEqual(disc["open_critical"], 1)
+
+    def test_review_file_is_used_and_validated(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            review_path = Path(tmp) / "review.json"
+            review_path.write_text(json.dumps(self._valid_review()), encoding="utf-8")
+            exit_code = main(
+                ["qc", str(self.hbm4_path), "--review", str(review_path), "--project-root", str(self.project_root)]
+            )
+            self.assertEqual(exit_code, 0)
+
+    def test_strict_fails_on_open_critical(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            review_path = Path(tmp) / "review.json"
+            review_path.write_text(json.dumps(self._valid_review()), encoding="utf-8")
+            exit_code = main(
+                [
+                    "qc",
+                    str(self.hbm4_path),
+                    "--review",
+                    str(review_path),
+                    "--strict",
+                    "--project-root",
+                    str(self.project_root),
+                ]
+            )
+            self.assertEqual(exit_code, 1)
+
+
+class CalibrateCliTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.project_root = Path(__file__).resolve().parents[1]
+        self.hbm4_path = self.project_root / "configs" / "themes" / "hbm4.json"
+
+    def test_register_resolve_and_qc_uses_calibration(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            track = Path(tmp) / "hbm4.json"
+
+            # register predictions
+            self.assertEqual(
+                main(["calibrate", str(self.hbm4_path), "--register", "--track-record", str(track), "--project-root", str(self.project_root)]),
+                0,
+            )
+            record = json.loads(track.read_text(encoding="utf-8"))
+            self.assertGreater(len(record["predictions"]), 0)
+            key = record["predictions"][0]["key"]
+
+            # resolve one with a probability
+            self.assertEqual(
+                main(
+                    [
+                        "calibrate", str(self.hbm4_path), "--resolve", key, "--outcome", "true",
+                        "--probability", "0.7", "--as-of", "2026-06-01",
+                        "--track-record", str(track), "--project-root", str(self.project_root),
+                    ]
+                ),
+                0,
+            )
+            record = json.loads(track.read_text(encoding="utf-8"))
+            self.assertTrue(record["predictions"][0]["resolved"])
+
+            # qc picks up the track record calibration
+            out = Path(tmp) / "qc.json"
+            self.assertEqual(
+                main(
+                    [
+                        "qc", str(self.hbm4_path), "--grounding-only",
+                        "--track-record", str(track), "--out", str(out), "--project-root", str(self.project_root),
+                    ]
+                ),
+                0,
+            )
+            report = json.loads(out.read_text(encoding="utf-8"))
+            self.assertEqual(report["quality_scorecard"]["calibration"]["resolved"], 1)
+            self.assertIsNotNone(report["quality_scorecard"]["calibration"]["brier"])
+
+    def test_resolve_unknown_key_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            track = Path(tmp) / "hbm4.json"
+            main(["calibrate", str(self.hbm4_path), "--register", "--track-record", str(track), "--project-root", str(self.project_root)])
+            exit_code = main(
+                ["calibrate", str(self.hbm4_path), "--resolve", "deadbeef", "--outcome", "false", "--track-record", str(track), "--project-root", str(self.project_root)]
+            )
+            self.assertEqual(exit_code, 1)
 
 
 if __name__ == "__main__":

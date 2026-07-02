@@ -46,6 +46,33 @@ def _render_evidence_audit(analysis: dict[str, Any]) -> list[str]:
     ]
 
 
+def _render_quality_scorecard(analysis: dict[str, Any]) -> list[str]:
+    scorecard = analysis.get("quality_scorecard")
+    if not scorecard:
+        return []
+    grounding = scorecard["grounding"]
+    summary = grounding["summary"]
+    return [
+        "## Quality Scorecard",
+        "",
+        f"- Grounding score: `{scorecard['grounding_score']:.2f}`",
+        f"- Reliability-weighted coverage: `{grounding['reliability_weighted_coverage']:.2f}`",
+        f"- Corroboration ratio: `{grounding['corroboration_ratio']:.2f}`",
+        (
+            f"- Owners: `{summary['owners']}` "
+            f"(grounded `{summary['grounded']}`, corroborated `{summary['corroborated']}`, "
+            f"single-source `{summary['thin']}`, ungrounded `{summary['ungrounded']}`)"
+        ),
+        "",
+        "### Quality Flags",
+        "",
+        _bullet(scorecard["flags"]),
+        "",
+        "> Process-health signal, not a truth score for the thesis.",
+        "",
+    ]
+
+
 def render_memo(analysis: dict[str, Any]) -> str:
     theme = analysis["theme"]
     bottleneck_rows = [
@@ -166,6 +193,7 @@ def render_memo(analysis: dict[str, Any]) -> str:
             "\n".join(evidence_lines) if evidence_lines else "- None stated",
             "",
             *_render_evidence_audit(analysis),
+            *_render_quality_scorecard(analysis),
         ]
     )
 

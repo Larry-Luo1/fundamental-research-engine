@@ -9,12 +9,26 @@ from pathlib import Path
 from typing import Any
 
 from .adapters import AdapterError, ManualCompletionPending, get_adapter
+from .calibration import build_calibration, register_predictions, resolve_prediction
 from .critique import summarize_critique, validate_critique_shape
 from .diff import default_diff_dir, diff_analysis, find_runs_for_theme, resolve_analysis_path
 from .evidence import build_evidence_audit, write_evidence_store
 from .io import read_json, write_json, write_text
-from .pipeline import default_ontology_path, load_and_validate_theme, run_pipeline
-from .prompts import default_methodology_path, render_critique_prompt, render_stage_prompt
+from .llm_json import complete_json_with_retry as _complete_json_with_retry
+from .pipeline import (
+    build_analysis,
+    default_ontology_path,
+    default_rules_path,
+    load_and_validate_theme,
+    run_pipeline,
+)
+from .prompts import (
+    default_methodology_path,
+    render_critique_prompt,
+    render_quality_review_prompt,
+    render_stage_prompt,
+)
+from .quality import build_quality_scorecard, validate_quality_review_shape
 from .render import render_diff
 from .stages import (
     STAGE_ORDER,
@@ -91,6 +105,7 @@ def build_parser() -> argparse.ArgumentParser:
     fill.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter to use.")
     fill.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
     fill.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")
+    fill.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude adapters (defaults to the adapter's own default).")
     fill.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/ and prompts/.")
 
     draft = subparsers.add_parser(
@@ -102,6 +117,7 @@ def build_parser() -> argparse.ArgumentParser:
     draft.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter to use.")
     draft.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
     draft.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts per stage when JSON parsing or validation fails.")
+    draft.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude adapters (defaults to the adapter's own default).")
     draft.add_argument(
         "--auto",
         action="store_true",
@@ -115,54 +131,44 @@ def build_parser() -> argparse.ArgumentParser:
     critique.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter to use.")
     critique.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
     critique.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")
+    critique.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude adapters (defaults to the adapter's own default).")
     critique.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/ and prompts/.")
+
+    qc = subparsers.add_parser("qc", help="Run the quality gate (grounding + adversarial review) for a theme.")
+    qc.add_argument("theme", type=Path, help="Theme config (monolithic JSON or stage directory).")
+    qc.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/ and prompts/.")
+    qc.add_argument("--out", type=Path, default=None, help="Write qc.json here (defaults to stdout).")
+    qc.add_argument("--grounding-only", action="store_true", help="Deterministic grounding + scorecard only; no model call.")
+    qc.add_argument("--review", type=Path, default=None, help="Use a pre-authored review JSON instead of calling a model.")
+    qc.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter for the adversarial review.")
+    qc.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
+    qc.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")
+    qc.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude adapters.")
+    qc.add_argument("--strict", action="store_true", help="Exit non-zero if grounding_score < threshold or any open critical concern.")
+    qc.add_argument("--grounding-threshold", type=float, default=0.5, help="Minimum grounding_score for --strict to pass.")
+    qc.add_argument("--track-record", type=Path, default=None, help="Track record JSON for calibration (defaults to track_records/<theme_id>.json).")
+
+    calibrate = subparsers.add_parser("calibrate", help="Register/resolve dated predictions and score calibration over time.")
+    calibrate.add_argument("theme", type=Path, help="Theme config (monolithic JSON or stage directory).")
+    calibrate.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/.")
+    calibrate.add_argument("--track-record", type=Path, default=None, help="Track record JSON path (defaults to track_records/<theme_id>.json).")
+    calibrate.add_argument("--register", action="store_true", help="Extract predictions from the theme and merge into the track record.")
+    calibrate.add_argument("--resolve", metavar="KEY", default=None, help="Resolve the prediction with this key.")
+    calibrate.add_argument("--outcome", choices=["true", "false"], default=None, help="Outcome for --resolve.")
+    calibrate.add_argument("--probability", type=float, default=None, help="Probability you had assigned (0-1), recorded on --resolve so Brier can be scored.")
+    calibrate.add_argument("--as-of", default=None, help="Resolution date (YYYY-MM-DD); defaults to today.")
+    calibrate.add_argument("--show", action="store_true", help="Print predictions and calibration summary (default action).")
 
     return parser
 
 
+def default_track_record_path(project_root: Path, theme_id: str) -> Path:
+    safe_id = theme_id.replace("/", "-").replace(" ", "-")
+    return project_root / "track_records" / f"{safe_id}.json"
+
+
 def _sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
-
-
-def _parse_model_json(response: str) -> dict[str, Any]:
-    text = response.strip()
-    try:
-        parsed = json.loads(text)
-        if isinstance(parsed, dict):
-            return parsed
-        raise ValueError(f"expected JSON object, got {type(parsed).__name__}")
-    except json.JSONDecodeError:
-        pass
-
-    decoder = json.JSONDecoder()
-    candidates: list[str] = []
-    if "```" in text:
-        parts = text.split("```")
-        candidates.extend(part.strip().removeprefix("json").strip() for part in parts[1::2])
-    candidates.append(text)
-
-    for candidate in candidates:
-        for index, char in enumerate(candidate):
-            if char != "{":
-                continue
-            try:
-                parsed, _ = decoder.raw_decode(candidate[index:])
-            except json.JSONDecodeError:
-                continue
-            if isinstance(parsed, dict):
-                return parsed
-            raise ValueError(f"expected JSON object, got {type(parsed).__name__}")
-    raise ValueError("model response did not contain a valid JSON object")
-
-
-def _retry_prompt(prompt: str, errors: list[str]) -> str:
-    details = "\n".join(f"- {error}" for error in errors)
-    return (
-        f"{prompt}\n\n"
-        "The previous response was rejected for these issues:\n"
-        f"{details}\n\n"
-        "Return only one corrected JSON object for the requested stage."
-    )
 
 
 def _write_fill_metadata(
@@ -190,47 +196,6 @@ def _write_fill_metadata(
 
 
 @dataclass
-class CompletionAttempt:
-    data: dict[str, Any] | None
-    response: str
-    errors: list[str]
-    attempts: int
-    adapter_error: bool = False
-
-
-def _complete_json_with_retry(
-    adapter: Any,
-    initial_response: str,
-    prompt: str,
-    validate: Any,
-    max_attempts: int,
-) -> CompletionAttempt:
-    max_attempts = max(1, max_attempts)
-    attempt = 1
-    last_response = initial_response
-    while True:
-        try:
-            data = _parse_model_json(last_response)
-            errors = validate(data)
-        except ValueError as exc:
-            data = None
-            errors = [str(exc)]
-
-        if data is not None and not errors:
-            return CompletionAttempt(data=data, response=last_response, errors=[], attempts=attempt)
-
-        if attempt >= max_attempts:
-            return CompletionAttempt(data=None, response=last_response, errors=errors, attempts=attempt)
-        attempt += 1
-        try:
-            last_response = adapter.complete(_retry_prompt(prompt, errors))
-        except AdapterError as exc:
-            return CompletionAttempt(
-                data=None, response=last_response, errors=[str(exc)], attempts=attempt, adapter_error=True
-            )
-
-
-@dataclass
 class FillResult:
     status: str  # "written" | "manual_pending" | "invalid" | "adapter_error"
     stage: str
@@ -246,6 +211,8 @@ def _fill_stage(
     model: str,
     model_name: str | None,
     max_attempts: int,
+    max_tokens: int | None = None,
+    prompt_prefix: str | None = None,
 ) -> FillResult:
     existing = read_stage_dir_partial(theme_dir)
     ontology = read_json(default_ontology_path(project_root))
@@ -257,7 +224,9 @@ def _fill_stage(
             methodology = read_json(methodology_path)
 
     prompt = render_stage_prompt(stage, project_root / "prompts", existing, ontology, methodology)
-    adapter = get_adapter(model, model_name)
+    if prompt_prefix:
+        prompt = f"{prompt_prefix}\n\n{prompt}"
+    adapter = get_adapter(model, model_name, max_tokens)
 
     try:
         response = adapter.complete(prompt)
@@ -399,7 +368,9 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"fill '{STAGE_ORDER[0]}' before filling '{stage}'")
             return 2
 
-        result = _fill_stage(theme_dir, stage, args.project_root, args.model, args.model_name, args.max_attempts)
+        result = _fill_stage(
+            theme_dir, stage, args.project_root, args.model, args.model_name, args.max_attempts, args.max_tokens
+        )
         return _report_fill_result(theme_dir, result)
 
     if args.command == "draft":
@@ -420,7 +391,9 @@ def main(argv: list[str] | None = None) -> int:
             return 2
 
         while stage is not None:
-            result = _fill_stage(theme_dir, stage, args.project_root, args.model, args.model_name, args.max_attempts)
+            result = _fill_stage(
+                theme_dir, stage, args.project_root, args.model, args.model_name, args.max_attempts, args.max_tokens
+            )
             exit_code = _report_fill_result(theme_dir, result)
             if exit_code != 0 or result.status != "written":
                 return exit_code
@@ -466,7 +439,7 @@ def main(argv: list[str] | None = None) -> int:
         prompt = render_critique_prompt(
             stage, existing[stage], args.project_root / "prompts", existing, ontology, methodology
         )
-        adapter = get_adapter(args.model, args.model_name)
+        adapter = get_adapter(args.model, args.model_name, args.max_tokens)
 
         try:
             response = adapter.complete(prompt)
@@ -491,6 +464,112 @@ def main(argv: list[str] | None = None) -> int:
         write_json(critique_path, completion.data)
         print(critique_path)
         print(summarize_critique(completion.data))
+        return 0
+
+    if args.command == "qc":
+        theme = load_and_validate_theme(args.theme, args.project_root)
+        rules = read_json(default_rules_path(args.project_root))
+        analysis = build_analysis(theme, rules)
+        grounding = analysis["quality_scorecard"]["grounding"]
+
+        review = None
+        if not args.grounding_only:
+            if args.review is not None:
+                review = read_json(args.review)
+                errors = validate_quality_review_shape(review)
+                if errors:
+                    print(f"qc: review file {args.review} is invalid:")
+                    for error in errors:
+                        print(f"- {error}")
+                    return 1
+            else:
+                prompt = render_quality_review_prompt(analysis, args.project_root / "prompts")
+                adapter = get_adapter(args.model, args.model_name, args.max_tokens)
+                try:
+                    response = adapter.complete(prompt)
+                except ManualCompletionPending as pending:
+                    prompt_path = (args.out.parent if args.out else Path.cwd()) / f"{theme.id}.qc.prompt.md"
+                    write_text(prompt_path, pending.prompt)
+                    print(f"manual mode: wrote quality-review prompt to {prompt_path}")
+                    print("run it through a model, save the JSON reply, then rerun with --review <file>")
+                    return 0
+                except AdapterError as exc:
+                    print(f"qc: model adapter failed: {exc}")
+                    return 1
+
+                completion = _complete_json_with_retry(
+                    adapter, response, prompt, validate_quality_review_shape, args.max_attempts
+                )
+                if completion.data is None:
+                    print(f"qc: review response has problems after {completion.attempts} attempt(s):")
+                    for error in completion.errors:
+                        print(f"- {error}")
+                    return 1
+                review = completion.data
+
+        calibration = None
+        track_record_path = args.track_record or default_track_record_path(args.project_root, theme.id)
+        if track_record_path.exists():
+            calibration = build_calibration(read_json(track_record_path))
+
+        scorecard = build_quality_scorecard(grounding, review=review, calibration=calibration)
+        report = {
+            "theme_id": theme.id,
+            "as_of": theme.as_of,
+            "quality_scorecard": scorecard,
+            "review": review,
+        }
+        if args.out is not None:
+            write_json(args.out, report)
+            print(args.out)
+        else:
+            print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+
+        gs = scorecard["grounding_score"]
+        open_critical = scorecard["disconfirmation"]["open_critical"]
+        print(f"grounding_score={gs} open_critical={open_critical} flags={len(scorecard['flags'])}")
+        if args.strict and (gs < args.grounding_threshold or open_critical > 0):
+            print(f"quality gate FAILED (grounding_score {gs} < {args.grounding_threshold} or open_critical {open_critical} > 0)")
+            return 1
+        return 0
+
+    if args.command == "calibrate":
+        theme = load_and_validate_theme(args.theme, args.project_root)
+        track_record_path = args.track_record or default_track_record_path(args.project_root, theme.id)
+        record = read_json(track_record_path) if track_record_path.exists() else {"theme_id": theme.id, "predictions": []}
+
+        if args.register:
+            before = len(record.get("predictions", []))
+            record = register_predictions(record, theme)
+            write_json(track_record_path, record)
+            added = len(record["predictions"]) - before
+            print(f"{track_record_path}: registered {added} new prediction(s), {len(record['predictions'])} total")
+            return 0
+
+        if args.resolve is not None:
+            if args.outcome is None:
+                parser.error("--resolve requires --outcome true|false")
+                return 2
+            if args.probability is not None:
+                for prediction in record.get("predictions", []):
+                    if prediction["key"] == args.resolve:
+                        prediction["probability"] = args.probability
+            resolved_as_of = args.as_of or datetime.now(timezone.utc).date().isoformat()
+            found = resolve_prediction(record, args.resolve, args.outcome == "true", resolved_as_of)
+            if not found:
+                print(f"calibrate: no prediction with key '{args.resolve}' in {track_record_path}")
+                return 1
+            write_json(track_record_path, record)
+            print(f"{track_record_path}: resolved {args.resolve} -> outcome={args.outcome}")
+            return 0
+
+        # Default action: show.
+        summary = build_calibration(record)
+        listing = [
+            {"key": item["key"], "kind": item["kind"], "resolved": item["resolved"], "outcome": item["outcome"], "statement": item["statement"]}
+            for item in record.get("predictions", [])
+        ]
+        print(json.dumps({"calibration": summary, "predictions": listing}, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
 
     parser.error(f"unknown command: {args.command}")

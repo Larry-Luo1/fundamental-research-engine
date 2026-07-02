@@ -19,3 +19,7 @@ data/evidence/*
 !data/raw_sources/.gitkeep
 !data/normalized/.gitkeep
 !data/evidence/.gitkeep
+
+# Web layer runtime
+.env
+web_data/

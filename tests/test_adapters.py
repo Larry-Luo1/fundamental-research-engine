@@ -74,6 +74,17 @@ class ClaudeAdapterTest(unittest.TestCase):
         with self.assertRaises(AdapterError):
             adapter.complete("prompt")
 
+    def test_default_max_tokens_has_headroom(self) -> None:
+        captured = {}
+
+        def fake_transport(url, headers, payload):
+            captured["payload"] = payload
+            return {"content": [{"type": "text", "text": "ok"}]}
+
+        adapter = ClaudeAdapter(model="claude-test", api_key="sk-ant-test", transport=fake_transport)
+        adapter.complete("prompt")
+        self.assertEqual(captured["payload"]["max_tokens"], 16000)
+
     def test_concatenates_multiple_text_blocks(self) -> None:
         def fake_transport(url, headers, payload):
             return {"content": [{"type": "text", "text": "part one "}, {"type": "text", "text": "part two"}]}
@@ -99,6 +110,29 @@ class GetAdapterTest(unittest.TestCase):
         adapter = get_adapter("claude", "claude-test")
         self.assertIsInstance(adapter, ClaudeAdapter)
         self.assertEqual(adapter.model, "claude-test")
+
+    def test_max_tokens_override_is_threaded(self) -> None:
+        claude = get_adapter("claude", "claude-test", max_tokens=32000)
+        self.assertIsInstance(claude, ClaudeAdapter)
+        self.assertEqual(claude.max_tokens, 32000)
+
+        openai = get_adapter("openai", "gpt-test", max_tokens=32000)
+        self.assertIsInstance(openai, OpenAIAdapter)
+        self.assertEqual(openai.max_tokens, 32000)
+
+    def test_openai_omits_max_tokens_when_unset(self) -> None:
+        captured = {}
+
+        def fake_transport(url, headers, payload):
+            captured["payload"] = payload
+            return {"choices": [{"message": {"content": "ok"}}]}
+
+        adapter = get_adapter("openai", "gpt-test")
+        assert isinstance(adapter, OpenAIAdapter)
+        adapter.api_key = "sk-test"
+        adapter.transport = fake_transport
+        adapter.complete("prompt")
+        self.assertNotIn("max_tokens", captured["payload"])
 
     def test_unknown_adapter_raises(self) -> None:
         with self.assertRaises(ValueError):

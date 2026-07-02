@@ -98,3 +98,19 @@ AI model scaling and inference workloads increase memory bandwidth, memory capac
 | company | SK hynix | adequate | 0.62 | 1 | 1 |
 | company | Micron | adequate | 0.62 | 1 | 1 |
 | company | TSMC | thin | 0.54 | 1 | 1 |
+
+## Quality Scorecard
+
+- Grounding score: `0.70`
+- Reliability-weighted coverage: `0.81`
+- Corroboration ratio: `0.43`
+- Owners: `7` (grounded `6`, corroborated `3`, single-source `3`, ungrounded `1`)
+
+### Quality Flags
+
+- scenario 'bear' has no linked evidence
+- company 'SK hynix' is supported by a single source
+- company 'Micron' is supported by a single source
+- company 'TSMC' is supported by a single source
+
+> Process-health signal, not a truth score for the thesis.

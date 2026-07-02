@@ -35,6 +35,12 @@ STAGE_FIELDS: dict[str, list[str]] = {
     "scenario_analysis": ["scenarios", "counter_theses", "tracking_signals", "evidence"],
 }
 
+# Fields that are permitted in a stage but not required (kept out of STAGE_FIELDS so
+# they are neither demanded by the "missing" check nor rejected as "unexpected").
+OPTIONAL_STAGE_FIELDS: dict[str, list[str]] = {
+    "theme_definition": ["thesis_evidence_ids"],
+}
+
 SCORECARD_FIELDS: list[str] = [
     "demand_growth_speed",
     "capacity_expansion_difficulty",
@@ -60,7 +66,8 @@ def stage_path(theme_dir: Path, stage: str) -> Path:
 def split_theme_dict(theme: dict[str, Any]) -> dict[str, dict[str, Any]]:
     stages: dict[str, dict[str, Any]] = {}
     for stage, fields in STAGE_FIELDS.items():
-        stages[stage] = {field: theme[field] for field in fields if field in theme}
+        allowed = [*fields, *OPTIONAL_STAGE_FIELDS.get(stage, [])]
+        stages[stage] = {field: theme[field] for field in allowed if field in theme}
     return stages
 
 
@@ -199,6 +206,8 @@ def _validate_theme_definition_stage(data: dict[str, Any], ontology: dict[str, A
     if isinstance(trl, int) and not isinstance(trl, bool) and not 1 <= trl <= 9:
         errors.append(f"theme_definition.technology_readiness_level: {trl} outside 1-9 range")
     _check_string_list(data.get("drivers", []), "theme_definition.drivers", errors)
+    if "thesis_evidence_ids" in data:
+        _check_string_list(data["thesis_evidence_ids"], "theme_definition.thesis_evidence_ids", errors)
     ontology = ontology or {}
     _check_enum(data.get("theme_type"), set(ontology.get("theme_types", [])), "theme_definition.theme_type", errors)
     _check_enum(data.get("hype_stage"), set(ontology.get("hype_stages", [])), "theme_definition.hype_stage", errors)
@@ -311,6 +320,8 @@ def _validate_scenario_stage(data: dict[str, Any], errors: list[str]) -> None:
         _check_required_fields(item, {"name": str, "description": str, "implications": list, "triggers": list}, prefix, errors)
         _check_string_list(item.get("implications", []), f"{prefix}.implications", errors)
         _check_string_list(item.get("triggers", []), f"{prefix}.triggers", errors)
+        if "evidence_ids" in item:
+            _check_string_list(item["evidence_ids"], f"{prefix}.evidence_ids", errors)
     _check_string_list(data.get("counter_theses", []), "scenario_analysis.counter_theses", errors)
     _check_string_list(data.get("tracking_signals", []), "scenario_analysis.tracking_signals", errors)
     seen_ids: set[str] = set()
@@ -345,8 +356,12 @@ def validate_stage_shape(stage: str, data: Any, ontology: dict[str, Any] | None 
         return [f"{stage}: expected a JSON object"]
 
     expected_fields = set(STAGE_FIELDS[stage])
+    optional_fields = set(OPTIONAL_STAGE_FIELDS.get(stage, []))
     errors = [f"{stage}.{field}: missing" for field in sorted(expected_fields - set(data))]
-    errors += [f"{stage}.{field}: unexpected field for this stage" for field in sorted(set(data) - expected_fields)]
+    errors += [
+        f"{stage}.{field}: unexpected field for this stage"
+        for field in sorted(set(data) - expected_fields - optional_fields)
+    ]
     if errors:
         return errors
 

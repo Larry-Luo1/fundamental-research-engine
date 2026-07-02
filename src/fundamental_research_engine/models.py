@@ -64,6 +64,7 @@ class Scenario:
     description: str
     implications: list[str] = field(default_factory=list)
     triggers: list[str] = field(default_factory=list)
+    evidence_ids: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -87,6 +88,7 @@ class Theme:
     evidence: list[Evidence]
     counter_theses: list[str]
     tracking_signals: list[str]
+    thesis_evidence_ids: list[str] = field(default_factory=list)
 
 
 def evidence_from_dict(data: dict[str, Any]) -> Evidence:
@@ -154,6 +156,7 @@ def scenario_from_dict(data: dict[str, Any]) -> Scenario:
         description=str(data["description"]),
         implications=[str(item) for item in data.get("implications", [])],
         triggers=[str(item) for item in data.get("triggers", [])],
+        evidence_ids=[str(item) for item in data.get("evidence_ids", [])],
     )
 
 
@@ -179,4 +182,5 @@ def theme_from_dict(data: dict[str, Any]) -> Theme:
         evidence=[evidence_from_dict(item) for item in data.get("evidence", [])],
         counter_theses=[str(item) for item in data.get("counter_theses", [])],
         tracking_signals=[str(item) for item in data.get("tracking_signals", [])],
+        thesis_evidence_ids=[str(item) for item in data.get("thesis_evidence_ids", [])],
     )

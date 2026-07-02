@@ -79,6 +79,18 @@ class ValidationTest(unittest.TestCase):
         errors = validate_theme_dict(data, self.ontology)
         self.assertTrue(any("duplicate id" in item for item in errors))
 
+    def test_dangling_thesis_evidence_id(self) -> None:
+        data = copy.deepcopy(self.theme)
+        data["thesis_evidence_ids"] = ["E999"]
+        errors = validate_theme_dict(data, self.ontology)
+        self.assertTrue(any("unknown evidence id 'E999'" in item for item in errors))
+
+    def test_dangling_scenario_evidence_id(self) -> None:
+        data = copy.deepcopy(self.theme)
+        data["scenarios"][0]["evidence_ids"] = ["E999"]
+        errors = validate_theme_dict(data, self.ontology)
+        self.assertTrue(any("unknown evidence id 'E999'" in item for item in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

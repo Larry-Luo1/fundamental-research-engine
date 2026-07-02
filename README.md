@@ -21,6 +21,18 @@ theme definition
 
 The first version started with AI infrastructure themes, but the core engine is theme-agnostic. AI, batteries, metals, healthcare, consumer, policy, macro, and geopolitics can be represented through domain packs and methodology packs. It intentionally avoids short-term price targets and detailed valuation.
 
+## Web UI (browser front end)
+
+An optional web layer lets you run the engine on one server and give everyone a
+browser-based, guided workflow (describe a theme → the model drafts the 6 stages
+→ pipeline runs → memo/scores/evidence render in the page, with per-stage
+critique and refine). The core engine stays dependency-free; only the web layer
+needs `fastapi`/`uvicorn`.
+
+One-click deploy after `git clone` (Ubuntu/macOS `./deploy.sh` then `./run.sh`;
+Windows `deploy.bat` then `run.bat`). See **`web/README.md`** for full setup,
+`.env` configuration, and usage.
+
 ## Quick Start
 
 Run the sample HBM4 analysis:
@@ -154,6 +166,16 @@ PYTHONPATH=src python3 -m fundamental_research_engine fill configs/themes_staged
   --model openai --model-name gpt-4.1
 ```
 
+The `claude`/`openai` adapters call the model with a sensible output-token
+default (16000 for Claude — enough headroom for large stages like
+`value_chain_map`/`company_positioning`). Override it per invocation with
+`--max-tokens` on `fill`, `draft`, and `critique`:
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine fill configs/themes_staged/hbm4 \
+  --model claude --model-name claude-opus-4-8 --max-tokens 32000
+```
+
 `fre fill` picks the first stage file missing from the directory unless
 `--stage` is given. Structured JSON stays the source of record: the model
 never writes prose directly into a memo, only one stage's fixed-shape JSON,
@@ -201,6 +223,42 @@ fix; an `overall_assessment`; and a `recommendation` of `accept` or `revise`)
 next to the stage file. This is a standalone check — it never blocks or
 rewrites `fre fill`/`fre draft` output on its own; a human decides whether to
 act on it.
+
+## Quality Gate
+
+`fre qc` scores the *research process*, not the thesis. It has a deterministic
+half (grounding: is each bottleneck / company / the thesis / each scenario
+backed by evidence, corroborated by independent sources, and how reliable are
+they?) and an optional adversarial half (a model runs pre-mortem, steelman-bear,
+cross-stage consistency, and unsupported-claim lenses):
+
+```bash
+# Deterministic only — no model, offline/CI-safe:
+PYTHONPATH=src python3 -m fundamental_research_engine qc configs/themes/hbm4.json --grounding-only
+
+# Full quality gate with an adversarial model pass:
+PYTHONPATH=src python3 -m fundamental_research_engine qc configs/themes/hbm4.json \
+  --model claude --model-name claude-opus-4-8 --out qc.json
+```
+
+The grounding scorecard is also embedded in every `fre run` (`analysis.json` +
+a `Quality Scorecard` memo section). `qc` is non-blocking by default; `--strict`
+exits non-zero when the grounding score is below `--grounding-threshold` or an
+open critical concern exists. Optional `thesis_evidence_ids` (theme-level) and
+per-scenario `evidence_ids` let the thesis and scenarios be graded too.
+
+To keep quality honest *over time*, `fre calibrate` turns a theme's tracking
+signals, counter-theses, and scenario triggers into dated predictions, lets you
+resolve them as outcomes arrive, and scores calibration (resolution rate +
+Brier):
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine calibrate configs/themes/hbm4.json --register
+PYTHONPATH=src python3 -m fundamental_research_engine calibrate configs/themes/hbm4.json \
+  --resolve <key> --outcome true --probability 0.7
+PYTHONPATH=src python3 -m fundamental_research_engine qc configs/themes/hbm4.json --grounding-only \
+  --track-record track_records/hbm4.json
+```
 
 ## Methodology
 

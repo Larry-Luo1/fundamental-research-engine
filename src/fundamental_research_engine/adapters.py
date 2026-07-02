@@ -48,6 +48,7 @@ def _default_transport(url: str, headers: dict[str, str], payload: dict[str, Any
 class OpenAIAdapter:
     model: str
     api_key: str | None = None
+    max_tokens: int | None = None
     transport: Transport = field(default=_default_transport)
 
     def complete(self, prompt: str) -> str:
@@ -55,7 +56,9 @@ class OpenAIAdapter:
         if not api_key:
             raise AdapterError("OPENAI_API_KEY is not set")
 
-        payload = {"model": self.model, "messages": [{"role": "user", "content": prompt}]}
+        payload: dict[str, Any] = {"model": self.model, "messages": [{"role": "user", "content": prompt}]}
+        if self.max_tokens is not None:
+            payload["max_tokens"] = self.max_tokens
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
         response = self.transport("https://api.openai.com/v1/chat/completions", headers, payload)
         try:
@@ -68,7 +71,10 @@ class OpenAIAdapter:
 class ClaudeAdapter:
     model: str
     api_key: str | None = None
-    max_tokens: int = 4096
+    # Research stages emit large structured JSON; keep headroom well above the
+    # old 4096 default so company_positioning/value_chain_map don't truncate.
+    # Non-streaming, so stays under the SDK/HTTP timeout ceiling.
+    max_tokens: int = 16000
     transport: Transport = field(default=_default_transport)
 
     def complete(self, prompt: str) -> str:
@@ -93,15 +99,21 @@ class ClaudeAdapter:
             raise AdapterError(f"unexpected Claude response shape: {response}") from exc
 
 
-def get_adapter(name: str, model_name: str | None = None) -> ModelAdapter:
+def get_adapter(name: str, model_name: str | None = None, max_tokens: int | None = None) -> ModelAdapter:
     if name == "manual":
         return ManualAdapter()
     if name == "openai":
         if not model_name:
             raise ValueError("--model-name is required for the openai adapter")
-        return OpenAIAdapter(model=model_name)
+        adapter = OpenAIAdapter(model=model_name)
+        if max_tokens is not None:
+            adapter.max_tokens = max_tokens
+        return adapter
     if name == "claude":
         if not model_name:
             raise ValueError("--model-name is required for the claude adapter")
-        return ClaudeAdapter(model=model_name)
+        adapter = ClaudeAdapter(model=model_name)
+        if max_tokens is not None:
+            adapter.max_tokens = max_tokens
+        return adapter
     raise ValueError(f"unknown adapter '{name}'")

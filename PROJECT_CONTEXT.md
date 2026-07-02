@@ -424,6 +424,68 @@ Not done in this pass (deliberately deferred, not forgotten):
   fetched text; a human or a future stage still has to turn it into
   `evidence[].claims` entries in `scenario_analysis.json`.
 
+## Quality Gate + Web Layer + Calibration (2026-07-02, Claude)
+
+Two threads landed this session, committed on a **feature branch** (not `main`)
+because a second agent session was reported active concurrently.
+
+**LLM adapter + Web layer (earlier in session):**
+- `adapters.ClaudeAdapter.max_tokens` default bumped 4096 -> 16000; `OpenAIAdapter`
+  gained an optional `max_tokens`; `get_adapter(name, model_name, max_tokens)` threads it.
+- Optional web app under `web/` (FastAPI + uvicorn, `[web]` extra): shared-password
+  HMAC cookie auth, server-side single API key, guided analysis flow with SSE
+  streaming, per-session lock + global semaphore for small-team concurrency,
+  one-click `deploy.sh`/`deploy.bat` + `run.*` + `.env.example`. The engine stays
+  zero-dependency; web is a separate optional layer. NOTE: this VPS has no
+  pip/venv, so the live FastAPI HTTP path is only `py_compile`-verified; the
+  engine-through-service path is offline-smoke-verified.
+
+**Quality gate (design in `docs/quality-gate-design.md`, build steps 1-6 done):**
+- Step 1 — extracted the JSON-extract/retry helpers from `cli.py` into
+  `llm_json.py` (`parse_model_json`, `complete_json_with_retry`, `CompletionAttempt`).
+  `cli` imports them aliased; `web.service` unaffected. Pure move.
+- Step 2 — `quality.py`: `build_grounding` scores each claim owner as
+  grounded / corroborated (>=2 independent sources) / thin (single source) /
+  ungrounded, with reliability-weighted coverage; `build_quality_scorecard`
+  aggregates into a scorecard (grounding_score, disconfirmation, calibration,
+  flags, "process-health not truth" note). Embedded in `build_analysis` (no LLM,
+  offline/CI-safe) and rendered as a `## Quality Scorecard` memo section.
+- Step 3/4 — adversarial QC: `prompts/quality_review.md` (pre-mortem / steelman-bear /
+  consistency / unsupported-claims lenses), `validate_quality_review_shape`, and a
+  new `fre qc <theme>` command (`--grounding-only` deterministic; full run calls a
+  model; `--review <file>` for offline/manual; `--strict` gates on
+  grounding_score/open-critical; default non-blocking, matching `critique`).
+- Step 5 — schema extension: optional `thesis_evidence_ids` (theme) and per-scenario
+  `evidence_ids`, so the thesis and each scenario are graded for grounding too.
+  Backward-compatible (default empty); `OPTIONAL_STAGE_FIELDS` added to `stages.py`
+  so optional fields are allowed-but-not-required by `validate_stage_shape`;
+  validation cross-references them against known evidence ids. `hbm4.json` updated
+  to demonstrate (thesis + bull grounded; bear scenario left ungrounded and now
+  correctly flagged).
+- Step 6 — calibration loop (`calibration.py`): register a theme's tracking
+  signals / counter-theses / scenario triggers as dated predictions, resolve them
+  over time (optionally with an assigned probability), and score
+  counts + resolution rate + Brier. New `fre calibrate <theme>`
+  (`--register` / `--resolve KEY --outcome` / `--show`) over a per-theme
+  `track_records/<theme_id>.json`; `fre qc --track-record` folds calibration into
+  the scorecard. This is the "keep quality high over time" half.
+
+**Verification (all offline; this VPS has no API key / no pip):**
+```bash
+PYTHONPATH=src python3 -m unittest discover -s tests   # 118 pass
+PYTHONPATH=src python3 -m fundamental_research_engine validate configs/themes/*.json
+PYTHONPATH=src python3 -m fundamental_research_engine qc configs/themes/hbm4.json --grounding-only
+PYTHONPATH=src python3 -m fundamental_research_engine calibrate configs/themes/hbm4.json --register --track-record /tmp/tr.json
+```
+118 tests pass; all samples validate; golden memo regenerated (now includes the
+scorecard + the flagged ungrounded bear scenario). The adversarial-QC model path
+is covered by fake-adapter tests only — real-model qc needs an environment with
+`ANTHROPIC_API_KEY` (network egress from this box works; only the key is missing).
+
+Deferred (not forgotten): auto claim-extraction from fetched text; splitting the
+QC lenses into independent adversarial verifiers with majority vote; wiring
+`grounding_score` into `fre diff` for drift tracking; per-lens web UI surfacing.
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:

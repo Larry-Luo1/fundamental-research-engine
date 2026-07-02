@@ -45,6 +45,14 @@ def render_stage_prompt(
     return rendered
 
 
+def render_quality_review_prompt(analysis: dict[str, Any], prompts_dir: Path) -> str:
+    template_path = prompts_dir / "quality_review.md"
+    if not template_path.exists():
+        raise FileNotFoundError(f"no quality review template at {template_path}")
+    template = template_path.read_text(encoding="utf-8")
+    return template.replace("{{ANALYSIS_JSON}}", _json_block(analysis))
+
+
 def render_critique_prompt(
     stage: str,
     stage_data: dict[str, Any],

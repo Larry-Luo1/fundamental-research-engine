@@ -188,6 +188,10 @@
         "advanced packaging remains constrained"
       ],
       "name": "bull",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
       "triggers": [
         "sold-out HBM4 capacity",
         "hyperscaler capex revisions",
@@ -267,6 +271,11 @@
   "technology_readiness_level": 7,
   "theme_type": "technology_adoption",
   "thesis": "HBM4 should be treated as a high-quality AI bottleneck candidate because next-generation accelerators, long-context inference, and high-throughput serving increase demand for memory bandwidth and capacity. The thesis weakens if capacity expands faster than accelerator demand or if model/runtime efficiency reduces HBM attach-rate pressure.",
+  "thesis_evidence_ids": [
+    "E1",
+    "E2",
+    "E4"
+  ],
   "title": "HBM4 AI Infrastructure Bottleneck",
   "tracking_signals": [
     "HBM sold-out statements and long-term agreements.",

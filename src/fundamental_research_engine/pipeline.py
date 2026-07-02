@@ -3,11 +3,13 @@ from __future__ import annotations
 from dataclasses import asdict
 from datetime import date
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 from .evidence import build_evidence_audit
 from .io import read_json, write_json, write_text
 from .models import Theme, theme_from_dict
+from .quality import build_grounding, build_quality_scorecard
 from .render import render_memo
 from .scoring import score_bottleneck
 from .stages import load_theme_source
@@ -37,6 +39,17 @@ def build_analysis(theme: Theme, rules: dict[str, Any]) -> dict[str, Any]:
             "company": theme.companies,
         },
     )
+    thesis_owner = SimpleNamespace(id="thesis", name="Thesis", evidence_ids=theme.thesis_evidence_ids)
+    grounding = build_grounding(
+        theme.evidence,
+        {
+            "bottleneck": theme.bottlenecks,
+            "company": theme.companies,
+            "thesis": [thesis_owner],
+            "scenario": theme.scenarios,
+        },
+    )
+    quality_scorecard = build_quality_scorecard(grounding)
 
     return {
         "generated_on": date.today().isoformat(),
@@ -64,6 +77,7 @@ def build_analysis(theme: Theme, rules: dict[str, Any]) -> dict[str, Any]:
             for item in [*theme.bottlenecks, *theme.companies]
         },
         "evidence_audit": evidence_audit,
+        "quality_scorecard": quality_scorecard,
         "counter_theses": theme.counter_theses,
         "tracking_signals": theme.tracking_signals,
     }

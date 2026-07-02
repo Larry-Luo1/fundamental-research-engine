@@ -251,7 +251,7 @@ def _validate_companies(items: Any, ontology: dict[str, Any], known_evidence_ids
         _validate_evidence_ids(prefix, item.get("evidence_ids", []), known_evidence_ids, errors)
 
 
-def _validate_scenarios(items: Any, errors: list[str]) -> None:
+def _validate_scenarios(items: Any, known_evidence_ids: set[str], errors: list[str]) -> None:
     if not isinstance(items, list):
         errors.append("scenarios: expected list")
         return
@@ -268,6 +268,8 @@ def _validate_scenarios(items: Any, errors: list[str]) -> None:
                 for value_index, value in enumerate(item[field]):
                     if not isinstance(value, str):
                         errors.append(f"{prefix}.{field}[{value_index}]: expected str, got {type(value).__name__}")
+        if "evidence_ids" in item:
+            _validate_evidence_ids(prefix, item["evidence_ids"], known_evidence_ids, errors)
 
 
 def validate_theme_dict(data: dict[str, Any], ontology: dict[str, Any]) -> list[str]:
@@ -309,7 +311,10 @@ def validate_theme_dict(data: dict[str, Any], ontology: dict[str, Any]) -> list[
     _validate_segments(data.get("segments", []), ontology, errors)
     _validate_profit_pools(data.get("profit_pools", []), ontology, errors)
     _validate_companies(data.get("companies", []), ontology, known_evidence_ids, errors)
-    _validate_scenarios(data.get("scenarios", []), errors)
+    _validate_scenarios(data.get("scenarios", []), known_evidence_ids, errors)
+
+    if "thesis_evidence_ids" in data:
+        _validate_evidence_ids("theme", data["thesis_evidence_ids"], known_evidence_ids, errors)
 
     return errors
 
