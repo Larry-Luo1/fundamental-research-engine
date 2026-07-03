@@ -829,5 +829,35 @@ class CalibrateCliTest(unittest.TestCase):
             self.assertEqual(exit_code, 1)
 
 
+class SourcesSearchCliTest(unittest.TestCase):
+    _HITS = [
+        {
+            "adsh": "0001039399-25-000023",
+            "cik": "0001039399",
+            "company": "FORMFACTOR INC (FORM)",
+            "form": "10-K",
+            "filed": "2025-02-21",
+            "period_ending": "2024-12-28",
+            "primary_doc": "form-20241228.htm",
+            "title": "FORMFACTOR INC (FORM) 10-K filed 2025-02-21",
+            "url": "https://www.sec.gov/Archives/edgar/data/1039399/000103939925000023/form-20241228.htm",
+        }
+    ]
+
+    def test_search_writes_evidence_shaped_results(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "sources.json"
+            with patch("fundamental_research_engine.cli.search_filings", return_value=self._HITS) as mocked:
+                exit_code = main(["sources", "search", "high bandwidth memory", "--forms", "10-K", "--out", str(out)])
+            self.assertEqual(exit_code, 0)
+            mocked.assert_called_once()
+            report = json.loads(out.read_text(encoding="utf-8"))
+            self.assertEqual(report["count"], 1)
+            src = report["sources"][0]
+            self.assertEqual(src["id"], "S1")
+            self.assertEqual(src["source_type"], "regulatory_filing")
+            self.assertTrue(src["url"].startswith("https://www.sec.gov/Archives/"))
+
+
 if __name__ == "__main__":
     unittest.main()

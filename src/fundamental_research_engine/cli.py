@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import urllib.error
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +13,7 @@ from .adapters import AdapterError, ManualCompletionPending, get_adapter
 from .calibration import build_calibration, register_predictions, resolve_prediction
 from .critique import summarize_critique, validate_critique_shape
 from .diff import default_diff_dir, diff_analysis, find_runs_for_theme, resolve_analysis_path
+from .edgar import filing_to_evidence, search_filings
 from .evidence import build_evidence_audit, write_evidence_store
 from .io import read_json, write_json, write_text
 from .llm_json import complete_json_with_retry as _complete_json_with_retry
@@ -158,6 +160,16 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--probability", type=float, default=None, help="Probability you had assigned (0-1), recorded on --resolve so Brier can be scored.")
     calibrate.add_argument("--as-of", default=None, help="Resolution date (YYYY-MM-DD); defaults to today.")
     calibrate.add_argument("--show", action="store_true", help="Print predictions and calibration summary (default action).")
+
+    sources = subparsers.add_parser("sources", help="Discover real primary sources.")
+    sources_sub = sources.add_subparsers(dest="sources_command", required=True)
+    search = sources_sub.add_parser("search", help="Full-text search SEC EDGAR filings (keyless).")
+    search.add_argument("query", help="Full-text query, e.g. 'high bandwidth memory qualification'.")
+    search.add_argument("--forms", default=None, help="Comma-separated form types, e.g. 10-K,10-Q,8-K.")
+    search.add_argument("--from", dest="date_from", default=None, help="Filed on/after (YYYY-MM-DD).")
+    search.add_argument("--to", dest="date_to", default=None, help="Filed on/before (YYYY-MM-DD).")
+    search.add_argument("--limit", type=int, default=10, help="Max filings to return.")
+    search.add_argument("--out", type=Path, default=None, help="Write evidence-shaped results here (defaults to stdout).")
 
     return parser
 
@@ -571,6 +583,28 @@ def main(argv: list[str] | None = None) -> int:
         ]
         print(json.dumps({"calibration": summary, "predictions": listing}, ensure_ascii=False, indent=2, sort_keys=True))
         return 0
+
+    if args.command == "sources":
+        if args.sources_command == "search":
+            forms = [f.strip() for f in args.forms.split(",") if f.strip()] if args.forms else None
+            try:
+                hits = search_filings(
+                    args.query, forms=forms, date_from=args.date_from, date_to=args.date_to, limit=args.limit
+                )
+            except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as exc:
+                print(f"sources search: EDGAR request failed: {exc}")
+                return 1
+            found = [filing_to_evidence(hit, evidence_id=f"S{index}") for index, hit in enumerate(hits, start=1)]
+            report = {"query": args.query, "count": len(found), "sources": found}
+            if args.out is not None:
+                write_json(args.out, report)
+                print(args.out)
+            else:
+                print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+            print(f"found {len(found)} filing(s)")
+            return 0
+        parser.error(f"unknown sources command: {args.sources_command}")
+        return 2
 
     parser.error(f"unknown command: {args.command}")
     return 2

@@ -152,6 +152,64 @@ async def refine(sid: str, body: RefineBody, _: None = Depends(require_auth)) ->
         raise HTTPException(status_code=502, detail=str(exc))
 
 
+# ---- primer: fuzzy topic -> orientation + candidate framings ---------------
+class TopicBody(BaseModel):
+    topic: str
+
+
+class PromoteBody(BaseModel):
+    framing_id: str
+
+
+@app.post("/api/primers")
+def create_primer(body: TopicBody, _: None = Depends(require_auth)) -> dict:
+    try:
+        sid = service.create_primer(body.topic)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"id": sid}
+
+
+@app.get("/api/primers/{sid}")
+def get_primer(sid: str, _: None = Depends(require_auth)) -> dict:
+    try:
+        return service.get_primer(sid)
+    except (FileNotFoundError, ValueError):
+        raise HTTPException(status_code=404, detail="primer not found")
+
+
+@app.get("/api/primers/{sid}/stream")
+async def stream_primer(sid: str, _: None = Depends(require_auth)) -> StreamingResponse:
+    try:
+        service.get_primer(sid)  # existence check
+    except (FileNotFoundError, ValueError):
+        raise HTTPException(status_code=404, detail="primer not found")
+
+    async def event_source():
+        try:
+            async for event in service.generate_primer(sid):
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        except Exception as exc:  # noqa: BLE001 - always close the stream cleanly
+            yield f"data: {json.dumps({'event': 'error', 'message': str(exc)})}\n\n"
+
+    return StreamingResponse(
+        event_source(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/api/primers/{sid}/promote")
+def promote_framing(sid: str, body: PromoteBody, _: None = Depends(require_auth)) -> dict:
+    try:
+        new_sid = service.promote_framing(sid, body.framing_id)
+    except (FileNotFoundError,):
+        raise HTTPException(status_code=404, detail="primer not found")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"analysis_id": new_sid}
+
+
 # ---- frontend --------------------------------------------------------------
 @app.get("/")
 def index() -> FileResponse:

@@ -20,6 +20,7 @@ from fundamental_research_engine.critique import validate_critique_shape
 from fundamental_research_engine.diff import diff_analysis
 from fundamental_research_engine.io import read_json, write_json
 from fundamental_research_engine.pipeline import default_ontology_path, run_pipeline
+from fundamental_research_engine.primer import build_primer, framing_to_theme_definition
 from fundamental_research_engine.prompts import default_methodology_path, render_critique_prompt
 from fundamental_research_engine.stages import (
     STAGE_ORDER,
@@ -127,6 +128,8 @@ class Service:
             try:
                 meta = read_json(meta_file)
             except Exception:  # noqa: BLE001 - skip corrupt session dirs
+                continue
+            if meta.get("kind") == "primer":
                 continue
             items.append(
                 {
@@ -253,6 +256,111 @@ class Service:
         meta.setdefault("runs", []).append(run_record)
         self._write_meta(sid, meta)
         return run_record
+
+    # ---- primer: fuzzy topic -> orientation + candidate framings -------
+    def create_primer(self, topic: str) -> str:
+        topic = topic.strip()
+        if not topic:
+            raise ValueError("topic is empty")
+        sid = uuid.uuid4().hex
+        self._session_dir(sid).mkdir(parents=True, exist_ok=True)
+        self._write_meta(
+            sid,
+            {
+                "id": sid,
+                "kind": "primer",
+                "topic": topic,
+                "created_at": _now(),
+                "status": "pending",
+                "model": self.config.model,
+                "model_name": self.config.model_name,
+                "resolved_title": None,
+                "error": None,
+            },
+        )
+        return sid
+
+    def _primer_path(self, sid: str) -> Path:
+        return self._session_dir(sid) / "primer.json"
+
+    def get_primer(self, sid: str) -> dict[str, Any]:
+        meta = self._read_meta(sid)
+        path = self._primer_path(sid)
+        return {"meta": meta, "primer": read_json(path) if path.exists() else None}
+
+    async def generate_primer(self, sid: str) -> AsyncIterator[dict[str, Any]]:
+        lock = self._lock(sid)
+        if lock.locked():
+            yield {"event": "info", "message": "primer already running"}
+            return
+        async with lock:
+            meta = self._read_meta(sid)
+            if meta.get("status") == "done" and self._primer_path(sid).exists():
+                yield {"event": "done", "primer": read_json(self._primer_path(sid))}
+                return
+
+            yield {"event": "queued"}
+            async with self._semaphore():
+                loop = asyncio.get_running_loop()
+                meta["status"] = "running"
+                meta["error"] = None
+                self._write_meta(sid, meta)
+
+                yield {"event": "working", "message": "fetching seed sources and organizing the primer"}
+                adapter = get_adapter(self.config.model, self.config.model_name, self.config.max_tokens)
+                ontology = self._ontology()
+                try:
+                    result = await loop.run_in_executor(
+                        None,
+                        functools.partial(
+                            build_primer,
+                            meta["topic"],
+                            adapter,
+                            ontology=ontology,
+                            prompts_dir=self.project_root / "prompts",
+                            max_attempts=self.config.max_attempts,
+                        ),
+                    )
+                except ManualCompletionPending:
+                    meta["status"] = "error"
+                    meta["error"] = "primer requires a configured model (manual mode is unavailable in the web app)"
+                    self._write_meta(sid, meta)
+                    yield {"event": "error", "message": meta["error"]}
+                    return
+                except Exception as exc:  # noqa: BLE001 - surface any failure to the client
+                    meta["status"] = "error"
+                    meta["error"] = f"primer failed: {exc}"
+                    self._write_meta(sid, meta)
+                    yield {"event": "error", "message": meta["error"]}
+                    return
+
+                write_json(self._primer_path(sid), result)
+                meta["status"] = "done"
+                meta["resolved_title"] = result.get("resolved_title")
+                self._write_meta(sid, meta)
+                yield {"event": "done", "primer": result}
+
+    def promote_framing(self, sid: str, framing_id: str) -> str:
+        """Turn a chosen candidate framing into a fresh, ready-to-draft analysis."""
+        data = self.get_primer(sid)
+        primer_result = data.get("primer")
+        if not primer_result:
+            raise ValueError("primer is not ready")
+        primer = primer_result.get("primer", {})
+        framing = next((f for f in primer.get("candidate_framings", []) if f.get("id") == framing_id), None)
+        if framing is None:
+            raise ValueError(f"unknown framing '{framing_id}'")
+
+        definition = framing_to_theme_definition(framing, primer)
+        brief = f"{framing['title']} — {framing['core_question']}"
+        new_sid = self.create_analysis(brief)
+        theme_dir = self._session_dir(new_sid) / "theme"
+        write_json(theme_dir / "theme_definition.json", definition)
+        meta = self._read_meta(new_sid)
+        meta["from_primer"] = sid
+        meta["from_framing"] = framing_id
+        self._write_meta(new_sid, meta)
+        return new_sid
 
     # ---- critique ------------------------------------------------------
     def critique_stage(self, sid: str, stage: str) -> dict[str, Any]:

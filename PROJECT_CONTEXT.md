@@ -486,6 +486,93 @@ Deferred (not forgotten): auto claim-extraction from fetched text; splitting the
 QC lenses into independent adversarial verifiers with majority vote; wiring
 `grounding_score` into `fre diff` for drift tracking; per-lens web UI surfacing.
 
+## Theme Primer — fuzzy-topic entry point (2026-07-03, Claude)
+
+Closed the biggest entry-point gap: the pipeline assumed a well-formed theme, but
+real users often start fuzzy ("HBM", "solid-state batteries", "GLP-1 drugs"). Added
+a **primer** layer that turns a fuzzy topic into a fast, structured orientation +
+2–4 candidate framings the user picks to enter the existing pipeline. Chosen shape:
+**web guided page** + **live source fetching** (per the user's two decisions).
+
+- `src/fundamental_research_engine/primer.py` (engine, zero-dep, injectable):
+  - `wikipedia_source(topic, http_get)` — keyless, predictable seed via Wikipedia
+    opensearch + REST summary (real live fetch works from this box; verified against
+    HBM / solid-state battery / GLP-1).
+  - `build_primer(topic, adapter, *, ontology, prompts_dir, http_get, fetch, ...)` —
+    fetch seed → model organizes into structured primer JSON → best-effort fetch of
+    model-suggested primary-source URLs (robots-aware `default_fetch`). All HTTP and
+    the adapter are injectable so tests stay hermetic.
+  - `validate_primer_shape` (load-bearing fields; ≥1 candidate framing required),
+    `render_primer_prompt`, and `framing_to_theme_definition` (a chosen framing →
+    a valid `theme_definition` stage dict — asserted against `validate_stage_shape`).
+  - `prompts/primer.md`: enum-constrained (theme_type/hype_stage), honesty rules —
+    every factual claim carries a `verify` flag unless a seed source supports it.
+- Web layer:
+  - `web/service.py`: `create_primer` / `generate_primer` (SSE) / `get_primer` /
+    `promote_framing` (seeds a fresh analysis session's `theme_definition.json`,
+    then the normal `draft_and_run` completes the rest). Primers carry
+    `meta.kind == "primer"` and are excluded from `list_analyses`.
+  - `web/app.py`: `POST /api/primers`, `GET /api/primers/{sid}`,
+    `GET .../stream` (SSE), `POST .../promote`.
+  - `web/static/index.html`: Primer is now the default landing screen — topic box →
+    streamed progress → rendered explainer/glossary/landscape/debates/claims/sources
+    + clickable framing cards → "进入深度分析" promotes into the existing analysis view.
+- Promotion deliberately does NOT set `thesis_evidence_ids` (the primer's fetched
+  sources aren't yet in the theme's `evidence[]`, which is authored later in
+  `scenario_analysis`); the thesis therefore shows as ungrounded and the quality
+  scorecard correctly flags it — honest, and it drives the evidence work.
+
+Verification (offline; this VPS has no pip/fastapi and no API key):
+```bash
+PYTHONPATH=src python3 -m unittest discover -s tests            # 130 pass
+PYTHONPATH=src python3 -c "from fundamental_research_engine.primer import wikipedia_source; print(wikipedia_source('HBM')['title'])"
+python3 -m py_compile web/app.py web/service.py                 # compiles
+```
+130 tests pass (test_primer.py: 9, test_web_primer.py: 3). Live Wikipedia lookup
+verified for real topics. Web `service` path tested offline with `build_primer`
+patched; `app.py` only `py_compile`-verified (no fastapi on this box); the
+frontend JS passed `node --check`. NOT verifiable here: the live HTTP server and
+real-model primer generation — both need an environment with `fastapi` + a key.
+
+Deferred: broader keyless source discovery (SEC EDGAR full-text, industry bodies)
+beyond Wikipedia + model-suggested URLs; a Socratic scoping step to refine a
+chosen framing before drafting; carrying primer sources into the theme's evidence
+so a promoted thesis starts partially grounded.
+
+## EDGAR Source Discovery (2026-07-03, Claude)
+
+Implemented Design 1 of `docs/data-sources-design.md` (real primary-source
+discovery). Design 2 (auto claim extraction) is designed but not yet built.
+
+- `src/fundamental_research_engine/edgar.py` (engine, zero-dep, injectable HTTP):
+  - `search_filings(query, *, forms, date_from, date_to, limit, http_get)` — SEC
+    EDGAR keyless full-text search (`efts.sec.gov/LATEST/search-index`), paginates,
+    returns normalized hits `{adsh, cik, company, form, filed, period_ending,
+    primary_doc, title, url}`.
+  - `filing_to_evidence(hit, *, evidence_id, reliability)` — evidence-shaped record
+    (`source_type: regulatory_filing`) that drops straight into `evidence[]`.
+  - `fetch_filing_text(hit, fetch)` — pulls the primary document text (for the
+    future claim-extraction step), via the shared robots-aware `default_fetch`.
+  - `default_edgar_get` carries the SEC-required User-Agent (`FRE_SEC_USER_AGENT`,
+    with a safe default) and a simple <=8 rps throttle; injectable so tests are hermetic.
+- `fre sources search "<query>" [--forms 10-K,10-Q] [--from/--to] [--limit] [--out]`
+  (nested subcommand). Prints/writes evidence-shaped candidates; does NOT auto-write
+  into a theme (human curates, consistent with critique/qc).
+- Verified REAL end-to-end from this box (EDGAR is keyless; network works):
+  `sources search '"high bandwidth memory"' --forms 10-K` returned real 10-Ks
+  (FormFactor, Veeco, MoSys); `fetch_filing_text` resolved the constructed
+  Archives URL and pulled the 301K-char FormFactor 10-K with the query phrase in it.
+- Tests: `tests/test_edgar.py` (6, injected http_get) + a CLI test (patched
+  `search_filings`). Full suite: 137 pass. CI stays hermetic (no live network).
+
+Next (Design 2, in the doc): `claims.py` + `prompts/claim_extraction.md` +
+`fre extract-claims` — LLM extracts atomic claims each bound to a VERBATIM quote,
+then a deterministic quote-verification guard drops any claim whose quote is not
+found in the source text (anti-hallucination). Fills `evidence[].claims`, which the
+audit/grounding layers already consume. Needs a model (fake-adapter tests here;
+real extraction needs a key). Also open: wire EDGAR hits into primer
+`suggested_sources`; optional `source_types` controlled vocabulary in the ontology.
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:

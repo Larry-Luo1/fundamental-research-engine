@@ -71,7 +71,8 @@
   </header>
   <div id="layout">
     <div id="side">
-      <button class="primary" style="width:100%" onclick="showNew()">+ 新建分析</button>
+      <button class="primary" style="width:100%" onclick="showPrimer()">+ 题材入门 / Primer</button>
+      <button style="width:100%;margin-top:8px" onclick="showNew()">+ 直接新建分析</button>
       <div id="sessions" style="margin-top:12px"></div>
     </div>
     <div id="main"></div>
@@ -97,7 +98,7 @@ function showLogin(){ $("#login").classList.remove("hidden"); $("#app").classLis
 async function showApp(){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   try { const c = await api("/api/config"); $("#modelinfo").textContent = c.model_name + (c.has_key?"":"（未配置 API Key）"); } catch(e){}
-  refreshSessions(); showNew();
+  refreshSessions(); showPrimer();
 }
 async function doLogin(){
   $("#loginerr").textContent="";
@@ -226,6 +227,85 @@ async function doRefine(id, stage){
     box.innerHTML = `<small class="ok">已生成 ${esc(r.run.run_id)}${r.diff?"（含 diff）":""}</small>`;
     openSession(id);
   } catch(e){ box.innerHTML = `<small class="err">${esc(e.message)}</small>`; }
+}
+
+// ---- primer: fuzzy topic -> orientation + candidate framings ----
+function showPrimer(){
+  $("#main").innerHTML = `
+    <div class="card">
+      <h3>题材入门 / Primer</h3>
+      <p class="muted">还不确定要分析什么？输入一个题材/技术/名词，引擎会联网抓取一手源，快速梳理：大白话解释、术语表、价值链版图、当前态势与成熟度、核心争论，并给出 2-4 个可直接进入深度分析的立题。</p>
+      <input id="topic" placeholder="例如：HBM、固态电池、GLP-1 减肥药、电网储能" onkeydown="if(event.key==='Enter')startPrimer()" />
+      <p><button class="primary" onclick="startPrimer()">开始梳理</button></p>
+      <small class="muted">Primer 是一张"待验证的地图"：每条事实性陈述都会标注是否需核实，并附上可查证的来源。</small>
+    </div>`;
+}
+async function startPrimer(){
+  const topic = $("#topic").value.trim();
+  if(!topic) return;
+  const {id} = await api("/api/primers",{method:"POST",body:JSON.stringify({topic})});
+  runPrimerStream(id, topic);
+}
+function runPrimerStream(id, topic){
+  $("#main").innerHTML = `<div class="card"><h3>正在梳理：${esc(topic)}</h3><div class="prog" id="pprog"></div></div>`;
+  const log=(html,cls="")=>{const d=document.createElement("div");d.className="row "+cls;d.innerHTML=html;$("#pprog").appendChild(d);};
+  const es=new EventSource(`/api/primers/${id}/stream`);
+  es.onmessage=ev=>{
+    const e=JSON.parse(ev.data);
+    if(e.event==="queued") log('<span class="tag">已连接，准备中 …</span>');
+    else if(e.event==="working") log(esc(e.message)+" …");
+    else if(e.event==="done"){ log("完成 ✓","ok"); es.close(); renderPrimer(id, e.primer); }
+    else if(e.event==="error"){ log("错误："+esc(e.message),"err"); es.close(); }
+    else if(e.event==="info") log(esc(e.message));
+  };
+  es.onerror=()=>{ log("连接中断（可重试）","err"); es.close(); };
+}
+function renderPrimer(id, res){
+  const p = res.primer||{};
+  const g = p.glossary||[], ls = p.landscape||[], deb = p.key_debates||[], kc = p.key_claims||[];
+  const fr = p.candidate_framings||[], src = res.fetched_sources||[], uv = res.unverified_claims||[];
+  let html = `<div class="card"><h3>${esc(res.resolved_title||res.topic)} <small class="muted">Primer</small></h3>
+    <p>${esc(p.explainer||"")}</p>
+    <p><small class="muted">${res.seed_used?"已抓取 Wikipedia 种子源":"未找到 Wikipedia 种子源"} · 成熟度：Hype ${esc((p.maturity||{}).hype_stage)} · TRL ${esc((p.maturity||{}).technology_readiness_level)}</small></p>
+    ${p.state_of_play?`<p><b>当前态势：</b>${esc(p.state_of_play)}</p>`:""}</div>`;
+
+  if(g.length) html += `<div class="card"><h3>术语表</h3><table><tr><th>术语</th><th>含义</th></tr>
+    ${g.map(x=>`<tr><td>${esc(x.term)}</td><td>${esc(x.definition)}</td></tr>`).join("")}</table></div>`;
+
+  if(ls.length) html += `<div class="card"><h3>价值链 / 版图</h3><table><tr><th>环节</th><th>角色</th><th>代表玩家</th></tr>
+    ${ls.map(x=>`<tr><td>${esc(x.segment)}</td><td>${esc(x.role)}</td><td>${esc((x.example_players||[]).join("、"))}</td></tr>`).join("")}</table></div>`;
+
+  if(deb.length) html += `<div class="card"><h3>核心争论</h3>${deb.map(d=>`
+    <div style="margin:6px 0"><b>${esc(d.question)}</b>
+      <div><small class="ok">多头：</small>${esc(d.bull)}</div>
+      <div><small class="err">空头：</small>${esc(d.bear)}</div></div>`).join("")}</div>`;
+
+  html += `<div class="card"><h3>选择一个立题进入深度分析</h3>
+    <p class="muted">每个立题会作为 theme_definition 直接种入分析流水线，自动补全其余阶段并生成备忘录。</p>
+    ${fr.map(f=>`<div class="card" style="background:#0c0f13">
+      <b>${esc(f.title)}</b>
+      <p><b>核心问题：</b>${esc(f.core_question)}</p>
+      <p><b>初始假设：</b>${esc(f.thesis_hypothesis)}</p>
+      <p><small class="muted">类型 ${esc(f.theme_type)} · 领域 ${esc(f.domain)}</small></p>
+      ${(f.drivers||[]).length?`<b>驱动：</b><ul class="tight">${f.drivers.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
+      <button class="primary" onclick="promoteFraming('${id}','${esc(f.id)}')">进入深度分析 →</button>
+    </div>`).join("")}</div>`;
+
+  if(kc.length) html += `<div class="card"><h3>关键陈述（含核实标记）</h3><table><tr><th>陈述</th><th>状态</th></tr>
+    ${kc.map(c=>`<tr><td>${esc(c.claim)}</td><td>${(c.verify||!(c.supported_by||[]).length)?'<span class="badge error">需核实</span>':'<span class="badge done">有来源</span>'}</td></tr>`).join("")}</table></div>`;
+
+  if(src.length) html += `<div class="card"><h3>已抓取来源</h3><table><tr><th>来源</th><th>状态</th></tr>
+    ${src.map(s=>`<tr><td>${s.url?`<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`:esc(s.title)}</td><td>${esc(s.fetch_status)}</td></tr>`).join("")}</table></div>`;
+
+  if(uv.length) html += `<div class="card"><small class="muted">⚠️ ${uv.length} 条陈述仍需核实 —— Primer 是起点地图，不是结论。进入深度分析后由证据/接地层继续验证。</small></div>`;
+
+  $("#main").innerHTML = html;
+}
+async function promoteFraming(primerId, framingId){
+  const {analysis_id} = await api(`/api/primers/${primerId}/promote`,{method:"POST",body:JSON.stringify({framing_id:framingId})});
+  await refreshSessions();
+  const data = await api("/api/analyses/"+analysis_id);
+  runStream(analysis_id, data.meta.brief);
 }
 
 boot();

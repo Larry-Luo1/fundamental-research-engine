@@ -24,10 +24,17 @@ The first version started with AI infrastructure themes, but the core engine is 
 ## Web UI (browser front end)
 
 An optional web layer lets you run the engine on one server and give everyone a
-browser-based, guided workflow (describe a theme → the model drafts the 6 stages
-→ pipeline runs → memo/scores/evidence render in the page, with per-stage
-critique and refine). The core engine stays dependency-free; only the web layer
-needs `fastapi`/`uvicorn`.
+browser-based, guided workflow. If you already know your theme, describe it and
+the model drafts the 6 stages → pipeline runs → memo/scores/evidence render in
+the page, with per-stage critique and refine. If you are **not sure what to
+analyze yet**, start with the **Primer** entry: type a fuzzy topic ("HBM",
+"solid-state batteries", "GLP-1 drugs") and the engine fetches live seed sources
+(Wikipedia + suggested primary sources) and organizes a fast orientation —
+plain-language explainer, glossary, value-chain landscape, maturity, key debates,
+and 2–4 concrete candidate framings you click to drop straight into the analysis
+pipeline. A primer is an explicitly *unverified map*: factual claims are flagged
+for verification and handed to the grounding layer. The core engine stays
+dependency-free; only the web layer needs `fastapi`/`uvicorn`.
 
 One-click deploy after `git clone` (Ubuntu/macOS `./deploy.sh` then `./run.sh`;
 Windows `deploy.bat` then `run.bat`). See **`web/README.md`** for full setup,
@@ -259,6 +266,24 @@ PYTHONPATH=src python3 -m fundamental_research_engine calibrate configs/themes/h
 PYTHONPATH=src python3 -m fundamental_research_engine qc configs/themes/hbm4.json --grounding-only \
   --track-record track_records/hbm4.json
 ```
+
+## Source Discovery (SEC EDGAR)
+
+`fre sources search` finds real primary filings via SEC EDGAR's keyless full-text
+search and returns them as evidence-shaped records that drop into a theme's
+`evidence[]`:
+
+```bash
+export FRE_SEC_USER_AGENT="Your Name your@email"   # SEC requires a descriptive UA
+PYTHONPATH=src python3 -m fundamental_research_engine sources search \
+  '"high bandwidth memory"' --forms 10-K,10-Q --from 2025-01-01 --limit 8 --out sources.json
+```
+
+Each result carries `source_type: regulatory_filing`, the filing date, and a
+direct document URL. This closes the "no source discovery" gap — sources are real
+filings rather than hand-typed or model-suggested URLs. (Turning a filing's text
+into structured, quote-backed `claims` is the next step; see
+`docs/data-sources-design.md`.)
 
 ## Methodology
 
