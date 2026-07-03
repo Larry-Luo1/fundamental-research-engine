@@ -4,7 +4,11 @@ import json
 import unittest
 from pathlib import Path
 
-from fundamental_research_engine.prompts import default_methodology_path, render_stage_prompt
+from fundamental_research_engine.prompts import (
+    default_methodology_path,
+    render_claim_extraction_prompt,
+    render_stage_prompt,
+)
 from fundamental_research_engine.stages import STAGE_ORDER, split_theme_dict
 
 
@@ -53,6 +57,20 @@ class PromptsTest(unittest.TestCase):
     def test_missing_template_file_raises(self) -> None:
         with self.assertRaises(FileNotFoundError):
             render_stage_prompt("theme_definition", self.project_root / "nonexistent_prompts", {}, self.ontology)
+
+    def test_claim_extraction_prompt_embeds_source_and_context(self) -> None:
+        prompt = render_claim_extraction_prompt(
+            source_title="Demo 10-K",
+            source_text="HBM revenue increased because AI customers qualified new products.",
+            context={"theme": {"id": "demo"}, "owners": {"thesis": [{"id": "thesis"}]}},
+            prompts_dir=self.prompts_dir,
+        )
+
+        self.assertNotIn("{{", prompt)
+        self.assertNotIn("}}", prompt)
+        self.assertIn("Demo 10-K", prompt)
+        self.assertIn("HBM revenue increased", prompt)
+        self.assertIn('"id": "demo"', prompt)
 
 
 if __name__ == "__main__":

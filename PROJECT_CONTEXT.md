@@ -565,13 +565,42 @@ discovery). Design 2 (auto claim extraction) is designed but not yet built.
 - Tests: `tests/test_edgar.py` (6, injected http_get) + a CLI test (patched
   `search_filings`). Full suite: 137 pass. CI stays hermetic (no live network).
 
-Next (Design 2, in the doc): `claims.py` + `prompts/claim_extraction.md` +
-`fre extract-claims` — LLM extracts atomic claims each bound to a VERBATIM quote,
-then a deterministic quote-verification guard drops any claim whose quote is not
-found in the source text (anti-hallucination). Fills `evidence[].claims`, which the
-audit/grounding layers already consume. Needs a model (fake-adapter tests here;
-real extraction needs a key). Also open: wire EDGAR hits into primer
-`suggested_sources`; optional `source_types` controlled vocabulary in the ontology.
+Design 2 from this note has since been implemented in the next section:
+`claims.py` + `prompts/claim_extraction.md` + `fre extract-claims` with
+deterministic quote verification. Still open: wire EDGAR hits into primer
+`suggested_sources`; optional `source_types` controlled vocabulary in the
+ontology; persist rich quote provenance into the evidence store sidecar.
+
+## Quote-Backed Claim Extraction (2026-07-03, Codex)
+
+Implemented Design 2 of `docs/data-sources-design.md`: source text can now be
+converted into quote-verified candidate evidence claims.
+
+- `src/fundamental_research_engine/claims.py`:
+  - `validate_claims_shape(data)` enforces `{claims:[{text, quote, confidence, bears_on}]}` with `confidence` in `high|medium|low`.
+  - `verify_quotes(claims, source_text)` normalizes whitespace and keeps only claims whose `quote` is found verbatim in the source text; kept claims get `verified: true`.
+  - `extract_claims(...)` renders `prompts/claim_extraction.md`, calls the adapter with JSON retry, then applies deterministic quote verification.
+- `prompts/claim_extraction.md` tells the model to extract atomic, checkable claims and include a source-text quote for every claim.
+- `fre extract-claims <theme> --source <evidence_id|url>`:
+  - supports `--source-text` for local text or URL fetching through `default_fetch`;
+  - default/manual mode writes `<theme>-<source>.claim_extraction.prompt.md`;
+  - model mode emits a verified report with `claims`, `claim_texts`, `dropped_unverified`, and source metadata;
+  - `--claims <json>` accepts raw model output or a prior extraction report, strips stale `verified`, and re-verifies against current source text;
+  - `--apply` appends only verified claim text back to the matched `evidence[].claims`.
+- Docs updated: README now has a quote-backed claim extraction section; `docs/data-sources-design.md` marks Design 2 complete and calls out the remaining evidence-store sidecar work.
+
+Verification:
+```bash
+PYTHONPATH=src python3 -m py_compile src/fundamental_research_engine/claims.py src/fundamental_research_engine/prompts.py src/fundamental_research_engine/cli.py
+PYTHONPATH=src python3 -m unittest tests.test_claims tests.test_prompts tests.test_cli
+PYTHONPATH=src python3 -m unittest discover -s tests            # 144 pass
+for f in configs/themes/*.json; do PYTHONPATH=src python3 -m fundamental_research_engine validate "$f" || exit 1; done
+```
+
+Known limitations / next steps:
+- The verified rich fields (`quote`, `confidence`, `bears_on`, `verified`) currently live in the extraction report; the theme still stores only `list[str]` claims. Next step is to persist the rich provenance as a sidecar in `data/evidence/<theme>/claims.json`.
+- EDGAR source search and claim extraction are still separate commands; next step is a controlled batch path (`evidence-sync --discover-edgar` / `--extract-claims`) that defaults to candidate reports, not automatic theme mutation.
+- Real model extraction still needs `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`; CI remains hermetic through fake adapters and pre-authored JSON fixtures.
 
 ## Collaboration Rule
 

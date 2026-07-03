@@ -53,6 +53,29 @@ def render_quality_review_prompt(analysis: dict[str, Any], prompts_dir: Path) ->
     return template.replace("{{ANALYSIS_JSON}}", _json_block(analysis))
 
 
+def render_claim_extraction_prompt(
+    *,
+    source_title: str,
+    source_text: str,
+    context: dict[str, Any],
+    prompts_dir: Path,
+    max_source_chars: int = 60_000,
+) -> str:
+    template_path = prompts_dir / "claim_extraction.md"
+    if not template_path.exists():
+        raise FileNotFoundError(f"no claim extraction template at {template_path}")
+    template = template_path.read_text(encoding="utf-8")
+    substitutions = {
+        "SOURCE_TITLE": source_title or "Untitled source",
+        "SOURCE_TEXT": source_text[:max_source_chars],
+        "SOURCE_CONTEXT_JSON": _json_block(context),
+    }
+    rendered = template
+    for key, value in substitutions.items():
+        rendered = rendered.replace(f"{{{{{key}}}}}", value)
+    return rendered
+
+
 def render_critique_prompt(
     stage: str,
     stage_data: dict[str, Any],

@@ -11,11 +11,13 @@ from typing import Any
 
 from .adapters import AdapterError, ManualCompletionPending, get_adapter
 from .calibration import build_calibration, register_predictions, resolve_prediction
+from .claims import claim_texts, extract_claims, validate_claims_shape, verify_quotes
 from .critique import summarize_critique, validate_critique_shape
 from .diff import default_diff_dir, diff_analysis, find_runs_for_theme, resolve_analysis_path
 from .edgar import filing_to_evidence, search_filings
-from .evidence import build_evidence_audit, write_evidence_store
+from .evidence import build_evidence_audit, default_fetch, write_evidence_store
 from .io import read_json, write_json, write_text
+from .models import Evidence, Theme
 from .llm_json import complete_json_with_retry as _complete_json_with_retry
 from .pipeline import (
     build_analysis,
@@ -171,12 +173,130 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--limit", type=int, default=10, help="Max filings to return.")
     search.add_argument("--out", type=Path, default=None, help="Write evidence-shaped results here (defaults to stdout).")
 
+    extract = subparsers.add_parser("extract-claims", help="Extract quote-verified claims from a source.")
+    extract.add_argument("theme", type=Path, help="Theme config (monolithic JSON or stage directory).")
+    extract.add_argument("--source", required=True, help="Evidence id or URL to extract claims from.")
+    extract.add_argument("--source-text", type=Path, default=None, help="Use this local source text instead of fetching.")
+    extract.add_argument("--claims", type=Path, default=None, help="Use a pre-authored extraction JSON instead of calling a model.")
+    extract.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter for extraction.")
+    extract.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
+    extract.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")
+    extract.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude adapters.")
+    extract.add_argument("--apply", action="store_true", help="Append verified claim text back to the matched evidence item.")
+    extract.add_argument("--out", type=Path, default=None, help="Write extraction report here (defaults to stdout).")
+    extract.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/ and prompts/.")
+
     return parser
 
 
 def default_track_record_path(project_root: Path, theme_id: str) -> Path:
     safe_id = theme_id.replace("/", "-").replace(" ", "-")
     return project_root / "track_records" / f"{safe_id}.json"
+
+
+def _safe_ref(value: str) -> str:
+    safe = "".join(char if char.isalnum() else "-" for char in value.lower()).strip("-")
+    return safe or "source"
+
+
+def _find_evidence(theme: Theme, source_ref: str) -> Evidence | None:
+    for item in theme.evidence:
+        if item.id == source_ref or (item.url and item.url == source_ref):
+            return item
+    return None
+
+
+def _claim_context(theme: Theme) -> dict[str, Any]:
+    return {
+        "theme": {
+            "id": theme.id,
+            "title": theme.title,
+            "core_question": theme.core_question,
+            "thesis": theme.thesis,
+            "theme_type": theme.theme_type,
+            "domain": theme.domain,
+        },
+        "owners": {
+            "thesis": [{"id": "thesis", "name": "Thesis"}],
+            "bottlenecks": [{"id": item.id, "name": item.name} for item in theme.bottlenecks],
+            "companies": [{"id": item.id, "name": item.name} for item in theme.companies],
+            "scenarios": [{"id": item.id, "name": item.name} for item in theme.scenarios],
+        },
+    }
+
+
+def _source_payload(theme: Theme, source_ref: str, source_text_path: Path | None) -> tuple[Evidence | None, str, str, str]:
+    evidence = _find_evidence(theme, source_ref)
+    title = evidence.title if evidence else source_ref
+    url = evidence.url if evidence else (source_ref if source_ref.startswith(("http://", "https://")) else "")
+
+    if source_text_path is not None:
+        return evidence, title, url, source_text_path.read_text(encoding="utf-8")
+
+    if not url:
+        raise ValueError(f"source '{source_ref}' has no URL; provide --source-text")
+
+    result = default_fetch(url)
+    if not result.ok or not result.text:
+        detail = result.error or result.status
+        raise ValueError(f"failed to fetch source '{source_ref}': {detail}")
+    return evidence, title, url, result.text
+
+
+def _normalize_claims_file_payload(candidate: Any) -> Any:
+    """Accept raw model output or a prior extraction report as --claims input."""
+    if not isinstance(candidate, dict):
+        return candidate
+    normalized = dict(candidate)
+    if isinstance(normalized.get("claims"), list):
+        normalized["claims"] = [
+            {key: value for key, value in item.items() if key != "verified"}
+            if isinstance(item, dict)
+            else item
+            for item in normalized["claims"]
+        ]
+    return normalized
+
+
+def _apply_claim_texts(theme_path: Path, source_ref: str, texts: list[str], project_root: Path) -> None:
+    if not texts:
+        return
+
+    ontology = read_json(default_ontology_path(project_root))
+    if theme_path.is_dir():
+        scenario_path = stage_path(theme_path, "scenario_analysis")
+        data = read_json(scenario_path)
+        evidence_items = data.get("evidence", [])
+        target_path = scenario_path
+    else:
+        data = read_json(theme_path)
+        evidence_items = data.get("evidence", [])
+        target_path = theme_path
+
+    matched = None
+    for item in evidence_items:
+        if isinstance(item, dict) and (item.get("id") == source_ref or item.get("url") == source_ref):
+            matched = item
+            break
+    if matched is None:
+        raise ValueError(f"--apply requires --source to match an existing evidence id or URL: {source_ref}")
+
+    existing = [str(item) for item in matched.get("claims", [])]
+    for text in texts:
+        if text not in existing:
+            existing.append(text)
+    matched["claims"] = existing
+
+    if theme_path.is_dir():
+        stages = read_stage_dir_partial(theme_path)
+        stages["scenario_analysis"] = data
+        merged = merge_stage_dicts(stages)
+    else:
+        merged = data
+    errors = validate_theme_dict(merged, ontology)
+    if errors:
+        raise ValueError("updated theme failed validation: " + "; ".join(errors))
+    write_json(target_path, data)
 
 
 def _sha256_text(value: str) -> str:
@@ -582,6 +702,79 @@ def main(argv: list[str] | None = None) -> int:
             for item in record.get("predictions", [])
         ]
         print(json.dumps({"calibration": summary, "predictions": listing}, ensure_ascii=False, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "extract-claims":
+        theme = load_and_validate_theme(args.theme, args.project_root)
+        try:
+            evidence, source_title, source_url, source_text = _source_payload(theme, args.source, args.source_text)
+        except ValueError as exc:
+            print(f"extract-claims: {exc}")
+            return 1
+
+        if args.claims is not None:
+            candidate = _normalize_claims_file_payload(read_json(args.claims))
+            errors = validate_claims_shape(candidate)
+            if errors:
+                print(f"extract-claims: claims file {args.claims} is invalid:")
+                for error in errors:
+                    print(f"- {error}")
+                return 1
+            kept, dropped = verify_quotes(candidate["claims"], source_text)
+            extraction = {"claims": kept, "dropped_unverified": dropped, "attempts": 0}
+        else:
+            adapter = get_adapter(args.model, args.model_name, args.max_tokens)
+            try:
+                extraction = extract_claims(
+                    source_text,
+                    adapter,
+                    context=_claim_context(theme),
+                    prompts_dir=args.project_root / "prompts",
+                    source_title=source_title,
+                    max_attempts=args.max_attempts,
+                )
+            except ManualCompletionPending as pending:
+                prompt_dir = args.out.parent if args.out else Path.cwd()
+                prompt_path = prompt_dir / f"{theme.id}-{_safe_ref(args.source)}.claim_extraction.prompt.md"
+                write_text(prompt_path, pending.prompt)
+                print(f"manual mode: wrote claim-extraction prompt to {prompt_path}")
+                print("run it through a model, save the JSON reply, then rerun with --claims <file>")
+                return 0
+            except (AdapterError, ValueError) as exc:
+                print(f"extract-claims: {exc}")
+                return 1
+
+        report = {
+            "theme_id": theme.id,
+            "source": {
+                "evidence_id": evidence.id if evidence else None,
+                "title": source_title,
+                "url": source_url,
+            },
+            "claims": extraction["claims"],
+            "claim_texts": claim_texts(extraction["claims"]),
+            "dropped_unverified": extraction["dropped_unverified"],
+            "attempts": extraction["attempts"],
+            "applied": False,
+        }
+
+        if args.apply:
+            try:
+                _apply_claim_texts(args.theme, args.source, report["claim_texts"], args.project_root)
+            except ValueError as exc:
+                print(f"extract-claims: {exc}")
+                return 1
+            report["applied"] = True
+
+        if args.out is not None:
+            write_json(args.out, report)
+            print(args.out)
+        else:
+            print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+        print(
+            f"verified_claims={len(report['claims'])} "
+            f"dropped_unverified={report['dropped_unverified']} applied={report['applied']}"
+        )
         return 0
 
     if args.command == "sources":

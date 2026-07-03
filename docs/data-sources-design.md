@@ -107,8 +107,9 @@ def verify_quotes(claims, source_text) -> tuple[list, int]:
 
 ### 数据落点(不破坏现有 schema)
 - 主题的 `evidence[].claims` **保持 `list[str]`**(仅 claim 文本)——审计的 `E1.C1` 链接与现有测试不变。
-- 富信息(quote/confidence/bears_on/verified)写进证据库已有的 `data/evidence/<theme>/claims.json` 的**扩展字段**,作为 provenance 侧车。
-- 这样 grounding/audit 契约不动,却多了"每条 claim 背后的逐字出处"。
+- 当前实现先把富信息(quote/confidence/bears_on/verified)写入 `fre extract-claims --out` 的候选报告;`--apply` 只把核验后的 claim 文本写回 `evidence[].claims`。
+- 下一步可把富信息同步进证据库已有的 `data/evidence/<theme>/claims.json` 扩展字段,作为 provenance 侧车。
+- 这样 grounding/audit 契约不动,同时逐步补上"每条 claim 背后的逐字出处"。
 
 ### CLI
 ```bash
@@ -136,8 +137,8 @@ fre extract-claims <theme> --source <evidence_id> --apply
 ## 5. 构建顺序
 
 1. ✅ `edgar.py` + `default_edgar_get` + 节流器;`search_filings`/`filing_to_evidence`/`fetch_filing_text`;`fre sources search`;注入式单测 + 一次真实冒烟。**已完成**:真实 EDGAR 全文检索 → evidence 同形记录 → 构造的 Archives URL 经 `fetch_filing_text` 验证可解析(拉到真实 10-K 正文,查询词命中)。
-2. `claims.py` + `prompts/claim_extraction.md` + `validate_claims_shape` + `verify_quotes`(确定性反幻觉);`fre extract-claims`(默认候选,`--apply` 落库);fake-adapter 单测。
-3. 衔接:primer `suggested_sources` 用 EDGAR 命中;`evidence-sync --discover-edgar` / `--extract-claims`。
+2. ✅ `claims.py` + `prompts/claim_extraction.md` + `validate_claims_shape` + `verify_quotes`(确定性反幻觉);`fre extract-claims`(默认候选,`--apply` 落库);fake-adapter/CLI 单测。**已完成**:支持本地 source text、URL/evidence id 抓取、manual prompt、模型直接抽取、预生成 JSON/report 复用和逐字 quote 二次核验。
+3. 衔接:primer `suggested_sources` 用 EDGAR 命中;`evidence-sync --discover-edgar` / `--extract-claims`;把 quote/confidence/bears_on 侧车写入 evidence store。
 4. (可选)`source_types` 受控词表。
 
 ## 6. 红线

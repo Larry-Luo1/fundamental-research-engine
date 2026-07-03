@@ -281,9 +281,32 @@ PYTHONPATH=src python3 -m fundamental_research_engine sources search \
 
 Each result carries `source_type: regulatory_filing`, the filing date, and a
 direct document URL. This closes the "no source discovery" gap — sources are real
-filings rather than hand-typed or model-suggested URLs. (Turning a filing's text
-into structured, quote-backed `claims` is the next step; see
-`docs/data-sources-design.md`.)
+filings rather than hand-typed or model-suggested URLs.
+
+## Quote-Backed Claim Extraction
+
+`fre extract-claims` turns a source text into candidate evidence claims. Every
+claim must include a verbatim `quote`; after the model or a pre-authored JSON
+file returns claims, the engine normalizes whitespace and drops any claim whose
+quote is not found in the source text.
+
+```bash
+# Manual/offline mode: writes a prompt for a model UI.
+PYTHONPATH=src python3 -m fundamental_research_engine extract-claims configs/themes/hbm4.json \
+  --source E1 --source-text nvidia-result.txt --out claim-report.json
+
+# Direct model mode: emits a verified candidate report.
+PYTHONPATH=src python3 -m fundamental_research_engine extract-claims configs/themes/hbm4.json \
+  --source E1 --model claude --model-name claude-opus-4-8 --out claim-report.json
+
+# Human-reviewed candidate JSON can be applied back to evidence[].claims.
+PYTHONPATH=src python3 -m fundamental_research_engine extract-claims configs/themes/hbm4.json \
+  --source E1 --source-text nvidia-result.txt --claims claim-report.json --apply
+```
+
+By default this command does not modify the theme; `--apply` appends only the
+verified claim text to the matched `evidence[]` item. The richer extraction
+report retains `quote`, `confidence`, `bears_on`, and `verified` for review.
 
 ## Methodology
 

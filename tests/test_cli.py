@@ -186,6 +186,139 @@ class EvidenceSyncCliTest(unittest.TestCase):
             self.assertTrue((store_root / "data" / "evidence" / "hbm4" / "manifest.json").exists())
 
 
+class ExtractClaimsCliTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.project_root = Path(__file__).resolve().parents[1]
+        self.hbm4_path = self.project_root / "configs" / "themes" / "hbm4.json"
+
+    def _write_source_and_claims(self, tmp_path: Path) -> tuple[Path, Path]:
+        source_path = tmp_path / "source.txt"
+        source_path.write_text(
+            "NVIDIA reported data center revenue increased because AI customers are scaling infrastructure.",
+            encoding="utf-8",
+        )
+        claims_path = tmp_path / "claims.json"
+        claims_path.write_text(
+            json.dumps(
+                {
+                    "claims": [
+                        {
+                            "text": "NVIDIA reported data center revenue increased because AI customers are scaling infrastructure.",
+                            "quote": "NVIDIA reported data center revenue increased because AI customers are scaling infrastructure.",
+                            "confidence": "high",
+                            "bears_on": ["thesis"],
+                        },
+                        {
+                            "text": "NVIDIA said HBM supply is already unconstrained.",
+                            "quote": "HBM supply is already unconstrained.",
+                            "confidence": "low",
+                            "bears_on": ["thesis"],
+                        },
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        return source_path, claims_path
+
+    def test_extract_claims_with_pre_authored_json_writes_verified_report(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            source_path, claims_path = self._write_source_and_claims(tmp_path)
+            out_path = tmp_path / "report.json"
+
+            exit_code = main(
+                [
+                    "extract-claims",
+                    str(self.hbm4_path),
+                    "--source",
+                    "E1",
+                    "--source-text",
+                    str(source_path),
+                    "--claims",
+                    str(claims_path),
+                    "--out",
+                    str(out_path),
+                    "--project-root",
+                    str(self.project_root),
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            report = json.loads(out_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["source"]["evidence_id"], "E1")
+            self.assertEqual(len(report["claims"]), 1)
+            self.assertEqual(report["dropped_unverified"], 1)
+            self.assertFalse(report["applied"])
+
+    def test_extract_claims_apply_appends_verified_claim_text_to_theme(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            theme_path = tmp_path / "hbm4.json"
+            theme_path.write_text(self.hbm4_path.read_text(encoding="utf-8"), encoding="utf-8")
+            source_path, claims_path = self._write_source_and_claims(tmp_path)
+            claims_payload = json.loads(claims_path.read_text(encoding="utf-8"))
+            for claim in claims_payload["claims"]:
+                claim["verified"] = True
+            claims_path.write_text(json.dumps(claims_payload), encoding="utf-8")
+            out_path = tmp_path / "report.json"
+
+            exit_code = main(
+                [
+                    "extract-claims",
+                    str(theme_path),
+                    "--source",
+                    "E1",
+                    "--source-text",
+                    str(source_path),
+                    "--claims",
+                    str(claims_path),
+                    "--apply",
+                    "--out",
+                    str(out_path),
+                    "--project-root",
+                    str(self.project_root),
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            updated = json.loads(theme_path.read_text(encoding="utf-8"))
+            e1 = next(item for item in updated["evidence"] if item["id"] == "E1")
+            self.assertIn(
+                "NVIDIA reported data center revenue increased because AI customers are scaling infrastructure.",
+                e1["claims"],
+            )
+            self.assertNotIn("NVIDIA said HBM supply is already unconstrained.", e1["claims"])
+
+    def test_extract_claims_manual_mode_writes_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            source_path = tmp_path / "source.txt"
+            source_path.write_text("Data-center infrastructure demand increased.", encoding="utf-8")
+            out_path = tmp_path / "report.json"
+
+            exit_code = main(
+                [
+                    "extract-claims",
+                    str(self.hbm4_path),
+                    "--source",
+                    "E1",
+                    "--source-text",
+                    str(source_path),
+                    "--out",
+                    str(out_path),
+                    "--project-root",
+                    str(self.project_root),
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            prompt_path = tmp_path / "hbm4-e1.claim_extraction.prompt.md"
+            self.assertTrue(prompt_path.exists())
+            self.assertIn("Data-center infrastructure demand", prompt_path.read_text(encoding="utf-8"))
+            self.assertFalse(out_path.exists())
+
+
 def _theme_dir_with_definition_only(hbm4_path: Path, tmp_path: Path) -> Path:
     theme_dir = tmp_path / "hbm4"
     assert main(["split", str(hbm4_path), str(theme_dir)]) == 0
