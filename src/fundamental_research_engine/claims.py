@@ -52,8 +52,25 @@ def validate_claims_shape(data: Any) -> list[str]:
     return errors
 
 
+# Fold characters that filings render differently from how a model retypes a
+# "verbatim" quote (curly quotes, primes, guillemets, the various dashes, and
+# ellipsis). Whitespace (incl. NBSP, matched by \s in unicode mode) is collapsed
+# separately, and matching is case-insensitive. This reduces false-negative
+# drops of genuine quotes without weakening the substring requirement that blocks
+# fabricated quotes.
+_QUOTE_FOLD = {
+    "‘": "'", "’": "'", "‚": "'", "‛": "'", "′": "'", "‵": "'",
+    "“": '"', "”": '"', "„": '"', "‟": '"', "″": '"', "‶": '"',
+    "«": '"', "»": '"',
+    "‐": "-", "‑": "-", "‒": "-", "–": "-", "—": "-", "―": "-", "−": "-",
+    "…": "...",
+}
+_QUOTE_TRANSLATION = str.maketrans(_QUOTE_FOLD)
+
+
 def _normalize_quote_text(value: str) -> str:
-    return re.sub(r"\s+", " ", value).strip()
+    folded = value.translate(_QUOTE_TRANSLATION)
+    return re.sub(r"\s+", " ", folded).strip().casefold()
 
 
 def verify_quotes(claims: list[dict[str, Any]], source_text: str) -> tuple[list[dict[str, Any]], int]:

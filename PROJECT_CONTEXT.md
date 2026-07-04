@@ -790,6 +790,34 @@ Next recommended direction:
    relations pages, and regulator/statistical datasets, so provenance specs can
    be refreshed with less manual source-text handling.
 
+## Review Hardening of Codex's Claim/Causal Work (2026-07-04, Claude)
+
+Reviewed Codex's 6 commits (claim extraction + the causal_map stage + provenance +
+readiness tiers). Verdict: reasonable and high-quality, in-spirit with
+auditability-first. Landed two of the review's improvement points:
+
+- **#1 Quote-verification robustness** (`claims.py:_normalize_quote_text`): now
+  folds curly quotes/primes/guillemets, the various dashes, and ellipsis, and
+  matches case-insensitively (whitespace incl. NBSP already collapsed). Reduces
+  false-negative drops of genuine quotes (filings render punctuation differently
+  from how a model retypes a "verbatim" quote) without weakening the substring
+  requirement that blocks fabricated quotes. Folding only widens matching, so no
+  previously-verified claim regresses. Also benefits `provenance.py` (shares
+  `verify_quotes`). New test: `test_verify_quotes_folds_unicode_punctuation_and_case`.
+- **#2 Provenance anti-drift guard** (`tests/test_provenance_drift.py`): the
+  committed `data/evidence/<theme>/claims.json` sidecars are a scoring input
+  (`build_causal_quality` trusts their `verified` flag). New test re-runs
+  `build_provenance_records` against every `configs/provenance/<theme>.json` spec
+  (specs embed `source_text`, so it's offline) and asserts every claim_id still
+  exists and every quote still verifies. Catches silent drift if a theme's
+  evidence is edited without regenerating provenance.
+
+162 tests pass. Open review items not yet actioned (product-positioning calls,
+awaiting user): #3 causal_map is opt-in and absent from the guided/`--auto` flow;
+#4 rename the `publishable_memo` readiness tier to something process-neutral
+(e.g. `review-ready`); #5 quote-presence != entailment (document + rely on
+adversarial QC / human review).
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:

@@ -112,6 +112,31 @@ class ClaimsTest(unittest.TestCase):
             ["Customers signed long-term agreements for HBM capacity."],
         )
 
+    def test_verify_quotes_folds_unicode_punctuation_and_case(self) -> None:
+        # Source uses curly quotes, an em-dash, a non-breaking space, and title case.
+        source_text = "The company’s HBM revenue—rose sharply in the Quarter."
+        claims = [
+            {
+                # Model retyped it with straight quote, hyphen, plain space, lowercase.
+                "text": "HBM revenue rose sharply.",
+                "quote": "the company's hbm revenue-rose sharply in the quarter",
+                "confidence": "high",
+                "bears_on": ["thesis"],
+            },
+            {
+                "text": "A fabricated claim.",
+                "quote": "revenue collapsed",
+                "confidence": "low",
+                "bears_on": ["thesis"],
+            },
+        ]
+
+        kept, dropped = verify_quotes(claims, source_text)
+
+        self.assertEqual(dropped, 1)  # only the genuinely-absent quote is dropped
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(kept[0]["text"], "HBM revenue rose sharply.")
+
 
 if __name__ == "__main__":
     unittest.main()
