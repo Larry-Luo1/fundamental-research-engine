@@ -665,6 +665,37 @@ class FillCliTest(unittest.TestCase):
             metadata = json.loads((theme_dir / "mechanism_analysis.meta.json").read_text(encoding="utf-8"))
             self.assertEqual(metadata["attempts"], 2)
 
+    def test_fill_normalizes_null_scenario_evidence_url(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = self._theme_dir_with_definition_only(Path(tmp))
+            scenario = json.loads(json.dumps(_DRAFT_STAGE_RESPONSES["scenario_analysis"]))
+            scenario["evidence"][0]["url"] = None
+
+            fake_adapter = unittest.mock.Mock()
+            fake_adapter.complete.return_value = json.dumps(scenario)
+
+            with patch("fundamental_research_engine.cli.get_adapter", return_value=fake_adapter):
+                exit_code = main(
+                    [
+                        "fill",
+                        str(theme_dir),
+                        "--stage",
+                        "scenario_analysis",
+                        "--model",
+                        "openai",
+                        "--model-name",
+                        "gpt-test",
+                        "--max-attempts",
+                        "1",
+                        "--project-root",
+                        str(self.project_root),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            stage_data = json.loads((theme_dir / "scenario_analysis.json").read_text(encoding="utf-8"))
+            self.assertEqual(stage_data["evidence"][0]["url"], "")
+
     def test_mocked_adapter_bad_shape_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             theme_dir = self._theme_dir_with_definition_only(Path(tmp))

@@ -14,6 +14,7 @@ from fundamental_research_engine.stages import (
     load_theme_stage_dir,
     merge_stage_dicts,
     next_missing_stage,
+    normalize_stage_payload,
     read_stage_dir_partial,
     split_theme_dict,
     validate_stage_shape,
@@ -145,6 +146,16 @@ class StagesTest(unittest.TestCase):
         self.assertTrue(any("duplicate evidence id" in item for item in errors))
         self.assertTrue(any("reliability" in item and "certain" in item for item in errors))
         self.assertTrue(any("date" in item and "YYYY-MM-DD" in item for item in errors))
+
+    def test_normalize_stage_payload_coerces_null_scenario_evidence_url(self) -> None:
+        data = split_theme_dict(self.theme)["scenario_analysis"]
+        data["evidence"][0]["url"] = None
+
+        normalized = normalize_stage_payload("scenario_analysis", data)
+
+        self.assertIsNone(data["evidence"][0]["url"])
+        self.assertEqual(normalized["evidence"][0]["url"], "")
+        self.assertEqual(validate_stage_shape("scenario_analysis", normalized), [])
 
 
 if __name__ == "__main__":

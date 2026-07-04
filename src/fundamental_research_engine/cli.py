@@ -51,6 +51,7 @@ from .stages import (
     load_theme_source,
     merge_stage_dicts,
     next_missing_stage,
+    normalize_stage_payload,
     read_stage_dir_partial,
     stage_path,
     validate_stage_shape,
@@ -512,9 +513,13 @@ def _fill_stage(
     except AdapterError as exc:
         return FillResult(status="adapter_error", stage=stage, errors=[str(exc)])
 
-    completion = _complete_json_with_retry(
-        adapter, response, prompt, lambda data: validate_stage_shape(stage, data, ontology), max_attempts
-    )
+    def validate_model_stage(data: dict[str, Any]) -> list[str]:
+        normalized = normalize_stage_payload(stage, data)
+        data.clear()
+        data.update(normalized)
+        return validate_stage_shape(stage, data, ontology)
+
+    completion = _complete_json_with_retry(adapter, response, prompt, validate_model_stage, max_attempts)
     if completion.data is None:
         status = "adapter_error" if completion.adapter_error else "invalid"
         return FillResult(status=status, stage=stage, errors=completion.errors, attempts=completion.attempts)

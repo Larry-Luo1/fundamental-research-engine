@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import re
 from pathlib import Path
 from typing import Any
@@ -141,6 +142,17 @@ def load_theme_source(path: Path) -> dict[str, Any]:
     if path.is_dir():
         return load_theme_stage_dir(path)
     return read_json(path)
+
+
+def normalize_stage_payload(stage: str, data: dict[str, Any]) -> dict[str, Any]:
+    normalized = copy.deepcopy(data)
+    if stage == "scenario_analysis":
+        evidence = normalized.get("evidence", [])
+        if isinstance(evidence, list):
+            for item in evidence:
+                if isinstance(item, dict) and item.get("url") is None:
+                    item["url"] = ""
+    return normalized
 
 
 def _check_type(value: Any, expected: type, path: str, errors: list[str]) -> bool:
