@@ -226,7 +226,7 @@ async function openSession(id){
   let html = `<div class="card"><h3>分析详情 <span class="badge ${m.status}">${cnStatus(m.status)}</span></h3>
     <p class="muted">${esc(m.brief)}</p>`;
   if(m.status==="error") html += `<p class="err">${esc(m.error||"")}</p>`;
-  if(m.status==="pending"||m.status==="running") html += `<p><button class="primary" onclick="runStream('${id}', ${JSON.stringify(esc(m.brief))})">继续/查看进度</button></p>`;
+  if(m.status==="pending"||m.status==="running"||m.status==="error") html += `<p><button class="primary" onclick="runStream('${id}', ${JSON.stringify(esc(m.brief))})">${m.status==="error"?"继续/重试":"继续/查看进度"}</button></p>`;
   html += `</div>`;
 
   if(a){
