@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
@@ -21,6 +22,34 @@ app = FastAPI(title="Fundamental Research Engine", docs_url=None, redoc_url=None
 _STATIC = Path(__file__).resolve().parent / "static"
 
 
+@app.middleware("http")
+async def audit_http_request(request: Request, call_next):
+    started = time.perf_counter()
+    status_code = 500
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        return response
+    except Exception as exc:  # noqa: BLE001 - log then let FastAPI handle it
+        service.audit.write(
+            "http_request_failed",
+            method=request.method,
+            path=request.url.path,
+            status_code=status_code,
+            duration_ms=round((time.perf_counter() - started) * 1000),
+            error=str(exc)[:1000],
+        )
+        raise
+    finally:
+        service.audit.write(
+            "http_request",
+            method=request.method,
+            path=request.url.path,
+            status_code=status_code,
+            duration_ms=round((time.perf_counter() - started) * 1000),
+        )
+
+
 # ---- auth ------------------------------------------------------------------
 def require_auth(request: Request) -> None:
     token = request.cookies.get(auth.COOKIE_NAME, "")
@@ -35,7 +64,9 @@ class LoginBody(BaseModel):
 @app.post("/api/login")
 def login(body: LoginBody) -> Response:
     if not auth.check_password(body.password, config.password):
+        service.audit.write("login_failed")
         raise HTTPException(status_code=401, detail="wrong password")
+    service.audit.write("login_succeeded")
     resp = JSONResponse({"ok": True})
     resp.set_cookie(
         auth.COOKIE_NAME,
@@ -49,6 +80,7 @@ def login(body: LoginBody) -> Response:
 
 @app.post("/api/logout")
 def logout() -> Response:
+    service.audit.write("logout")
     resp = JSONResponse({"ok": True})
     resp.delete_cookie(auth.COOKIE_NAME)
     return resp
@@ -62,7 +94,13 @@ def me(request: Request) -> dict:
 
 @app.get("/api/config")
 def get_config(_: None = Depends(require_auth)) -> dict:
-    return {"model": config.model, "model_name": config.model_name, "has_key": config.has_key}
+    issue = service.model_config_issue()
+    return {"model": config.model, "model_name": config.model_name, "has_key": config.has_key, "config_error": issue}
+
+
+@app.get("/api/audit/events")
+def get_audit_events(limit: int = 200, _: None = Depends(require_auth)) -> list:
+    return service.audit_events(limit)
 
 
 # ---- analyses --------------------------------------------------------------

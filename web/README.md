@@ -15,7 +15,7 @@
 git clone <repo-url>
 cd fundamental-research-engine
 ./deploy.sh          # 建 venv、装依赖、生成 .env
-nano .env            # 填 FRE_WEB_PASSWORD 和 ANTHROPIC_API_KEY
+nano .env            # 填 FRE_WEB_PASSWORD，并选择一种模型 API Key
 ./run.sh             # 启动，默认 http://0.0.0.0:8000
 ```
 
@@ -24,7 +24,7 @@ nano .env            # 填 FRE_WEB_PASSWORD 和 ANTHROPIC_API_KEY
 git clone <repo-url>
 cd fundamental-research-engine
 deploy.bat
-notepad .env         REM 填 FRE_WEB_PASSWORD 和 ANTHROPIC_API_KEY
+notepad .env         REM 填 FRE_WEB_PASSWORD，并选择一种模型 API Key
 run.bat
 ```
 
@@ -37,13 +37,15 @@ run.bat
 | 变量 | 必填 | 说明 |
 |---|---|---|
 | `FRE_WEB_PASSWORD` | ✅ | 所有人登录用的共享口令 |
-| `ANTHROPIC_API_KEY` | ✅（用 LLM 时） | 服务器统一一个 key，所有用户共享。只看报告/跑现成主题不需要 |
-| `FRE_MODEL_NAME` | | 模型 id，默认 `claude-opus-4-8` |
+| `FRE_MODEL` | ✅（用 LLM 时） | `claude` / `openai` / `deepseek` |
+| `ANTHROPIC_API_KEY` | 使用 Claude 时 | 服务器统一一个 key，所有用户共享 |
+| `OPENAI_API_KEY` | 使用 OpenAI 时 | 设 `FRE_MODEL=openai` 时读取 |
+| `DEEPSEEK_API_KEY` | 使用 DeepSeek 时 | 设 `FRE_MODEL=deepseek` 时读取 |
+| `FRE_MODEL_NAME` | | 模型 id，Claude 默认 `claude-opus-4-8`，DeepSeek 默认 `deepseek-v4-pro` |
 | `FRE_MAX_CONCURRENCY` | | 同时进行的起草任务数，小机器保持 1-2 |
 | `FRE_MAX_TOKENS` | | 单次输出 token 上限，默认 16000 |
 | `PORT` / `FRE_HOST` | | 监听端口/地址 |
 | `FRE_WEB_DATA_DIR` | | 会话与产物存放目录，默认 `./web_data` |
-| `FRE_MODEL` + `OPENAI_API_KEY` | | 设 `FRE_MODEL=openai` 可改用 OpenAI |
 
 ---
 
@@ -56,6 +58,15 @@ run.bat
 5. **迭代**：对任一阶段点「审阅(critique)」做对抗式评审，或「优化(refine)」给出修改说明→重新起草该阶段并重跑，产出新 run（含与上次的 diff）。
 
 每个用户/会话的产物隔离在 `web_data/sessions/<id>/`，互不覆盖。
+
+---
+
+## 维测日志
+
+- 统一事件流写入 `web_data/audit/events.jsonl`，一行一个 JSON 事件。
+- 网页侧可点「维测日志」查看最近事件。
+- 日志记录 HTTP 请求、登录、创建题材、模型任务开始/结束/失败、阶段起草、审阅与优化等运维信息。
+- 日志不记录 API Key、完整 prompt 或模型原文；只记录状态、耗时、session id、阶段名、错误摘要和 hash/计数类元数据。
 
 ---
 

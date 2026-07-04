@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -30,6 +31,7 @@ from fundamental_research_engine.stages import (
 from fundamental_research_engine.validation import validate_theme_dict
 
 from .config import Config, PROJECT_ROOT
+from .audit import AuditLogger, sha256_text
 
 
 def _now() -> str:
@@ -38,13 +40,33 @@ def _now() -> str:
 
 def _brief_prefix(brief: str, instruction: str | None = None) -> str:
     block = (
-        "USER BRIEF — the analyst's request. The ENTIRE theme, and this stage in "
-        "particular, must be about exactly this topic and stay consistent with it:\n\n"
+        "用户需求：以下是分析师本次要研究的问题。整个主题以及当前阶段都必须严格围绕它展开，"
+        "不得跑题；所有面向用户阅读的自然语言内容必须使用简体中文。\n\n"
         f"{brief.strip()}"
     )
     if instruction and instruction.strip():
-        block += "\n\nREFINEMENT INSTRUCTION for this stage:\n" + instruction.strip()
+        block += "\n\n本阶段优化说明：\n" + instruction.strip()
     return block
+
+
+def model_config_issue(config: Config) -> str | None:
+    if config.model == "claude":
+        if not config.api_key:
+            return "Claude 模型未配置 ANTHROPIC_API_KEY。"
+        if config.api_key.startswith("sk-") and not config.api_key.startswith("sk-ant-"):
+            return "当前模型设置为 Claude，但配置的 Key 不像 Anthropic Key；如果这是 DeepSeek Key，请设置 FRE_MODEL=deepseek。"
+        return None
+    if config.model == "deepseek":
+        if not config.api_key:
+            return "DeepSeek 模型未配置 DEEPSEEK_API_KEY。"
+        if config.api_key.startswith("sk-ant-"):
+            return "当前模型设置为 DeepSeek，但配置的 Key 像 Anthropic Key；请检查 DEEPSEEK_API_KEY。"
+        return None
+    if config.model == "openai":
+        if not config.api_key:
+            return "OpenAI 模型未配置 OPENAI_API_KEY。"
+        return None
+    return f"未知模型适配器 '{config.model}'。可选值：claude、openai、deepseek。"
 
 
 class Service:
@@ -53,6 +75,7 @@ class Service:
         self.project_root = PROJECT_ROOT
         self.sessions_dir = config.data_dir / "sessions"
         self.sessions_dir.mkdir(parents=True, exist_ok=True)
+        self.audit = AuditLogger(config.data_dir)
         self._sem: asyncio.Semaphore | None = None
         self._locks: dict[str, asyncio.Lock] = {}
 
@@ -99,6 +122,12 @@ class Service:
     def _ontology(self) -> dict[str, Any]:
         return read_json(default_ontology_path(self.project_root))
 
+    def model_config_issue(self) -> str | None:
+        return model_config_issue(self.config)
+
+    def audit_events(self, limit: int = 200) -> list[dict[str, Any]]:
+        return self.audit.tail(limit)
+
     # ---- session lifecycle --------------------------------------------
     def create_analysis(self, brief: str) -> str:
         brief = brief.strip()
@@ -119,6 +148,14 @@ class Service:
                 "runs": [],
                 "error": None,
             },
+        )
+        self.audit.write(
+            "analysis_created",
+            session_id=sid,
+            brief_hash=sha256_text(brief),
+            brief_chars=len(brief),
+            model=self.config.model,
+            model_name=self.config.model_name,
         )
         return sid
 
@@ -213,6 +250,23 @@ class Service:
         theme_dir = self._session_dir(sid) / "theme"
         prefix = _brief_prefix(meta["brief"])
 
+        issue = self.model_config_issue()
+        if issue:
+            meta["status"] = "error"
+            meta["error"] = issue
+            self._write_meta(sid, meta)
+            self.audit.write("analysis_config_error", session_id=sid, message=issue, model=self.config.model)
+            yield {"event": "error", "message": issue}
+            return
+
+        started = time.perf_counter()
+        self.audit.write(
+            "analysis_started",
+            session_id=sid,
+            model=self.config.model,
+            model_name=self.config.model_name,
+            stage_count=len(STAGE_ORDER),
+        )
         meta["status"] = "running"
         meta["error"] = None
         self._write_meta(sid, meta)
@@ -223,6 +277,8 @@ class Service:
                 yield {"event": "stage", "stage": stage, "status": "kept", "index": index, "total": len(STAGE_ORDER)}
                 continue
             yield {"event": "stage", "stage": stage, "status": "drafting", "index": index, "total": len(STAGE_ORDER)}
+            stage_started = time.perf_counter()
+            self.audit.write("stage_draft_started", session_id=sid, stage=stage, model=self.config.model)
             result = await loop.run_in_executor(
                 None,
                 functools.partial(
@@ -242,8 +298,24 @@ class Service:
                 meta["status"] = "error"
                 meta["error"] = f"{stage}: {detail}"
                 self._write_meta(sid, meta)
+                self.audit.write(
+                    "stage_draft_failed",
+                    session_id=sid,
+                    stage=stage,
+                    status=result.status,
+                    attempts=result.attempts,
+                    duration_ms=round((time.perf_counter() - stage_started) * 1000),
+                    error=detail[:1000],
+                )
                 yield {"event": "error", "stage": stage, "message": meta["error"]}
                 return
+            self.audit.write(
+                "stage_draft_finished",
+                session_id=sid,
+                stage=stage,
+                attempts=result.attempts,
+                duration_ms=round((time.perf_counter() - stage_started) * 1000),
+            )
             yield {"event": "stage", "stage": stage, "status": "done", "index": index, "total": len(STAGE_ORDER)}
 
         yield {"event": "validating"}
@@ -254,21 +326,35 @@ class Service:
             meta["status"] = "error"
             meta["error"] = "validation failed: " + "; ".join(errors)
             self._write_meta(sid, meta)
+            self.audit.write("analysis_validation_failed", session_id=sid, errors=errors[:20])
             yield {"event": "error", "message": meta["error"]}
             return
 
         yield {"event": "running"}
+        pipeline_started = time.perf_counter()
         try:
             run = await loop.run_in_executor(None, functools.partial(self._run_once, sid, theme_dir, meta))
         except Exception as exc:  # noqa: BLE001 - surface any pipeline failure to the client
             meta["status"] = "error"
             meta["error"] = f"pipeline failed: {exc}"
             self._write_meta(sid, meta)
+            self.audit.write(
+                "analysis_pipeline_failed",
+                session_id=sid,
+                duration_ms=round((time.perf_counter() - pipeline_started) * 1000),
+                error=str(exc)[:1000],
+            )
             yield {"event": "error", "message": meta["error"]}
             return
 
         meta["status"] = "done"
         self._write_meta(sid, meta)
+        self.audit.write(
+            "analysis_finished",
+            session_id=sid,
+            run_id=run.get("run_id"),
+            duration_ms=round((time.perf_counter() - started) * 1000),
+        )
         yield {"event": "done", "run": run}
 
     def _run_once(self, sid: str, theme_dir: Path, meta: dict[str, Any]) -> dict[str, Any]:
@@ -308,6 +394,14 @@ class Service:
                 "error": None,
             },
         )
+        self.audit.write(
+            "primer_created",
+            session_id=sid,
+            topic=topic,
+            topic_hash=sha256_text(topic),
+            model=self.config.model,
+            model_name=self.config.model_name,
+        )
         return sid
 
     def _primer_path(self, sid: str) -> Path:
@@ -332,11 +426,27 @@ class Service:
             yield {"event": "queued"}
             async with self._semaphore():
                 loop = asyncio.get_running_loop()
+                issue = self.model_config_issue()
+                if issue:
+                    meta["status"] = "error"
+                    meta["error"] = issue
+                    self._write_meta(sid, meta)
+                    self.audit.write("primer_config_error", session_id=sid, message=issue, model=self.config.model)
+                    yield {"event": "error", "message": issue}
+                    return
                 meta["status"] = "running"
                 meta["error"] = None
                 self._write_meta(sid, meta)
 
                 yield {"event": "working", "message": "fetching seed sources and organizing the primer"}
+                started = time.perf_counter()
+                self.audit.write(
+                    "primer_started",
+                    session_id=sid,
+                    topic=meta.get("topic"),
+                    model=self.config.model,
+                    model_name=self.config.model_name,
+                )
                 adapter = get_adapter(self.config.model, self.config.model_name, self.config.max_tokens)
                 ontology = self._ontology()
                 try:
@@ -355,12 +465,24 @@ class Service:
                     meta["status"] = "error"
                     meta["error"] = "primer requires a configured model (manual mode is unavailable in the web app)"
                     self._write_meta(sid, meta)
+                    self.audit.write(
+                        "primer_failed",
+                        session_id=sid,
+                        duration_ms=round((time.perf_counter() - started) * 1000),
+                        error=meta["error"],
+                    )
                     yield {"event": "error", "message": meta["error"]}
                     return
                 except Exception as exc:  # noqa: BLE001 - surface any failure to the client
                     meta["status"] = "error"
                     meta["error"] = f"primer failed: {exc}"
                     self._write_meta(sid, meta)
+                    self.audit.write(
+                        "primer_failed",
+                        session_id=sid,
+                        duration_ms=round((time.perf_counter() - started) * 1000),
+                        error=str(exc)[:1000],
+                    )
                     yield {"event": "error", "message": meta["error"]}
                     return
 
@@ -368,6 +490,17 @@ class Service:
                 meta["status"] = "done"
                 meta["resolved_title"] = result.get("resolved_title")
                 self._write_meta(sid, meta)
+                primer = result.get("primer", {})
+                self.audit.write(
+                    "primer_finished",
+                    session_id=sid,
+                    topic=meta.get("topic"),
+                    resolved_title=result.get("resolved_title"),
+                    duration_ms=round((time.perf_counter() - started) * 1000),
+                    source_count=len(result.get("fetched_sources", [])),
+                    framing_count=len(primer.get("candidate_framings", [])) if isinstance(primer, dict) else None,
+                    unverified_claim_count=len(result.get("unverified_claims", [])),
+                )
                 yield {"event": "done", "primer": result}
 
     def promote_framing(self, sid: str, framing_id: str) -> str:
@@ -390,10 +523,15 @@ class Service:
         meta["from_primer"] = sid
         meta["from_framing"] = framing_id
         self._write_meta(new_sid, meta)
+        self.audit.write("framing_promoted", session_id=sid, analysis_session_id=new_sid, framing_id=framing_id)
         return new_sid
 
     # ---- critique ------------------------------------------------------
     def critique_stage(self, sid: str, stage: str) -> dict[str, Any]:
+        issue = self.model_config_issue()
+        if issue:
+            self.audit.write("critique_config_error", session_id=sid, stage=stage, message=issue)
+            raise RuntimeError(issue)
         if stage not in STAGE_ORDER:
             raise ValueError(f"unknown stage '{stage}'")
         theme_dir = self._session_dir(sid) / "theme"
@@ -413,22 +551,47 @@ class Service:
             stage, existing[stage], self.project_root / "prompts", existing, ontology, methodology
         )
         adapter = get_adapter(self.config.model, self.config.model_name, self.config.max_tokens)
+        started = time.perf_counter()
+        self.audit.write("critique_started", session_id=sid, stage=stage, model=self.config.model)
         try:
             response = adapter.complete(prompt)
         except ManualCompletionPending:
+            self.audit.write("critique_failed", session_id=sid, stage=stage, error="manual completion pending")
             raise RuntimeError("critique requires a configured model (manual mode is unavailable in the web app)")
         except AdapterError as exc:
+            self.audit.write("critique_failed", session_id=sid, stage=stage, error=str(exc)[:1000])
             raise RuntimeError(str(exc))
 
         completion = _complete_json_with_retry(
             adapter, response, prompt, validate_critique_shape, self.config.max_attempts
         )
         if completion.data is None:
+            self.audit.write(
+                "critique_failed",
+                session_id=sid,
+                stage=stage,
+                attempts=completion.attempts,
+                duration_ms=round((time.perf_counter() - started) * 1000),
+                error="; ".join(completion.errors)[:1000],
+            )
             raise RuntimeError("critique response invalid: " + "; ".join(completion.errors))
+        self.audit.write(
+            "critique_finished",
+            session_id=sid,
+            stage=stage,
+            attempts=completion.attempts,
+            duration_ms=round((time.perf_counter() - started) * 1000),
+            concern_count=len(completion.data.get("concerns", [])),
+            recommendation=completion.data.get("recommendation"),
+        )
         return completion.data
 
     # ---- iterate: refine one stage, re-run, diff -----------------------
     def refine_and_rerun(self, sid: str, stage: str, instruction: str) -> dict[str, Any]:
+        issue = self.model_config_issue()
+        if issue:
+            self.audit.write("refine_config_error", session_id=sid, stage=stage, message=issue)
+            raise RuntimeError(issue)
         if stage not in STAGE_ORDER:
             raise ValueError(f"unknown stage '{stage}'")
         meta = self._read_meta(sid)
@@ -445,6 +608,14 @@ class Service:
                 old_analysis = read_json(old_path)
 
         prefix = _brief_prefix(meta["brief"], instruction)
+        started = time.perf_counter()
+        self.audit.write(
+            "refine_started",
+            session_id=sid,
+            stage=stage,
+            instruction_hash=sha256_text(instruction or ""),
+            instruction_chars=len(instruction or ""),
+        )
         result = _fill_stage(
             theme_dir,
             stage,
@@ -457,15 +628,32 @@ class Service:
         )
         if result.status != "written":
             detail = "; ".join(result.errors) if result.errors else result.status
+            self.audit.write(
+                "refine_failed",
+                session_id=sid,
+                stage=stage,
+                status=result.status,
+                attempts=result.attempts,
+                duration_ms=round((time.perf_counter() - started) * 1000),
+                error=detail[:1000],
+            )
             raise RuntimeError(f"refine failed for {stage}: {detail}")
 
         ontology = self._ontology()
         merged = merge_stage_dicts(read_stage_dir_partial(theme_dir))
         errors = validate_theme_dict(merged, ontology)
         if errors:
+            self.audit.write("refine_validation_failed", session_id=sid, stage=stage, errors=errors[:20])
             raise RuntimeError("validation failed after refine: " + "; ".join(errors))
 
         run = self._run_once(sid, theme_dir, meta)
         new_analysis = read_json(self._session_dir(sid) / run["dir"] / "analysis.json")
         diff = diff_analysis(old_analysis, new_analysis) if old_analysis is not None else None
+        self.audit.write(
+            "refine_finished",
+            session_id=sid,
+            stage=stage,
+            run_id=run.get("run_id"),
+            duration_ms=round((time.perf_counter() - started) * 1000),
+        )
         return {"run": run, "diff": diff}

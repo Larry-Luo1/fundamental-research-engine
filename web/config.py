@@ -47,11 +47,17 @@ def load_config() -> Config:
         )
 
     model = os.environ.get("FRE_MODEL", "claude").strip()
-    # Default to the current most capable Claude model; override in .env.
-    model_name = os.environ.get("FRE_MODEL_NAME", "claude-opus-4-8").strip()
+    default_model_name = {
+        "claude": "claude-opus-4-8",
+        "deepseek": "deepseek-v4-pro",
+        "openai": "gpt-4.1",
+    }.get(model, "claude-opus-4-8")
+    model_name = os.environ.get("FRE_MODEL_NAME", default_model_name).strip()
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if model == "openai":
         api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if model == "deepseek":
+        api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
 
     data_dir = Path(os.environ.get("FRE_WEB_DATA_DIR", str(PROJECT_ROOT / "web_data"))).resolve()
 

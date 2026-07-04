@@ -39,6 +39,7 @@
   .prog { font-family:ui-monospace,monospace; font-size:12.5px; }
   .prog .row { padding:2px 0; }
   .tag { color:var(--muted); }
+  .mono { font-family:ui-monospace,Consolas,monospace; }
   .stagebar { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0; }
   .chip { font-size:11px; padding:2px 8px; border-radius:10px; border:1px solid var(--line); color:var(--muted); }
   .center { max-width:420px; margin:12vh auto; }
@@ -73,6 +74,7 @@
     <div id="side">
       <button class="primary" style="width:100%" onclick="showPrimer()">+ 题材入门 / Primer</button>
       <button style="width:100%;margin-top:8px" onclick="showNew()">+ 直接新建分析</button>
+      <button style="width:100%;margin-top:8px" onclick="showAudit()">维测日志</button>
       <div id="sessions" style="margin-top:12px"></div>
     </div>
     <div id="main"></div>
@@ -88,6 +90,39 @@ async function api(path, opts={}) {
   return r.status===204 ? null : r.json();
 }
 function esc(s){ return (s==null?"":String(s)).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+const fmt = {
+  hype: {
+    trigger: "技术触发期",
+    inflated_expectations: "预期膨胀期",
+    disillusionment: "预期回落期",
+    enlightenment: "产业验证期",
+    productivity: "规模兑现期"
+  },
+  themeType: {
+    technology_adoption: "技术渗透",
+    supply_demand_cycle: "供需周期",
+    policy_driven: "政策驱动",
+    consumer_adoption: "消费渗透",
+    healthcare_clinical: "医药临床",
+    macro_cycle: "宏观周期",
+    geopolitics_security: "地缘安全"
+  },
+  status: { pending:"待启动", running:"运行中", done:"完成", error:"异常" }
+};
+function cnHype(v){ return fmt.hype[v] || v || ""; }
+function cnThemeType(v){ return fmt.themeType[v] || v || ""; }
+function cnStatus(v){ return fmt.status[v] || v || ""; }
+function cnEvent(v){
+  return ({
+    http_request:"HTTP 请求", login_succeeded:"登录成功", login_failed:"登录失败", logout:"退出登录",
+    primer_created:"创建题材入门", primer_started:"题材梳理开始", primer_finished:"题材梳理完成", primer_failed:"题材梳理失败",
+    analysis_created:"创建深度分析", analysis_started:"分析开始", analysis_finished:"分析完成",
+    stage_draft_started:"阶段起草开始", stage_draft_finished:"阶段起草完成", stage_draft_failed:"阶段起草失败",
+    analysis_validation_failed:"结构校验失败", analysis_pipeline_failed:"流水线失败",
+    framing_promoted:"立题转深度分析", critique_started:"审阅开始", critique_finished:"审阅完成", critique_failed:"审阅失败",
+    refine_started:"优化开始", refine_finished:"优化完成", refine_failed:"优化失败"
+  })[v] || v || "";
+}
 
 // ---- auth ----
 async function boot(){
@@ -97,7 +132,11 @@ async function boot(){
 function showLogin(){ $("#login").classList.remove("hidden"); $("#app").classList.add("hidden"); }
 async function showApp(){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
-  try { const c = await api("/api/config"); $("#modelinfo").textContent = c.model_name + (c.has_key?"":"（未配置 API Key）"); } catch(e){}
+  try {
+    const c = await api("/api/config");
+    $("#modelinfo").textContent = c.model_name + (c.config_error?"（配置异常）":(c.has_key?"":"（未配置 API Key）"));
+    $("#modelinfo").title = c.config_error || "";
+  } catch(e){}
   refreshSessions(); showPrimer();
 }
 async function doLogin(){
@@ -113,8 +152,26 @@ async function refreshSessions(){
   $("#sessions").innerHTML = items.map(s => `
     <div class="sess" onclick="openSession('${s.id}')">
       <div class="brief">${esc((s.brief||"").slice(0,90))}</div>
-      <div class="meta"><span class="badge ${s.status}">${s.status}</span> · ${s.runs} run · ${esc((s.created_at||"").slice(0,16).replace("T"," "))}</div>
+      <div class="meta"><span class="badge ${s.status}">${cnStatus(s.status)}</span> · ${s.runs} 次运行 · ${esc((s.created_at||"").slice(0,16).replace("T"," "))}</div>
     </div>`).join("") || '<p class="muted">还没有分析。</p>';
+}
+
+async function showAudit(){
+  $("#main").innerHTML = `<div class="card"><h3>维测日志</h3><p class="muted">正在读取最近事件...</p></div>`;
+  try {
+    const rows = await api("/api/audit/events?limit=200");
+    $("#main").innerHTML = `<div class="card"><h3>维测日志</h3>
+      <p class="muted">来源：<span class="mono">web_data/audit/events.jsonl</span>。日志不记录 API Key、prompt 或模型原文，仅记录状态、耗时和摘要元数据。</p>
+      <table><tr><th>时间</th><th>事件</th><th>对象</th><th>状态/耗时</th></tr>
+      ${rows.slice().reverse().map(r=>`<tr>
+        <td class="mono">${esc((r.ts||"").slice(0,19).replace("T"," "))}</td>
+        <td>${esc(cnEvent(r.event))}<br><small class="muted mono">${esc(r.event)}</small></td>
+        <td>${esc(r.session_id||r.path||r.topic||"")}${r.stage?`<br><small class="muted">${esc(r.stage)}</small>`:""}</td>
+        <td>${r.status_code?`HTTP ${esc(r.status_code)} · `:""}${r.duration_ms!=null?`${esc(r.duration_ms)} ms`:""}${r.error?`<br><small class="err">${esc(r.error)}</small>`:""}</td>
+      </tr>`).join("")}</table></div>`;
+  } catch(e) {
+    $("#main").innerHTML = `<div class="card"><h3>维测日志</h3><p class="err">${esc(e.message)}</p></div>`;
+  }
 }
 
 // ---- new analysis ----
@@ -166,7 +223,7 @@ function runStream(id, brief){
 async function openSession(id){
   const data = await api("/api/analyses/"+id);
   const m = data.meta, a = data.analysis;
-  let html = `<div class="card"><h3>分析详情 <span class="badge ${m.status}">${m.status}</span></h3>
+  let html = `<div class="card"><h3>分析详情 <span class="badge ${m.status}">${cnStatus(m.status)}</span></h3>
     <p class="muted">${esc(m.brief)}</p>`;
   if(m.status==="error") html += `<p class="err">${esc(m.error||"")}</p>`;
   if(m.status==="pending"||m.status==="running") html += `<p><button class="primary" onclick="runStream('${id}', ${JSON.stringify(esc(m.brief))})">继续/查看进度</button></p>`;
@@ -177,7 +234,7 @@ async function openSession(id){
     html += `<div class="card"><h3>${esc(t.title||"")}</h3>
       <p><b>核心问题：</b>${esc(t.core_question||"")}</p>
       <p><b>论点：</b>${esc(t.thesis||"")}</p>
-      <p><small class="muted">类型 ${esc(t.theme_type)} · 领域 ${esc(t.domain)} · Hype ${esc(t.hype_stage)} · TRL ${esc(t.technology_readiness_level)} · as_of ${esc(t.as_of)}</small></p>
+      <p><small class="muted">类型 ${esc(cnThemeType(t.theme_type))} · 领域 ${esc(t.domain)} · 产业阶段 ${esc(cnHype(t.hype_stage))} · TRL ${esc(t.technology_readiness_level)} · as_of ${esc(t.as_of)}</small></p>
       ${(t.drivers||[]).length?`<b>驱动：</b><ul class="tight">${t.drivers.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
     </div>`;
 
@@ -264,9 +321,9 @@ function renderPrimer(id, res){
   const p = res.primer||{};
   const g = p.glossary||[], ls = p.landscape||[], deb = p.key_debates||[], kc = p.key_claims||[];
   const fr = p.candidate_framings||[], src = res.fetched_sources||[], uv = res.unverified_claims||[];
-  let html = `<div class="card"><h3>${esc(res.resolved_title||res.topic)} <small class="muted">Primer</small></h3>
+  let html = `<div class="card"><h3>${esc(res.resolved_title||res.topic)} <small class="muted">题材入门</small></h3>
     <p>${esc(p.explainer||"")}</p>
-    <p><small class="muted">${res.seed_used?"已抓取 Wikipedia 种子源":"未找到 Wikipedia 种子源"} · 成熟度：Hype ${esc((p.maturity||{}).hype_stage)} · TRL ${esc((p.maturity||{}).technology_readiness_level)}</small></p>
+    <p><small class="muted">${res.seed_used?"已抓取 Wikipedia 种子源":"未找到 Wikipedia 种子源"} · 产业阶段：${esc(cnHype((p.maturity||{}).hype_stage))} · 技术成熟度 TRL ${esc((p.maturity||{}).technology_readiness_level)}</small></p>
     ${p.state_of_play?`<p><b>当前态势：</b>${esc(p.state_of_play)}</p>`:""}</div>`;
 
   if(g.length) html += `<div class="card"><h3>术语表</h3><table><tr><th>术语</th><th>含义</th></tr>
@@ -286,7 +343,7 @@ function renderPrimer(id, res){
       <b>${esc(f.title)}</b>
       <p><b>核心问题：</b>${esc(f.core_question)}</p>
       <p><b>初始假设：</b>${esc(f.thesis_hypothesis)}</p>
-      <p><small class="muted">类型 ${esc(f.theme_type)} · 领域 ${esc(f.domain)}</small></p>
+      <p><small class="muted">类型 ${esc(cnThemeType(f.theme_type))} · 领域 ${esc(f.domain)}</small></p>
       ${(f.drivers||[]).length?`<b>驱动：</b><ul class="tight">${f.drivers.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
       <button class="primary" onclick="promoteFraming('${id}','${esc(f.id)}')">进入深度分析 →</button>
     </div>`).join("")}</div>`;

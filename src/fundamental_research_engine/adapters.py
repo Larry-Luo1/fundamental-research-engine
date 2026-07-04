@@ -68,6 +68,43 @@ class OpenAIAdapter:
 
 
 @dataclass
+class DeepSeekAdapter:
+    model: str
+    api_key: str | None = None
+    max_tokens: int | None = None
+    transport: Transport = field(default=_default_transport)
+
+    def complete(self, prompt: str) -> str:
+        api_key = self.api_key or os.environ.get("DEEPSEEK_API_KEY")
+        if not api_key:
+            raise AdapterError("DEEPSEEK_API_KEY is not set")
+
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            # Every engine prompt expects machine-readable JSON; DeepSeek's
+            # JSON Output mode makes retries much less noisy.
+            "response_format": {"type": "json_object"},
+        }
+        if self.max_tokens is not None:
+            payload["max_tokens"] = self.max_tokens
+
+        thinking = os.environ.get("DEEPSEEK_THINKING", "disabled").strip().lower()
+        if thinking in {"enabled", "disabled"}:
+            payload["thinking"] = {"type": thinking}
+            if thinking == "enabled":
+                payload["reasoning_effort"] = os.environ.get("DEEPSEEK_REASONING_EFFORT", "high")
+
+        headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+        response = self.transport("https://api.deepseek.com/chat/completions", headers, payload)
+        try:
+            return str(response["choices"][0]["message"]["content"])
+        except (KeyError, IndexError) as exc:
+            raise AdapterError(f"unexpected DeepSeek response shape: {response}") from exc
+
+
+@dataclass
 class ClaudeAdapter:
     model: str
     api_key: str | None = None
@@ -106,6 +143,13 @@ def get_adapter(name: str, model_name: str | None = None, max_tokens: int | None
         if not model_name:
             raise ValueError("--model-name is required for the openai adapter")
         adapter = OpenAIAdapter(model=model_name)
+        if max_tokens is not None:
+            adapter.max_tokens = max_tokens
+        return adapter
+    if name == "deepseek":
+        if not model_name:
+            raise ValueError("--model-name is required for the deepseek adapter")
+        adapter = DeepSeekAdapter(model=model_name)
         if max_tokens is not None:
             adapter.max_tokens = max_tokens
         return adapter

@@ -119,10 +119,10 @@ def build_parser() -> argparse.ArgumentParser:
     fill = subparsers.add_parser("fill", help="Draft the next missing stage of a theme directory with a model adapter.")
     fill.add_argument("theme_dir", type=Path, help="Directory containing (partial) theme stage JSON files.")
     fill.add_argument("--stage", choices=stage_choices, default=None, help="Stage to fill. Defaults to the first missing one.")
-    fill.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter to use.")
-    fill.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
+    fill.add_argument("--model", choices=["manual", "openai", "claude", "deepseek"], default="manual", help="Model adapter to use.")
+    fill.add_argument("--model-name", default=None, help="Model name/id for the openai/claude/deepseek adapters.")
     fill.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")
-    fill.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude adapters (defaults to the adapter's own default).")
+    fill.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude/deepseek adapters (defaults to the adapter's own default).")
     fill.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/ and prompts/.")
 
     draft = subparsers.add_parser(
@@ -131,24 +131,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     draft.add_argument("theme_dir", type=Path, help="Directory containing (partial) theme stage JSON files.")
     draft.add_argument("--stage", choices=stage_choices, default=None, help="Stage to draft. Defaults to the first missing one. Not usable with --auto.")
-    draft.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter to use.")
-    draft.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
+    draft.add_argument("--model", choices=["manual", "openai", "claude", "deepseek"], default="manual", help="Model adapter to use.")
+    draft.add_argument("--model-name", default=None, help="Model name/id for the openai/claude/deepseek adapters.")
     draft.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts per stage when JSON parsing or validation fails.")
-    draft.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude adapters (defaults to the adapter's own default).")
+    draft.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude/deepseek adapters (defaults to the adapter's own default).")
     draft.add_argument(
         "--auto",
         action="store_true",
-        help="Walk every remaining stage automatically instead of stopping after one (requires --model openai or claude).",
+        help="Walk every remaining stage automatically instead of stopping after one (requires --model openai, claude, or deepseek).",
     )
     draft.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/ and prompts/.")
 
     critique = subparsers.add_parser("critique", help="Adversarially review an already-drafted theme stage.")
     critique.add_argument("theme_dir", type=Path, help="Directory containing theme stage JSON files.")
     critique.add_argument("--stage", choices=stage_choices, required=True, help="Stage to critique; it must already be drafted.")
-    critique.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter to use.")
-    critique.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
+    critique.add_argument("--model", choices=["manual", "openai", "claude", "deepseek"], default="manual", help="Model adapter to use.")
+    critique.add_argument("--model-name", default=None, help="Model name/id for the openai/claude/deepseek adapters.")
     critique.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")
-    critique.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude adapters (defaults to the adapter's own default).")
+    critique.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude/deepseek adapters (defaults to the adapter's own default).")
     critique.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/ and prompts/.")
 
     qc = subparsers.add_parser("qc", help="Run the quality gate (grounding + adversarial review) for a theme.")
@@ -157,10 +157,10 @@ def build_parser() -> argparse.ArgumentParser:
     qc.add_argument("--out", type=Path, default=None, help="Write qc.json here (defaults to stdout).")
     qc.add_argument("--grounding-only", action="store_true", help="Deterministic grounding + scorecard only; no model call.")
     qc.add_argument("--review", type=Path, default=None, help="Use a pre-authored review JSON instead of calling a model.")
-    qc.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter for the adversarial review.")
-    qc.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
+    qc.add_argument("--model", choices=["manual", "openai", "claude", "deepseek"], default="manual", help="Model adapter for the adversarial review.")
+    qc.add_argument("--model-name", default=None, help="Model name/id for the openai/claude/deepseek adapters.")
     qc.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")
-    qc.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude adapters.")
+    qc.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude/deepseek adapters.")
     qc.add_argument("--strict", action="store_true", help="Exit non-zero if grounding_score < threshold or any open critical concern.")
     qc.add_argument("--grounding-threshold", type=float, default=0.5, help="Minimum grounding_score for --strict to pass.")
     qc.add_argument("--track-record", type=Path, default=None, help="Track record JSON for calibration (defaults to track_records/<theme_id>.json).")
@@ -200,10 +200,10 @@ def build_parser() -> argparse.ArgumentParser:
     extract.add_argument("--source", required=True, help="Evidence id or URL to extract claims from.")
     extract.add_argument("--source-text", type=Path, default=None, help="Use this local source text instead of fetching.")
     extract.add_argument("--claims", type=Path, default=None, help="Use a pre-authored extraction JSON instead of calling a model.")
-    extract.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter for extraction.")
-    extract.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
+    extract.add_argument("--model", choices=["manual", "openai", "claude", "deepseek"], default="manual", help="Model adapter for extraction.")
+    extract.add_argument("--model-name", default=None, help="Model name/id for the openai/claude/deepseek adapters.")
     extract.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")
-    extract.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude adapters.")
+    extract.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude/deepseek adapters.")
     extract.add_argument("--apply", action="store_true", help="Append verified claim text back to the matched evidence item.")
     extract.add_argument("--store", action="store_true", help="Write rich quote provenance into data/evidence/<theme>/claims.json.")
     extract.add_argument(
@@ -653,7 +653,7 @@ def main(argv: list[str] | None = None) -> int:
         theme_dir.mkdir(parents=True, exist_ok=True)
 
         if args.auto and args.model == "manual":
-            parser.error("--auto requires --model openai or --model claude (manual mode cannot proceed unattended)")
+            parser.error("--auto requires --model openai, claude, or deepseek (manual mode cannot proceed unattended)")
             return 2
         if args.auto and args.stage:
             parser.error("--auto walks all remaining stages; --stage cannot be combined with --auto")

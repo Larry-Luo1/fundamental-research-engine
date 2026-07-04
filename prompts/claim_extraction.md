@@ -4,6 +4,10 @@ Extract atomic, checkable claims from the source text for the research theme.
 Use only information that appears in the source text. Every claim must include
 a verbatim quote copied from the source text.
 
+Write the extracted `text` claims in Simplified Chinese. Keep `quote` verbatim
+in the source language and keep JSON keys, confidence values, and owner ids in
+the required English form.
+
 ## Research Context
 
 ```json

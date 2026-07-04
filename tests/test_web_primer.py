@@ -10,17 +10,18 @@ import asyncio
 import hashlib
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
 from web.config import Config
-from web.service import Service
+from web.service import Service, model_config_issue
 
 
 def _config(tmp: Path) -> Config:
     return Config(
         password="pw",
-        api_key="",
+        api_key="sk-ant-test",
         model="claude",
         model_name="claude-opus-4-8",
         max_tokens=16000,
@@ -86,6 +87,9 @@ class PrimerServiceTest(unittest.TestCase):
             stored = service.get_primer(sid)
             self.assertEqual(stored["meta"]["status"], "done")
             self.assertEqual(stored["primer"]["resolved_title"], "High Bandwidth Memory")
+            audit_events = service.audit_events(20)
+            self.assertIn("primer_created", {event.get("event") for event in audit_events})
+            self.assertIn("primer_finished", {event.get("event") for event in audit_events})
 
             # promote the framing into a real analysis with a seeded theme_definition
             analysis_sid = service.promote_framing(sid, "f1")
@@ -114,6 +118,21 @@ class PrimerServiceTest(unittest.TestCase):
                 _drain(service.generate_primer(sid))
             with self.assertRaises(ValueError):
                 service.promote_framing(sid, "nope")
+
+    def test_model_config_issue_catches_deepseek_key_in_claude_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = replace(_config(Path(tmp)), model="claude", api_key="sk-deepseek-looking-key")
+            self.assertIn("DeepSeek Key", model_config_issue(config) or "")
+
+    def test_model_config_issue_accepts_deepseek_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = replace(
+                _config(Path(tmp)),
+                model="deepseek",
+                model_name="deepseek-v4-pro",
+                api_key="sk-deepseek-looking-key",
+            )
+            self.assertIsNone(model_config_issue(config))
 
 
 if __name__ == "__main__":

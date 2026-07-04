@@ -12,6 +12,10 @@ Use the upstream causal map as the starting point. A company should only receive
 a strong label when its product controls, relieves, or monetizes a cited
 bottleneck edge. Do not upgrade a company because it is thematically adjacent.
 
+Write all human-readable natural-language values in Simplified Chinese. Keep
+JSON keys, ids, enum values, and company/product names in their conventional
+market spelling.
+
 ## Upstream context (already decided, do not restate or contradict)
 
 ```json

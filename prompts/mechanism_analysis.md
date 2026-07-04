@@ -3,6 +3,9 @@
 You are drafting the **mechanism chain** stage: explain how the theme's
 driver transmits into orders, price, volume, margins, budgets, or adoption.
 
+Write all human-readable natural-language values in Simplified Chinese. Keep
+JSON keys and enum/id/slug values in the required English form.
+
 ## Upstream context (already decided, do not restate or contradict)
 
 ```json

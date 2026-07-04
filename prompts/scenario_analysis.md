@@ -10,6 +10,10 @@ Counter-theses should be the strongest reasonable case against the thesis,
 not strawmen. Tracking signals should be concrete and checkable at the next
 update, not vague ("watch the market").
 
+Write all human-readable natural-language values in Simplified Chinese. Keep
+JSON keys, ids, enum values, URLs, source_type, reliability, and dates in the
+required English/ISO form.
+
 ## Upstream context (already decided, do not restate or contradict)
 
 ```json

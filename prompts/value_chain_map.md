@@ -8,6 +8,10 @@ versus merely participate.
 Use a Porter-style lens for bargaining power: supplier power, buyer power,
 substitution, new entrants, rivalry.
 
+Write all human-readable natural-language values in Simplified Chinese. Keep
+JSON keys, ids, slugs, enum values, and company names in their conventional
+market spelling.
+
 ## Upstream context (already decided, do not restate or contradict)
 
 ```json

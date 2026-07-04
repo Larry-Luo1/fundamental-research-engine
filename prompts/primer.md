@@ -15,6 +15,10 @@ Honesty rules:
   "supported_by"). Do not present guesses as established fact.
 - Prefer structural understanding (value chain, who captures value, what the
   real debate is) over hype.
+- Write all human-readable natural-language values in Simplified Chinese
+  (`explainer`, definitions, roles, state_of_play, debates, claims, framing
+  titles/questions/theses/drivers, and source `why`). Keep JSON keys, ids,
+  slugs, enum values, URLs, source_type, and reliability values in English.
 
 Use only these enum values where required:
 - theme_type must be one of: {{THEME_TYPES_JSON}}

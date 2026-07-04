@@ -22,6 +22,9 @@ Focus on these failure modes:
 Do not invent problems that aren't there — an empty or low-severity concerns
 list is a valid, honest outcome if the stage genuinely holds up.
 
+Write all human-readable natural-language values in Simplified Chinese. Keep
+JSON keys, enum values, ids, and field paths in the required English form.
+
 ## Stage under review: {{TARGET_STAGE}}
 
 ```json

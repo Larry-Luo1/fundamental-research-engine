@@ -12,6 +12,9 @@ Define the theme boundary: what is included, what is excluded, and what would
 be a false mapping. Classify the driver type. State the core question the
 research is trying to answer and a falsifiable thesis.
 
+Write all human-readable natural-language values in Simplified Chinese. Keep
+JSON keys, ids, slugs, enum values, and dates in the required English/ISO form.
+
 Every conclusion in this project answers four questions — keep them in mind
 even though this stage only fills part of the answer:
 

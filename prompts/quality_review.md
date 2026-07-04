@@ -27,6 +27,9 @@ Review the full assembled analysis below through four lenses:
    edges, low-confidence edges, and weak evidence. Each item has a "location"
    (owner id or field), the "claim", and a severity.
 
+Write all human-readable natural-language values in Simplified Chinese. Keep
+JSON keys, ids, enum values, and field names in the required English form.
+
 Then consolidate the material problems into `open_concerns` (each with severity,
 target, issue, suggested_fix) and give an overall `recommendation`:
 "accept" (process is sound enough to act on) or "revise" (fix issues first).

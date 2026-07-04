@@ -14,6 +14,10 @@ You are drafting the **bottleneck diagnosis** stage. Score bottlenecks on:
 Each dimension is scored 0-5 (0 = not present, 5 = critical). At least one
 bottleneck is required.
 
+Write all human-readable natural-language values in Simplified Chinese. Keep
+JSON keys, ids, enum values, and scorecard dimension keys in the required
+English form.
+
 ## Upstream context (already decided, do not restate or contradict)
 
 ```json
