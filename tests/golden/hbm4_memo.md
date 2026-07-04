@@ -40,7 +40,7 @@ AI model scaling and inference workloads increase memory bandwidth, memory capac
 | --- | --- | --- | --- | --- | --- | --- |
 | hyperscaler AI infrastructure buildout | raises demand for qualified HBM supply | qualified HBM demand | positive | 0-4 quarters | high | E1.C1, E2.C1 |
 | qualified HBM demand | improves supplier mix and pricing power | memory supplier revenue mix and profitability | positive | 1-4 quarters | medium | E2.C1, E4.C1 |
-| higher HBM attach and stack complexity | increases advanced packaging load | advanced packaging capacity utilization | positive | 2-6 quarters | medium | E3.C1 |
+| higher HBM attach and stack complexity | increases advanced packaging load | advanced packaging capacity utilization | positive | 2-6 quarters | medium | E3.C1, E5.C1 |
 
 ## Industry Chain
 
@@ -93,34 +93,33 @@ AI model scaling and inference workloads increase memory bandwidth, memory capac
 - E2: [SK hynix announces 1Q26 financial results](https://www.prnewswire.com/news-releases/sk-hynix-announces-1q26-financial-results-302750959.html) (2026-04-24, company_disclosure, high)
 - E3: [TrendForce discusses AI-driven advanced packaging constraints](https://www.trendforce.com/presscenter/news/20260430-13028.html) (2026-04-30, industry_research, medium)
 - E4: [Micron fiscal 2026 third-quarter results](https://investors.micron.com/news-releases/news-release-details/micron-technology-inc-reports-record-results-third-quarter) (2026-06-24, company_disclosure, high)
+- E5: [TSMC 2025 annual report](https://investor.tsmc.com/static/annualReports/2025/english/index.html) (2026-04-17, company_disclosure, high)
 
 ## Evidence Audit
 
-- Evidence items: `4`
-- Evidence claims: `4`
-- Average owner coverage score: `0.69`
+- Evidence items: `5`
+- Evidence claims: `5`
+- Average owner coverage score: `0.78`
 
 | Owner type | Owner | Status | Coverage | Evidence | Claims |
 | --- | --- | --- | --- | --- | --- |
-| bottleneck | HBM4 capacity and qualification | strong | 0.98 | 4 | 4 |
+| bottleneck | HBM4 capacity and qualification | strong | 0.98 | 5 | 5 |
 | company | SK hynix | adequate | 0.62 | 1 | 1 |
 | company | Micron | adequate | 0.62 | 1 | 1 |
-| company | TSMC | thin | 0.54 | 1 | 1 |
+| company | TSMC | strong | 0.91 | 2 | 2 |
 
 ## Quality Scorecard
 
-- Grounding score: `0.70`
-- Reliability-weighted coverage: `0.81`
-- Corroboration ratio: `0.43`
-- Owners: `7` (grounded `6`, corroborated `3`, single-source `3`, ungrounded `1`)
-- Causal edges: `3` (supported `3`, quote-verified `3`, single-source `1`, weak-evidence `0`)
+- Grounding score: `0.91`
+- Reliability-weighted coverage: `1.00`
+- Corroboration ratio: `0.71`
+- Quality tier: `multi-source causal map`
+- Owners: `7` (grounded `7`, corroborated `5`, single-source `2`, ungrounded `0`)
+- Causal edges: `3` (supported `3`, quote-verified `3`, single-source `0`, weak-evidence `0`)
 
 ### Quality Flags
 
-- scenario 'bear' has no linked evidence
 - company 'SK hynix' is supported by a single source
 - company 'Micron' is supported by a single source
-- company 'TSMC' is supported by a single source
-- causal edge 'edge-hbm-attach-to-packaging-capacity' is supported by a single source
 
 > Process-health signal, not a truth score for the thesis.

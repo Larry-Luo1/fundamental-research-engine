@@ -1,0 +1,44 @@
+{
+  "records": [
+    {
+      "bears_on": [
+        "thesis",
+        "bn-2-5d-advanced-packaging-capacity",
+        "co-tsmc",
+        "co-ase",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim_id": "E1.C1",
+      "confidence": "medium",
+      "quote": "The shortage of CoWoS has persisted",
+      "source_text": "The shortage of CoWoS has persisted"
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-2-5d-advanced-packaging-capacity",
+        "co-tsmc",
+        "co-ase",
+        "scn-bull"
+      ],
+      "claim_id": "E2.C1",
+      "confidence": "high",
+      "quote": "Data Center compute revenue was a record $60.4 billion, up 77% from a year ago",
+      "source_text": "Data Center compute revenue was a record $60.4 billion, up 77% from a year ago"
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-2-5d-advanced-packaging-capacity",
+        "co-tsmc",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim_id": "E3.C1",
+      "confidence": "high",
+      "quote": "strong demand for our leading-edge, specialty and advanced packaging technologies",
+      "source_text": "strong demand for our leading-edge, specialty and advanced packaging technologies"
+    }
+  ]
+}

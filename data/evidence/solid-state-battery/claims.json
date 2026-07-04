@@ -1,0 +1,95 @@
+{
+  "records": [
+    {
+      "bears_on": [
+        "thesis",
+        "bn-solid-state-battery-manufacturability-and-qualification",
+        "co-quantumscape",
+        "co-toyota",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim": "QuantumScape Eagle Line supports customer sampling, product integration, and scalable production demonstration.",
+      "claim_id": "E1.C1",
+      "confidence": "high",
+      "date": "2026-02-04",
+      "evidence_id": "E1",
+      "extracted_at": "2026-07-04T03:31:20.398363+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-solid-state-battery-manufacturability-and-qualification",
+          "owner_name": "solid-state battery manufacturability and qualification",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-quantumscape",
+          "owner_name": "QuantumScape",
+          "owner_type": "company"
+        },
+        {
+          "owner_id": "co-toyota",
+          "owner_name": "Toyota",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "customer sampling and testing, technology demonstrations, and product integration efforts",
+      "reliability": "high",
+      "source_sha256": "881f8aba467ba5b570ee53b1ce814eb994b9abaf2fb3ea013df73fe331b4e6c0",
+      "source_title": "QuantumScape Eagle Line pilot production announcement",
+      "source_type": "company_disclosure",
+      "source_url": "https://ir.quantumscape.com/news-releases/news-release-details/quantumscape-inaugurates-eagle-line-solid-state-battery-pilot",
+      "status": "applied",
+      "theme_id": "solid-state-battery",
+      "verified": true
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-solid-state-battery-manufacturability-and-qualification",
+        "co-quantumscape",
+        "co-toyota",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim": "Toyota targets solid-state battery commercial readiness in 2027-28 while shifting focus toward mass production.",
+      "claim_id": "E2.C1",
+      "confidence": "high",
+      "date": "2023-09-14",
+      "evidence_id": "E2",
+      "extracted_at": "2026-07-04T03:31:20.398400+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-solid-state-battery-manufacturability-and-qualification",
+          "owner_name": "solid-state battery manufacturability and qualification",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-quantumscape",
+          "owner_name": "QuantumScape",
+          "owner_type": "company"
+        },
+        {
+          "owner_id": "co-toyota",
+          "owner_name": "Toyota",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "switched its focus to putting solid-state batteries into mass production",
+      "reliability": "high",
+      "source_sha256": "47640a70b03987b096cfbf0d74bb8f680e038fb0bc847e820bda07bb1bb7af01",
+      "source_title": "Toyota advanced battery technology roadmap",
+      "source_type": "company_disclosure",
+      "source_url": "https://newsroom.toyota.eu/toyotas-advanced-battery-technology-roadmap/",
+      "status": "applied",
+      "theme_id": "solid-state-battery",
+      "verified": true
+    }
+  ],
+  "theme_id": "solid-state-battery"
+}

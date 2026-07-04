@@ -1,5 +1,35 @@
 {
   "as_of": "2026-07-01",
+  "bottlenecks": [
+    {
+      "evidence_ids": [
+        "E1",
+        "E2",
+        "E3",
+        "E4",
+        "E5"
+      ],
+      "id": "bn-hbm4-capacity-and-qualification",
+      "name": "HBM4 capacity and qualification",
+      "scorecard": {
+        "architecture_bypass_risk": 2,
+        "capacity_expansion_difficulty": 4,
+        "customer_qualification_lock_in": 5,
+        "demand_growth_speed": 5,
+        "rapid_supply_release_risk": 3,
+        "supplier_pricing_power": 4,
+        "technology_substitution_difficulty": 4,
+        "yield_material_equipment_constraint": 4
+      },
+      "technical_reason": "HBM supply is constrained by DRAM die allocation, TSV/stacking yield, thermal and power performance, and qualification with accelerator vendors.",
+      "types": [
+        "capacity",
+        "yield",
+        "qualification",
+        "advanced_packaging_dependency"
+      ]
+    }
+  ],
   "causal_map": [
     {
       "claim_ids": [
@@ -31,7 +61,8 @@
     },
     {
       "claim_ids": [
-        "E3.C1"
+        "E3.C1",
+        "E5.C1"
       ],
       "confidence": "medium",
       "direction": "positive",
@@ -41,35 +72,6 @@
       "source": "higher HBM attach and stack complexity",
       "target": "advanced packaging capacity utilization",
       "transmission": "HBM value is realized through package-level integration with accelerators. Higher attach rates and stack complexity increase demand for interposers, CoWoS-like capacity, and packaging yield control."
-    }
-  ],
-  "bottlenecks": [
-    {
-      "evidence_ids": [
-        "E1",
-        "E2",
-        "E3",
-        "E4"
-      ],
-      "id": "bn-hbm4-capacity-and-qualification",
-      "name": "HBM4 capacity and qualification",
-      "scorecard": {
-        "architecture_bypass_risk": 2,
-        "capacity_expansion_difficulty": 4,
-        "customer_qualification_lock_in": 5,
-        "demand_growth_speed": 5,
-        "rapid_supply_release_risk": 3,
-        "supplier_pricing_power": 4,
-        "technology_substitution_difficulty": 4,
-        "yield_material_equipment_constraint": 4
-      },
-      "technical_reason": "HBM supply is constrained by DRAM die allocation, TSV/stacking yield, thermal and power performance, and qualification with accelerator vendors.",
-      "types": [
-        "capacity",
-        "yield",
-        "qualification",
-        "advanced_packaging_dependency"
-      ]
     }
   ],
   "companies": [
@@ -117,7 +119,8 @@
     },
     {
       "evidence_ids": [
-        "E3"
+        "E3",
+        "E5"
       ],
       "exposure_quality": "capacity leverage",
       "id": "co-tsmc",
@@ -194,6 +197,17 @@
       "source_type": "company_disclosure",
       "title": "Micron fiscal 2026 third-quarter results",
       "url": "https://investors.micron.com/news-releases/news-release-details/micron-technology-inc-reports-record-results-third-quarter"
+    },
+    {
+      "claims": [
+        "TSMC links robust AI demand to strong demand for leading-edge, specialty, and advanced packaging technologies."
+      ],
+      "date": "2026-04-17",
+      "id": "E5",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "TSMC 2025 annual report",
+      "url": "https://investor.tsmc.com/static/annualReports/2025/english/index.html"
     }
   ],
   "hype_stage": "enlightenment",
@@ -225,16 +239,17 @@
   "scenarios": [
     {
       "description": "HBM qualification remains tight and long-context inference accelerates memory demand.",
+      "evidence_ids": [
+        "E1",
+        "E2",
+        "E5"
+      ],
       "id": "scn-bull",
       "implications": [
         "HBM suppliers retain strong pricing power",
         "advanced packaging remains constrained"
       ],
       "name": "bull",
-      "evidence_ids": [
-        "E1",
-        "E2"
-      ],
       "triggers": [
         "sold-out HBM4 capacity",
         "hyperscaler capex revisions",
@@ -243,6 +258,10 @@
     },
     {
       "description": "Capacity ramps faster than accelerator demand or software efficiency reduces memory pressure.",
+      "evidence_ids": [
+        "E3",
+        "E5"
+      ],
       "id": "scn-bear",
       "implications": [
         "HBM pricing power weakens",
@@ -317,7 +336,8 @@
   "thesis_evidence_ids": [
     "E1",
     "E2",
-    "E4"
+    "E4",
+    "E5"
   ],
   "title": "HBM4 AI Infrastructure Bottleneck",
   "tracking_signals": [

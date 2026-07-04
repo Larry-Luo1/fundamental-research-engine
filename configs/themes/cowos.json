@@ -4,7 +4,8 @@
     {
       "evidence_ids": [
         "E1",
-        "E2"
+        "E2",
+        "E3"
       ],
       "id": "bn-2-5d-advanced-packaging-capacity",
       "name": "2.5D advanced packaging capacity",
@@ -27,11 +28,56 @@
       ]
     }
   ],
+  "causal_map": [
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E2.C1"
+      ],
+      "confidence": "high",
+      "direction": "positive",
+      "id": "edge-ai-compute-to-package-capacity-load",
+      "lag": "0-4 quarters",
+      "relationship": "raises load on qualified 2.5D/3D packaging slots",
+      "source": "AI accelerator package complexity",
+      "target": "advanced packaging capacity utilization",
+      "transmission": "Larger AI compute chips combine high-end logic, HBM, substrates, and interposers in a qualified package flow. Rising accelerator and networking demand therefore consumes scarce package capacity before generic OSAT capacity can substitute."
+    },
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E3.C1"
+      ],
+      "confidence": "medium",
+      "direction": "positive",
+      "id": "edge-packaging-scarcity-to-foundry-profit-pool",
+      "lag": "1-6 quarters",
+      "relationship": "supports pricing and capex priority for leading-edge package integration",
+      "source": "persistent CoWoS-like capacity shortage",
+      "target": "leading-edge package integration profit pool",
+      "transmission": "When AI customers compete for qualified packaging and chip-stacking capacity, foundries with integrated process and package roadmaps can prioritize scarce capacity and preserve a stronger value-capture position."
+    },
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E3.C1"
+      ],
+      "confidence": "medium",
+      "direction": "positive",
+      "id": "edge-capacity-expansion-to-enabler-demand",
+      "lag": "2-8 quarters",
+      "relationship": "pulls demand into equipment, substrates, and spillover assembly capacity",
+      "source": "advanced packaging capacity expansion",
+      "target": "packaging equipment, substrate, and OSAT enablers",
+      "transmission": "Capacity additions do not only require floor space; they require bonding, inspection, substrates, materials, and yield learning. Spillover from foundry bottlenecks can therefore broaden demand to OSAT and equipment enablers."
+    }
+  ],
   "companies": [
     {
       "evidence_ids": [
         "E1",
-        "E2"
+        "E2",
+        "E3"
       ],
       "exposure_quality": "direct revenue and capacity leverage",
       "id": "co-tsmc",
@@ -52,6 +98,7 @@
     },
     {
       "evidence_ids": [
+        "E1",
         "E2"
       ],
       "exposure_quality": "capacity leverage",
@@ -106,6 +153,17 @@
       "source_type": "company_disclosure",
       "title": "NVIDIA first quarter fiscal 2027 results",
       "url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-first-quarter-fiscal-2027"
+    },
+    {
+      "claims": [
+        "TSMC links robust AI demand to strong demand for leading-edge, specialty, and advanced packaging technologies."
+      ],
+      "date": "2026-04-17",
+      "id": "E3",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "TSMC 2025 annual report",
+      "url": "https://investor.tsmc.com/static/annualReports/2025/english/index.html"
     }
   ],
   "hype_stage": "productivity",
@@ -139,6 +197,11 @@
   "scenarios": [
     {
       "description": "Accelerator package complexity rises faster than packaging capacity.",
+      "evidence_ids": [
+        "E1",
+        "E2",
+        "E3"
+      ],
       "id": "scn-bull",
       "implications": [
         "foundry packaging retains scarcity premium",
@@ -152,6 +215,10 @@
     },
     {
       "description": "Capacity additions and alternative packaging paths reduce scarcity.",
+      "evidence_ids": [
+        "E1",
+        "E3"
+      ],
       "id": "scn-bear",
       "implications": [
         "pricing power shifts downstream",
@@ -218,6 +285,11 @@
   "technology_readiness_level": 8,
   "theme_type": "technology_adoption",
   "thesis": "Advanced packaging remains a structural AI bottleneck because high-end accelerators increasingly depend on close integration of compute die, HBM stacks, interposers, substrates, and high-speed package interconnect. The bottleneck can migrate from foundry packaging slots to tools, substrates, inspection, and thermal/mechanical integration.",
+  "thesis_evidence_ids": [
+    "E1",
+    "E2",
+    "E3"
+  ],
   "title": "CoWoS and Advanced Packaging Bottleneck",
   "tracking_signals": [
     "Foundry advanced packaging capex and capacity targets.",

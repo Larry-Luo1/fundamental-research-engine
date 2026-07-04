@@ -156,7 +156,7 @@ class AuditCliTest(unittest.TestCase):
 
             self.assertEqual(exit_code, 0)
             audit = json.loads(out_path.read_text(encoding="utf-8"))
-            self.assertEqual(audit["inventory"]["evidence_count"], 4)
+            self.assertEqual(audit["inventory"]["evidence_count"], 5)
             self.assertTrue(audit["coverage"])
 
 
@@ -368,6 +368,55 @@ class ExtractClaimsCliTest(unittest.TestCase):
             self.assertTrue(by_id["E2.C1"]["verified"])
             self.assertEqual(by_id["E1.C1"]["quote"], claim_by_source["E1"])
             self.assertEqual(by_id["E2.C1"]["quote"], claim_by_source["E2"])
+
+    def test_build_provenance_from_curated_spec(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            theme = json.loads(self.hbm4_path.read_text(encoding="utf-8"))
+            e1_claim = next(item for item in theme["evidence"] if item["id"] == "E1")["claims"][0]
+            spec_path = tmp_path / "spec.json"
+            spec_path.write_text(
+                json.dumps(
+                    {
+                        "records": [
+                            {
+                                "claim_id": "E1.C1",
+                                "quote": "Data-center demand remains large",
+                                "confidence": "high",
+                                "bears_on": ["thesis"],
+                                "source_text": f"{e1_claim} Data-center demand remains large.",
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            out_path = tmp_path / "report.json"
+
+            exit_code = main(
+                [
+                    "build-provenance",
+                    str(self.hbm4_path),
+                    str(spec_path),
+                    "--store-root",
+                    str(tmp_path),
+                    "--project-root",
+                    str(self.project_root),
+                    "--out",
+                    str(out_path),
+                ]
+            )
+
+            self.assertEqual(exit_code, 0)
+            report = json.loads(out_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["record_count"], 1)
+            self.assertEqual(report["stored_record_count"], sum(len(item["claims"]) for item in theme["evidence"]))
+            claims_store = json.loads(
+                (tmp_path / "data" / "evidence" / "hbm4" / "claims.json").read_text(encoding="utf-8")
+            )
+            record = next(item for item in claims_store["records"] if item["claim_id"] == "E1.C1")
+            self.assertTrue(record["verified"])
+            self.assertEqual(record["quote"], "Data-center demand remains large")
 
     def test_extract_claims_manual_mode_writes_prompt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

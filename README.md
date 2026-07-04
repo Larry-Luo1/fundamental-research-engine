@@ -263,6 +263,17 @@ comes from more than one source, whether the cited claims have quote-verified
 provenance in `data/evidence/<theme_id>/claims.json`, and whether any
 low-confidence edge is being used as a core mechanism link.
 
+The scorecard also assigns a process-quality tier:
+
+- `draft`: structurally valid but not yet well grounded.
+- `evidence-backed`: enough owner-level evidence exists to inspect the thesis.
+- `quote-verified`: every causal edge cites quote-verified claim provenance.
+- `multi-source causal map`: causal edges are quote-verified and not single-source, weak, or low confidence.
+- `publishable memo`: stronger grounding, completed adversarial review, no ungrounded owners, no critical concerns, and no quality flags.
+
+Treat the tier as a workflow gate, not an investment rating. A strong thesis can
+still fail; the tier only says how much of the process has been made auditable.
+
 To keep quality honest *over time*, `fre calibrate` turns a theme's tracking
 signals, counter-theses, and scenario triggers into dated predictions, lets you
 resolve them as outcomes arrive, and scores calibration (resolution rate +
@@ -324,6 +335,20 @@ With `--store`, those fields are written to
 `data/evidence/<theme_id>/claims.json`. Claims already present in the theme keep
 stable ids like `E1.C1`; verified-but-unapplied candidates are stored as
 candidate records like `E1.Q1`.
+
+For repeatable, human-reviewed evidence curation, use `build-provenance` with a
+short spec in `configs/provenance/<theme_id>.json`. The spec maps existing
+theme claims such as `E1.C1` to a verified quote, confidence, and the thesis /
+bottleneck / company / scenario ids the quote bears on:
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine build-provenance \
+  configs/themes/hbm4.json configs/provenance/hbm4.json
+```
+
+This is the preferred path for worked examples and team handoff: the theme file
+stores the compact claim, while `data/evidence/<theme_id>/claims.json` stores
+quote provenance used by the causal-map quality gate.
 
 ## Methodology
 

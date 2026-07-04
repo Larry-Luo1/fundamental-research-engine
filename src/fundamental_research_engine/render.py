@@ -58,6 +58,7 @@ def _render_quality_scorecard(analysis: dict[str, Any]) -> list[str]:
         f"- Grounding score: `{scorecard['grounding_score']:.2f}`",
         f"- Reliability-weighted coverage: `{grounding['reliability_weighted_coverage']:.2f}`",
         f"- Corroboration ratio: `{grounding['corroboration_ratio']:.2f}`",
+        f"- Quality tier: `{scorecard.get('quality_status', {}).get('tier', 'draft')}`",
         (
             f"- Owners: `{summary['owners']}` "
             f"(grounded `{summary['grounded']}`, corroborated `{summary['corroborated']}`, "

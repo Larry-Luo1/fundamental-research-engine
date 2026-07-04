@@ -1,0 +1,32 @@
+{
+  "records": [
+    {
+      "bears_on": [
+        "thesis",
+        "bn-solid-state-battery-manufacturability-and-qualification",
+        "co-quantumscape",
+        "co-toyota",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim_id": "E1.C1",
+      "confidence": "high",
+      "quote": "customer sampling and testing, technology demonstrations, and product integration efforts",
+      "source_text": "customer sampling and testing, technology demonstrations, and product integration efforts"
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-solid-state-battery-manufacturability-and-qualification",
+        "co-quantumscape",
+        "co-toyota",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim_id": "E2.C1",
+      "confidence": "high",
+      "quote": "switched its focus to putting solid-state batteries into mass production",
+      "source_text": "switched its focus to putting solid-state batteries into mass production"
+    }
+  ]
+}

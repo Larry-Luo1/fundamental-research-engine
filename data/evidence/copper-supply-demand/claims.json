@@ -1,0 +1,94 @@
+{
+  "records": [
+    {
+      "bears_on": [
+        "thesis",
+        "bn-mine-supply-response-and-quality-reserve-scarcity",
+        "co-freeport-mcmoran",
+        "co-southern-copper",
+        "scn-bull"
+      ],
+      "claim": "FCX is a major copper producer and frames copper as essential to electrification, technology, and connectivity.",
+      "claim_id": "E1.C1",
+      "confidence": "high",
+      "date": "2026-07-01",
+      "evidence_id": "E1",
+      "extracted_at": "2026-07-04T03:31:20.352670+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-mine-supply-response-and-quality-reserve-scarcity",
+          "owner_name": "mine supply response and quality reserve scarcity",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-freeport-mcmoran",
+          "owner_name": "Freeport-McMoRan",
+          "owner_type": "company"
+        },
+        {
+          "owner_id": "co-southern-copper",
+          "owner_name": "Southern Copper",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "Copper is essential to global progress",
+      "reliability": "high",
+      "source_sha256": "b43484c3c34d6a5f871e9ccead693bdf6588746c58910abf03e98bf88f4a9a11",
+      "source_title": "Freeport-McMoRan sustainability report page",
+      "source_type": "company_disclosure",
+      "source_url": "https://www.fcx.com/sustainability",
+      "status": "applied",
+      "theme_id": "copper-supply-demand",
+      "verified": true
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-mine-supply-response-and-quality-reserve-scarcity",
+        "co-freeport-mcmoran",
+        "co-southern-copper",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim": "Strong copper demand from electrification and long mine-project lead times point to a potential structural supply shortfall.",
+      "claim_id": "E2.C1",
+      "confidence": "high",
+      "date": "2025-05-21",
+      "evidence_id": "E2",
+      "extracted_at": "2026-07-04T03:31:20.352712+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-mine-supply-response-and-quality-reserve-scarcity",
+          "owner_name": "mine supply response and quality reserve scarcity",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-freeport-mcmoran",
+          "owner_name": "Freeport-McMoRan",
+          "owner_type": "company"
+        },
+        {
+          "owner_id": "co-southern-copper",
+          "owner_name": "Southern Copper",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "potential 30% supply shortfall by 2035",
+      "reliability": "high",
+      "source_sha256": "bafc60758dd6a328941868eb148b81cde2ec40029ea4a75dab5b9f2a127e717b",
+      "source_title": "IEA Global Critical Minerals Outlook 2025 executive summary",
+      "source_type": "official_report",
+      "source_url": "https://www.iea.org/reports/global-critical-minerals-outlook-2025/executive-summary",
+      "status": "applied",
+      "theme_id": "copper-supply-demand",
+      "verified": true
+    }
+  ],
+  "theme_id": "copper-supply-demand"
+}

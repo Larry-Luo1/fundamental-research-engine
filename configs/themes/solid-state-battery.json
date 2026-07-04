@@ -27,10 +27,55 @@
       ]
     }
   ],
+  "causal_map": [
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E2.C1"
+      ],
+      "confidence": "medium",
+      "direction": "positive",
+      "id": "edge-pilot-validation-to-commercial-readiness",
+      "lag": "2-8 quarters",
+      "relationship": "raises probability of commercialization milestones",
+      "source": "pilot-line progress and customer validation",
+      "target": "solid-state battery commercialization readiness",
+      "transmission": "Pilot equipment, customer sampling, and OEM roadmaps are the bridge between lab-cell performance and commercial qualification. Progress at this layer improves readiness before mass-market vehicle volume appears."
+    },
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E2.C1"
+      ],
+      "confidence": "medium",
+      "direction": "negative",
+      "id": "edge-manufacturing-risk-to-adoption-timing",
+      "lag": "multi-year",
+      "relationship": "can delay adoption if yield, quality, throughput, or cost miss targets",
+      "source": "manufacturing scale-up and automotive qualification risk",
+      "target": "mass-market solid-state battery adoption timing",
+      "transmission": "The investable theme can stay in option-value territory if pilot success does not translate into qualified, repeatable, cost-competitive high-volume production."
+    },
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E2.C1"
+      ],
+      "confidence": "medium",
+      "direction": "positive",
+      "id": "edge-scale-up-to-equipment-materials-profit-pool",
+      "lag": "1-6 quarters after pilot commitments",
+      "relationship": "pulls early value capture toward materials and pilot-line equipment",
+      "source": "solid-state scale-up programs",
+      "target": "qualified materials and process-equipment profit pool",
+      "transmission": "Before vehicle-volume revenue is visible, commercialization attempts require separators, electrolytes, process recipes, automation, inspection, and pilot-line equipment. Those enablers can be first-order signals of genuine adoption progress."
+    }
+  ],
   "companies": [
     {
       "evidence_ids": [
-        "E1"
+        "E1",
+        "E2"
       ],
       "exposure_quality": "option value",
       "id": "co-quantumscape",
@@ -50,6 +95,7 @@
     },
     {
       "evidence_ids": [
+        "E1",
         "E2"
       ],
       "exposure_quality": "option value",
@@ -86,25 +132,25 @@
   "evidence": [
     {
       "claims": [
-        "Solid-state commercialization depends on pilot progress, customer validation, and manufacturing scale-up."
+        "QuantumScape Eagle Line supports customer sampling, product integration, and scalable production demonstration."
       ],
-      "date": "2026-07-01",
+      "date": "2026-02-04",
       "id": "E1",
-      "reliability": "medium",
+      "reliability": "high",
       "source_type": "company_disclosure",
-      "title": "Company technical roadmap and shareholder disclosures",
-      "url": ""
+      "title": "QuantumScape Eagle Line pilot production announcement",
+      "url": "https://ir.quantumscape.com/news-releases/news-release-details/quantumscape-inaugurates-eagle-line-solid-state-battery-pilot"
     },
     {
       "claims": [
-        "Automotive adoption requires long qualification cycles and cost reduction."
+        "Toyota targets solid-state battery commercial readiness in 2027-28 while shifting focus toward mass production."
       ],
-      "date": "2026-07-01",
+      "date": "2023-09-14",
       "id": "E2",
-      "reliability": "medium",
-      "source_type": "industry_research",
-      "title": "OEM solid-state battery commercialization roadmaps",
-      "url": ""
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "Toyota advanced battery technology roadmap",
+      "url": "https://newsroom.toyota.eu/toyotas-advanced-battery-technology-roadmap/"
     }
   ],
   "hype_stage": "inflated_expectations",
@@ -135,6 +181,10 @@
   "scenarios": [
     {
       "description": "Pilot lines validate cycle life and manufacturability for premium applications.",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
       "id": "scn-bull",
       "implications": [
         "materials and equipment suppliers gain early orders",
@@ -149,6 +199,10 @@
     },
     {
       "description": "Liquid lithium-ion chemistry improves enough to delay solid-state adoption.",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
       "id": "scn-bear",
       "implications": [
         "solid-state remains option value",
@@ -202,6 +256,10 @@
   "technology_readiness_level": 6,
   "theme_type": "technology_adoption",
   "thesis": "Solid-state batteries are a high-option-value technology adoption theme, but broad value capture depends on manufacturability, cycle life, safety, cost, and automotive qualification. Near-term beneficiaries are more likely to be materials, pilot-line equipment, and qualified niche applications than mass-market EV volume leaders.",
+  "thesis_evidence_ids": [
+    "E1",
+    "E2"
+  ],
   "title": "Solid-State Battery Commercialization Theme",
   "tracking_signals": [
     "Pilot-line yield and throughput.",

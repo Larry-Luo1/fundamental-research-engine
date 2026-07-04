@@ -30,7 +30,8 @@
     },
     {
       "claim_ids": [
-        "E3.C1"
+        "E3.C1",
+        "E5.C1"
       ],
       "confidence": "medium",
       "direction": "positive",

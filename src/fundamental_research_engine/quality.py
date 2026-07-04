@@ -272,6 +272,76 @@ def _empty_causal_quality() -> dict[str, Any]:
     }
 
 
+def build_quality_status(
+    grounding_score: float,
+    grounding: dict[str, Any],
+    causal_quality: dict[str, Any],
+    flags: list[str],
+    disconfirmation: dict[str, Any],
+) -> dict[str, Any]:
+    """Assign a deterministic process tier for the analysis artifact."""
+    causal_summary = causal_quality.get("summary", {})
+    causal_edges = int(causal_summary.get("edges", 0) or 0)
+    blockers: list[str] = []
+
+    evidence_backed = grounding["summary"].get("grounded", 0) > 0 and grounding_score >= 0.5
+    if not evidence_backed:
+        blockers.append("insufficient grounded evidence coverage")
+
+    quote_verified = (
+        causal_edges > 0
+        and causal_summary.get("fully_quote_verified", 0) == causal_edges
+        and causal_summary.get("missing_claims", 0) == 0
+    )
+    if causal_edges and not quote_verified:
+        blockers.append("causal map is not fully quote-verified")
+
+    multi_source_causal = (
+        quote_verified
+        and causal_summary.get("thin", 0) == 0
+        and causal_summary.get("weak_evidence", 0) == 0
+        and causal_summary.get("low_confidence", 0) == 0
+    )
+    if quote_verified and not multi_source_causal:
+        blockers.append("causal map still has single-source, weak, or low-confidence edges")
+
+    publishable = (
+        multi_source_causal
+        and grounding_score >= 0.7
+        and not grounding.get("ungrounded")
+        and disconfirmation.get("premortem_done")
+        and disconfirmation.get("steelman_done")
+        and disconfirmation.get("open_critical", 0) == 0
+        and not flags
+    )
+    if multi_source_causal and not publishable:
+        blockers.append(
+            "publishable memo requires stronger grounding, adversarial review, and no open quality flags"
+        )
+
+    tiers = ["draft"]
+    if evidence_backed:
+        tiers.append("evidence-backed")
+    if quote_verified:
+        tiers.append("quote-verified")
+    if multi_source_causal:
+        tiers.append("multi-source causal map")
+    if publishable:
+        tiers.append("publishable memo")
+
+    return {
+        "tier": tiers[-1],
+        "satisfied": tiers,
+        "blockers": blockers,
+        "policy": {
+            "evidence_backed": "grounding_score >= 0.5 and at least one grounded owner",
+            "quote_verified": "all causal edges are backed by quote-verified claim ids",
+            "multi_source_causal_map": "quote-verified causal map with no single-source, weak, or low-confidence edges",
+            "publishable_memo": "multi-source causal map, grounding_score >= 0.7, adversarial review complete, no ungrounded owners, no critical concerns, no flags",
+        },
+    }
+
+
 def build_grounding(
     evidence: list[Evidence],
     owners_by_kind: dict[str, list[Any]],
@@ -383,11 +453,20 @@ def build_quality_scorecard(
                 flags.append(f"critical: {concern.get('issue', '')}")
     if causal_quality:
         flags.extend(str(item) for item in causal_quality.get("flags", []))
+    causal_quality = causal_quality or _empty_causal_quality()
+    quality_status = build_quality_status(
+        grounding_score,
+        grounding,
+        causal_quality,
+        flags,
+        disconfirmation,
+    )
 
     return {
         "grounding_score": grounding_score,
         "grounding": grounding,
-        "causal_quality": causal_quality or _empty_causal_quality(),
+        "causal_quality": causal_quality,
+        "quality_status": quality_status,
         "disconfirmation": disconfirmation,
         "calibration": calibration,
         "flags": flags,

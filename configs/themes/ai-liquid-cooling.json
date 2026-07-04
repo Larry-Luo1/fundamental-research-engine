@@ -29,9 +29,54 @@
       ]
     }
   ],
+  "causal_map": [
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E4.C1"
+      ],
+      "confidence": "high",
+      "direction": "positive",
+      "id": "edge-ai-capex-to-power-cooling-load",
+      "lag": "0-6 quarters",
+      "relationship": "increases site-level electrical and thermal deployment load",
+      "source": "hyperscaler AI capex and accelerated-server adoption",
+      "target": "data-center power and cooling demand",
+      "transmission": "Accelerated AI servers raise power density inside racks while hyperscaler capex turns the technical requirement into near-term project demand. That shifts the deployment bottleneck toward electrical interconnection, power distribution, UPS, and thermal systems."
+    },
+    {
+      "claim_ids": [
+        "E2.C1",
+        "E3.C1"
+      ],
+      "confidence": "high",
+      "direction": "positive",
+      "id": "edge-infrastructure-demand-to-supplier-backlog",
+      "lag": "0-4 quarters",
+      "relationship": "supports revenue growth and backlog for qualified infrastructure suppliers",
+      "source": "data-center power and cooling demand",
+      "target": "thermal and electrical infrastructure supplier backlog",
+      "transmission": "When data-center operators need faster deployment, the constraint moves to suppliers already qualified for critical power, cooling, and integrated infrastructure delivery. Orders and backlog become the earliest observable translation from technical bottleneck to company exposure."
+    },
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E3.C1"
+      ],
+      "confidence": "medium",
+      "direction": "negative",
+      "id": "edge-energy-system-lead-times-to-deployment-speed",
+      "lag": "2-10 quarters",
+      "relationship": "slows data-center deployment if power infrastructure cannot scale fast enough",
+      "source": "energy-system planning and equipment lead times",
+      "target": "AI data-center capacity deployment speed",
+      "transmission": "Data centers can be planned faster than grid and electrical infrastructure can be built. If switchgear, transformers, interconnection, or thermal systems lag, booked AI capacity may convert to revenue more slowly even when compute demand remains strong."
+    }
+  ],
   "companies": [
     {
       "evidence_ids": [
+        "E1",
         "E2"
       ],
       "exposure_quality": "direct revenue and backlog growth",
@@ -53,6 +98,7 @@
     },
     {
       "evidence_ids": [
+        "E1",
         "E3"
       ],
       "exposure_quality": "direct revenue and backlog growth",
@@ -163,6 +209,12 @@
   "scenarios": [
     {
       "description": "Rack power density and AI data-center capex continue to rise.",
+      "evidence_ids": [
+        "E1",
+        "E2",
+        "E3",
+        "E4"
+      ],
       "id": "scn-bull",
       "implications": [
         "cooling and power suppliers see backlog durability",
@@ -177,6 +229,10 @@
     },
     {
       "description": "Accelerator efficiency improves or cloud capex enters a digestion phase.",
+      "evidence_ids": [
+        "E1",
+        "E4"
+      ],
       "id": "scn-bear",
       "implications": [
         "AI-specific growth decelerates",
@@ -232,6 +288,12 @@
   "technology_readiness_level": 8,
   "theme_type": "technology_adoption",
   "thesis": "Liquid cooling and power infrastructure should be treated as a durable second-wave AI bottleneck because rack power density and site-level electricity constraints increasingly determine how fast AI capacity can be deployed. The strongest value capture is likely in qualified power, thermal, and electrical infrastructure suppliers rather than generic construction exposure.",
+  "thesis_evidence_ids": [
+    "E1",
+    "E2",
+    "E3",
+    "E4"
+  ],
   "title": "AI Data-Center Liquid Cooling and Power Bottleneck",
   "tracking_signals": [
     "Rack power density roadmaps from accelerator and server vendors.",

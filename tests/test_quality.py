@@ -7,6 +7,7 @@ from fundamental_research_engine.models import Evidence
 from fundamental_research_engine.quality import (
     build_causal_quality,
     build_grounding,
+    build_quality_status,
     build_quality_scorecard,
     validate_quality_review_shape,
 )
@@ -119,6 +120,31 @@ class ScorecardTest(unittest.TestCase):
         sc = build_quality_scorecard(self._grounding(), causal_quality=causal_quality)
         self.assertEqual(sc["causal_quality"], causal_quality)
         self.assertTrue(any("lacks quote-verified provenance" in f for f in sc["flags"]))
+
+    def test_quality_status_tiers(self) -> None:
+        grounding = self._grounding()
+        causal_quality = {
+            "edges": [],
+            "summary": {
+                "edges": 2,
+                "supported": 2,
+                "fully_quote_verified": 2,
+                "thin": 0,
+                "low_confidence": 0,
+                "missing_claims": 0,
+                "weak_evidence": 0,
+            },
+            "flags": [],
+        }
+        status = build_quality_status(
+            0.7,
+            grounding,
+            causal_quality,
+            [],
+            {"open_critical": 0, "open_major": 0},
+        )
+        self.assertEqual(status["tier"], "multi-source causal map")
+        self.assertIn("quote-verified", status["satisfied"])
 
 
 class CausalQualityTest(unittest.TestCase):

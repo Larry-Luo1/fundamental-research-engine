@@ -1,0 +1,133 @@
+{
+  "records": [
+    {
+      "bears_on": [
+        "thesis",
+        "bn-2-5d-advanced-packaging-capacity",
+        "co-tsmc",
+        "co-ase",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim": "AI demand has created pressure on advanced process nodes and 2.5D/3D packaging.",
+      "claim_id": "E1.C1",
+      "confidence": "medium",
+      "date": "2026-04-30",
+      "evidence_id": "E1",
+      "extracted_at": "2026-07-04T03:31:20.264665+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-2-5d-advanced-packaging-capacity",
+          "owner_name": "2.5D advanced packaging capacity",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-tsmc",
+          "owner_name": "TSMC",
+          "owner_type": "company"
+        },
+        {
+          "owner_id": "co-ase",
+          "owner_name": "ASE",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "The shortage of CoWoS has persisted",
+      "reliability": "medium",
+      "source_sha256": "8c00f580d1df487c5885d0487710d5f01e68374e8559c2b02f1fdec7047dc0fe",
+      "source_title": "TrendForce discusses AI-driven advanced packaging constraints",
+      "source_type": "industry_research",
+      "source_url": "https://www.trendforce.com/presscenter/news/20260430-13028.html",
+      "status": "applied",
+      "theme_id": "cowos",
+      "verified": true
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-2-5d-advanced-packaging-capacity",
+        "co-tsmc",
+        "co-ase",
+        "scn-bull"
+      ],
+      "claim": "AI accelerator and networking demand implies continued pressure on package-level integration capacity.",
+      "claim_id": "E2.C1",
+      "confidence": "high",
+      "date": "2026-05-27",
+      "evidence_id": "E2",
+      "extracted_at": "2026-07-04T03:31:20.264692+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-2-5d-advanced-packaging-capacity",
+          "owner_name": "2.5D advanced packaging capacity",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-tsmc",
+          "owner_name": "TSMC",
+          "owner_type": "company"
+        },
+        {
+          "owner_id": "co-ase",
+          "owner_name": "ASE",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "Data Center compute revenue was a record $60.4 billion, up 77% from a year ago",
+      "reliability": "high",
+      "source_sha256": "7e23496e56d51dd8e9717ce8bfeb29122bcd59d68e408331dbe3bcba39f91b53",
+      "source_title": "NVIDIA first quarter fiscal 2027 results",
+      "source_type": "company_disclosure",
+      "source_url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-first-quarter-fiscal-2027",
+      "status": "applied",
+      "theme_id": "cowos",
+      "verified": true
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-2-5d-advanced-packaging-capacity",
+        "co-tsmc",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim": "TSMC links robust AI demand to strong demand for leading-edge, specialty, and advanced packaging technologies.",
+      "claim_id": "E3.C1",
+      "confidence": "high",
+      "date": "2026-04-17",
+      "evidence_id": "E3",
+      "extracted_at": "2026-07-04T03:31:20.264701+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-2-5d-advanced-packaging-capacity",
+          "owner_name": "2.5D advanced packaging capacity",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-tsmc",
+          "owner_name": "TSMC",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "strong demand for our leading-edge, specialty and advanced packaging technologies",
+      "reliability": "high",
+      "source_sha256": "423e29e98c9920e6a85747636551525897f993dee41c983c25705ab7ea5ed5ad",
+      "source_title": "TSMC 2025 annual report",
+      "source_type": "company_disclosure",
+      "source_url": "https://investor.tsmc.com/static/annualReports/2025/english/index.html",
+      "status": "applied",
+      "theme_id": "cowos",
+      "verified": true
+    }
+  ],
+  "theme_id": "cowos"
+}

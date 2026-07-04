@@ -48,11 +48,27 @@
       "source_type": "company_disclosure",
       "title": "Micron fiscal 2026 third-quarter results",
       "url": "https://investors.micron.com/news-releases/news-release-details/micron-technology-inc-reports-record-results-third-quarter"
+    },
+    {
+      "claims": [
+        "TSMC links robust AI demand to strong demand for leading-edge, specialty, and advanced packaging technologies."
+      ],
+      "date": "2026-04-17",
+      "id": "E5",
+      "reliability": "high",
+      "source_type": "company_disclosure",
+      "title": "TSMC 2025 annual report",
+      "url": "https://investor.tsmc.com/static/annualReports/2025/english/index.html"
     }
   ],
   "scenarios": [
     {
       "description": "HBM qualification remains tight and long-context inference accelerates memory demand.",
+      "evidence_ids": [
+        "E1",
+        "E2",
+        "E5"
+      ],
       "id": "scn-bull",
       "implications": [
         "HBM suppliers retain strong pricing power",
@@ -67,6 +83,10 @@
     },
     {
       "description": "Capacity ramps faster than accelerator demand or software efficiency reduces memory pressure.",
+      "evidence_ids": [
+        "E3",
+        "E5"
+      ],
       "id": "scn-bear",
       "implications": [
         "HBM pricing power weakens",

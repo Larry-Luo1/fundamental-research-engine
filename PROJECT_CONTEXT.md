@@ -740,7 +740,55 @@ PYTHONPATH=src python3 -m fundamental_research_engine qc configs/themes/hbm4.jso
 Next recommended step: add a second independent source for the advanced
 packaging causal edge (for example a foundry/packaging company disclosure or a
 second credible industry source) so `edge-hbm-attach-to-packaging-capacity`
-is no longer single-source.
+is no longer single-source. Completed in the next section.
+
+## Multi-Theme Provenance + Quality Tier Batch (2026-07-04, Codex)
+
+Completed the six-action batch that turns the engine from an HBM4-only worked
+example into a reusable, theme-level causal research loop.
+
+- Added `provenance.py` plus `fre build-provenance`, a re-entrant command that
+  reads curated specs from `configs/provenance/<theme>.json`, verifies quotes,
+  and writes `data/evidence/<theme>/claims.json`.
+- Added process-quality tiers to `quality_scorecard.quality_status`:
+  `draft`, `evidence-backed`, `quote-verified`,
+  `multi-source causal map`, and `publishable memo`. `publishable memo`
+  requires completed adversarial review, not just deterministic checks.
+- Upgraded HBM4 with a second advanced-packaging source (`E5`, TSMC 2025 annual
+  report) and moved `edge-hbm-attach-to-packaging-capacity` from single-source
+  support to `E3.C1` + `E5.C1`.
+- Added causal maps, thesis/scenario evidence ids, and quote-provenance sidecars
+  for all current sample themes:
+  - `hbm4`
+  - `cowos`
+  - `ai-liquid-cooling`
+  - `copper-supply-demand`
+  - `solid-state-battery`
+- Strengthened the model workflow prompts so future GPT/Claude runs follow the
+  evidence-first sequence: mechanism -> claim provenance -> causal map ->
+  bottlenecks/profit pools -> company positioning -> scenarios/QC.
+- README and `docs/quality-gate-design.md` now document
+  `build-provenance`, the evidence sidecar contract, and the quality-tier gate.
+
+Verification targets for this batch:
+
+```bash
+PYTHONPATH=src python3 -m py_compile src/fundamental_research_engine/provenance.py src/fundamental_research_engine/quality.py src/fundamental_research_engine/cli.py src/fundamental_research_engine/render.py
+for theme in hbm4 cowos ai-liquid-cooling copper-supply-demand solid-state-battery; do PYTHONPATH=src python3 -m fundamental_research_engine validate "configs/themes/${theme}.json" --project-root . || exit 1; done
+PYTHONPATH=src python3 -m fundamental_research_engine validate configs/themes_staged/hbm4 --project-root .
+PYTHONPATH=src python3 -m unittest discover -s tests
+git diff --check
+```
+
+Next recommended direction:
+
+1. Add CI checks that fail when a sample theme has unresolved causal claim ids
+   or missing quote provenance.
+2. Add one non-AI domain pack with the same standard (for example copper or
+   solid-state battery) to prove the methodology is not AI-specific.
+3. Build source-collector adapters beyond EDGAR for official reports, investor
+   relations pages, and regulator/statistical datasets, so provenance specs can
+   be refreshed with less manual source-text handling.
 
 ## Collaboration Rule
 

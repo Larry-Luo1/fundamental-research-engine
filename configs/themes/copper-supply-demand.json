@@ -27,10 +27,55 @@
       ]
     }
   ],
+  "causal_map": [
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E2.C1"
+      ],
+      "confidence": "medium",
+      "direction": "positive",
+      "id": "edge-electrification-to-copper-demand",
+      "lag": "1-8 quarters",
+      "relationship": "raises demand for mined and refined copper",
+      "source": "electrification, grid, technology, and connectivity demand",
+      "target": "copper demand intensity",
+      "transmission": "Copper is embedded in electrical infrastructure, grid expansion, connectivity, and industrial technology. When electrification demand rises, the commodity exposure moves upstream to mined copper supply and reserve quality."
+    },
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E2.C1"
+      ],
+      "confidence": "medium",
+      "direction": "negative",
+      "id": "edge-mine-lead-times-to-supply-flexibility",
+      "lag": "multi-year",
+      "relationship": "reduces rapid supply response",
+      "source": "declining ore grades, capital intensity, discoveries, and long lead times",
+      "target": "copper supply flexibility",
+      "transmission": "Unlike factory capacity, mined copper supply requires reserves, permits, infrastructure, water, power, and capital over long time horizons. That makes supply less able to respond quickly when demand accelerates."
+    },
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E2.C1"
+      ],
+      "confidence": "medium",
+      "direction": "positive",
+      "id": "edge-structural-tightness-to-reserve-profit-pool",
+      "lag": "0-6 quarters after price signal",
+      "relationship": "improves leverage for quality reserve owners when prices rise",
+      "source": "structural copper tightness",
+      "target": "scarce low-cost reserve profit pool",
+      "transmission": "If demand outruns mine additions, price signals accrue first to producers with existing low-cost reserves and operating leverage, while new projects remain too slow to neutralize the cycle immediately."
+    }
+  ],
   "companies": [
     {
       "evidence_ids": [
-        "E1"
+        "E1",
+        "E2"
       ],
       "exposure_quality": "direct price and volume leverage",
       "id": "co-freeport-mcmoran",
@@ -51,7 +96,8 @@
     },
     {
       "evidence_ids": [
-        "E1"
+        "E1",
+        "E2"
       ],
       "exposure_quality": "direct price leverage",
       "id": "co-southern-copper",
@@ -87,25 +133,25 @@
   "evidence": [
     {
       "claims": [
-        "Reserve quality, cost position, and project pipeline determine mining exposure to copper price."
+        "FCX is a major copper producer and frames copper as essential to electrification, technology, and connectivity."
       ],
       "date": "2026-07-01",
       "id": "E1",
-      "reliability": "medium",
+      "reliability": "high",
       "source_type": "company_disclosure",
-      "title": "Major copper miner disclosures and reserve reports",
-      "url": ""
+      "title": "Freeport-McMoRan sustainability report page",
+      "url": "https://www.fcx.com/sustainability"
     },
     {
       "claims": [
-        "Electrification demand and long mine lead times can create structural tightness."
+        "Strong copper demand from electrification and long mine-project lead times point to a potential structural supply shortfall."
       ],
-      "date": "2026-07-01",
+      "date": "2025-05-21",
       "id": "E2",
-      "reliability": "medium",
-      "source_type": "industry_research",
-      "title": "Industry copper supply-demand research",
-      "url": ""
+      "reliability": "high",
+      "source_type": "official_report",
+      "title": "IEA Global Critical Minerals Outlook 2025 executive summary",
+      "url": "https://www.iea.org/reports/global-critical-minerals-outlook-2025/executive-summary"
     }
   ],
   "hype_stage": "productivity",
@@ -135,6 +181,10 @@
   "scenarios": [
     {
       "description": "Electrification and grid demand exceed supply additions while inventories stay tight.",
+      "evidence_ids": [
+        "E1",
+        "E2"
+      ],
       "id": "scn-bull",
       "implications": [
         "miners capture price leverage",
@@ -149,6 +199,9 @@
     },
     {
       "description": "Macro demand weakens or substitution/recycling offsets structural growth.",
+      "evidence_ids": [
+        "E2"
+      ],
       "id": "scn-bear",
       "implications": [
         "copper behaves more like a cyclical commodity",
@@ -204,6 +257,10 @@
   "technology_readiness_level": 9,
   "theme_type": "supply_demand_cycle",
   "thesis": "Copper should be analyzed as both a structural electrification constraint and a macro-sensitive commodity. The structural thesis depends on long mine lead times, declining ore grades, grid and data-center demand, and limited rapid supply response; the cyclical risk is that weak construction or manufacturing demand offsets electrification growth.",
+  "thesis_evidence_ids": [
+    "E1",
+    "E2"
+  ],
   "title": "Copper Supply-Demand Cycle",
   "tracking_signals": [
     "LME/COMEX inventories.",

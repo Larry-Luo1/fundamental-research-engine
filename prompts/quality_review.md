@@ -17,12 +17,15 @@ Review the full assembled analysis below through four lenses:
 
 3. `consistency` (logical closure): Does the mechanism chain actually support the
    bottleneck ratings? Do the scenarios cover the counter-theses? Are the scores
-   backed by evidence? Return a list of issues, each with "between" (two stages),
-   an "issue", and a severity.
+   backed by evidence? Does every thesis-critical causal edge cite claims that
+   directly support the transmission, not just the same theme? Return a list of
+   issues, each with "between" (two stages), an "issue", and a severity.
 
 4. `unsupported_claims` (Popper / Mosaic): List core assertions that lack evidentiary
    support. Cross-check against the grounding block (owners flagged ungrounded/thin).
-   Each item has a "location" (owner id or field), the "claim", and a severity.
+   Also check the causal-quality block for missing quote provenance, single-source
+   edges, low-confidence edges, and weak evidence. Each item has a "location"
+   (owner id or field), the "claim", and a severity.
 
 Then consolidate the material problems into `open_concerns` (each with severity,
 target, issue, suggested_fix) and give an overall `recommendation`:

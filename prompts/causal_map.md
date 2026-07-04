@@ -39,10 +39,15 @@ Return a single JSON object with exactly this field: {{SCHEMA_FIELDS}}
 ## Rules
 
 - Every edge must cite at least one claim id.
+- Prefer two or more independent claim ids for thesis-critical edges. If only
+  one source exists, lower `confidence` unless the source is a primary filing or
+  official disclosure and the edge is narrow.
 - Prefer a few high-signal causal edges over a dense graph.
 - Make each edge directional; do not write generic association.
 - Include lag even when uncertain; use `unknown` rather than omitting it.
 - Do not invent claim ids. If evidence is missing, return fewer edges.
+- Do not use a claim merely because it mentions the same theme. The quote must
+  bear directly on the transmission mechanism, bottleneck, or profit-pool link.
 
 ## Output contract
 

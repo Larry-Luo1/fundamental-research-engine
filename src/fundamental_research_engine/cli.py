@@ -33,6 +33,7 @@ from .prompts import (
     render_quality_review_prompt,
     render_stage_prompt,
 )
+from .provenance import build_provenance_records, write_provenance_store
 from .quality import build_quality_scorecard, validate_quality_review_shape
 from .render import render_diff
 from .stages import (
@@ -195,6 +196,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     extract.add_argument("--out", type=Path, default=None, help="Write extraction report here (defaults to stdout).")
     extract.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/ and prompts/.")
+
+    build_provenance = subparsers.add_parser(
+        "build-provenance",
+        help="Build quote-verified claim provenance from a curated spec.",
+    )
+    build_provenance.add_argument("theme", type=Path, help="Theme config (monolithic JSON or stage directory).")
+    build_provenance.add_argument("spec", type=Path, help="JSON spec containing records with claim_id, quote, confidence, bears_on.")
+    build_provenance.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/.")
+    build_provenance.add_argument(
+        "--store-root",
+        type=Path,
+        default=None,
+        help="Root for data/evidence/<theme>/claims.json. Defaults to --project-root.",
+    )
+    build_provenance.add_argument("--out", type=Path, default=None, help="Write build report here (defaults to stdout).")
 
     return parser
 
@@ -877,6 +893,48 @@ def main(argv: list[str] | None = None) -> int:
             f"dropped_unverified={report['dropped_unverified']} "
             f"applied={report['applied']} stored={report['stored']}"
         )
+        return 0
+
+    if args.command == "build-provenance":
+        theme = load_and_validate_theme(args.theme, args.project_root)
+        spec = read_json(args.spec)
+        store_root = args.store_root or args.project_root
+
+        def make_records(evidence: Evidence, claims: list[dict[str, Any]], source_text: str) -> list[dict[str, Any]]:
+            return _rich_claims_for_store(
+                theme,
+                evidence,
+                claims,
+                source_title=evidence.title,
+                source_url=evidence.url,
+                source_text=source_text,
+                model="curated",
+                model_name=None,
+                attempts=0,
+            )
+
+        result = build_provenance_records(theme, spec, spec_dir=args.spec.parent, make_record=make_records)
+        if result.errors:
+            print(f"build-provenance: spec {args.spec} has problems:")
+            for error in result.errors:
+                print(f"- {error}")
+            return 1
+
+        records = [*load_claim_provenance(store_root, theme.id), *result.records]
+        paths = write_provenance_store(theme, records, _store_owners(theme), store_root)
+        stored_records = load_claim_provenance(store_root, theme.id)
+        report = {
+            "theme_id": theme.id,
+            "record_count": len(result.records),
+            "stored_record_count": len(stored_records),
+            "store": paths,
+        }
+        if args.out is not None:
+            write_json(args.out, report)
+            print(args.out)
+        else:
+            print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+        print(f"provenance_records={len(result.records)} stored={paths['claims_path']}")
         return 0
 
     if args.command == "sources":

@@ -19,9 +19,14 @@ The contract is:
 3. The engine validates the output shape (`stages.validate_stage_shape`) and
    full referential integrity once every stage is present
    (`validation.validate_theme_dict`), then renders the final memo.
+4. The model must follow an evidence-first sequence: define the mechanism,
+   ground it in source claims, express the causal links as `claim_ids`, then
+   derive bottlenecks, profit pools, companies, and scenarios from those links.
 
 Model-specific free-form prose never becomes the source of record. Structured
 JSON is written to `<stage>.json` first; prose (the memo) is rendered from it.
+When multiple capable models are used, differences should appear as different
+candidate JSON drafts, not as untraceable memo prose.
 
 Templates use `{{PLACEHOLDER}}` tokens, substituted by
 `fundamental_research_engine.prompts.render_stage_prompt`:

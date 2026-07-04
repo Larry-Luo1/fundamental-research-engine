@@ -1,0 +1,54 @@
+{
+  "records": [
+    {
+      "bears_on": [
+        "thesis",
+        "bn-high-density-power-and-liquid-cooling-deployment",
+        "co-vertiv",
+        "co-eaton",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim_id": "E1.C1",
+      "confidence": "high",
+      "quote": "The rise of AI is accelerating the deployment of high-performance accelerated servers",
+      "source_text": "The rise of AI is accelerating the deployment of high-performance accelerated servers"
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-high-density-power-and-liquid-cooling-deployment",
+        "co-vertiv",
+        "scn-bull"
+      ],
+      "claim_id": "E2.C1",
+      "confidence": "high",
+      "quote": "expanding 44% on strong data center demand",
+      "source_text": "expanding 44% on strong data center demand"
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-high-density-power-and-liquid-cooling-deployment",
+        "co-eaton",
+        "scn-bull"
+      ],
+      "claim_id": "E3.C1",
+      "confidence": "high",
+      "quote": "driven by data center momentum",
+      "source_text": "driven by data center momentum"
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-high-density-power-and-liquid-cooling-deployment",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim_id": "E4.C1",
+      "confidence": "high",
+      "quote": "Capital expenditures, including principal payments on finance leases, were $19.84 billion",
+      "source_text": "Capital expenditures, including principal payments on finance leases, were $19.84 billion"
+    }
+  ]
+}

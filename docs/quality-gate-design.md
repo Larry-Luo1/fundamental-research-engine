@@ -168,3 +168,31 @@ fre qc configs/themes/hbm4.json --grounding-only
   `quality_scorecard`。
 - `render.py`:memo 的 Quality Scorecard 增加 causal edge 汇总,详细问题仍
   汇总在 Quality Flags。
+
+## 10. Provenance 规格与质量分层(2026-07-04)
+
+新增 `fre build-provenance` 作为手工策展证据的可重入入口:
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine build-provenance \
+  configs/themes/<theme>.json configs/provenance/<theme>.json
+```
+
+`configs/provenance/<theme>.json` 只保存短规格: `claim_id`、verbatim
+`quote`、`confidence`、`bears_on`,以及可选 `source_text`/`source_text_path`。
+命令会校验 quote 是否出现在 source text 中,再写入
+`data/evidence/<theme>/claims.json`。这样主题配置负责"分析结构",侧车文件
+负责"证据出处",两者可以分别审查。
+
+质量门现在给每次分析分配一个流程分层:
+
+| Tier | 含义 |
+|---|---|
+| `draft` | 结构有效,但证据不足或尚未形成可审计因果链。 |
+| `evidence-backed` | owner 层证据覆盖达到最低可检查标准。 |
+| `quote-verified` | 所有 causal edge 都有 quote-verified claim provenance。 |
+| `multi-source causal map` | 因果边不再单源、弱证据或低置信。 |
+| `publishable memo` | 在上述基础上,完成对抗式 review,且无未接地 owner、无 critical concern、无质量 flags。 |
+
+这个分层不是买卖建议,也不代表论点为真;它只回答"当前研究流程是否足够
+可审计,是否可以进入下一轮人工判断"。

@@ -1,0 +1,159 @@
+{
+  "records": [
+    {
+      "bears_on": [
+        "thesis",
+        "bn-high-density-power-and-liquid-cooling-deployment",
+        "co-vertiv",
+        "co-eaton",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim": "AI and data centers increase electricity demand and create infrastructure planning constraints.",
+      "claim_id": "E1.C1",
+      "confidence": "high",
+      "date": "2025-04-10",
+      "evidence_id": "E1",
+      "extracted_at": "2026-07-04T03:31:20.307462+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-high-density-power-and-liquid-cooling-deployment",
+          "owner_name": "High-density power and liquid-cooling deployment",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-vertiv",
+          "owner_name": "Vertiv",
+          "owner_type": "company"
+        },
+        {
+          "owner_id": "co-eaton",
+          "owner_name": "Eaton",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "The rise of AI is accelerating the deployment of high-performance accelerated servers",
+      "reliability": "high",
+      "source_sha256": "c81721c8f7768cbe3535f778767d454ff246f0e493969efac5fee924b5da6d5c",
+      "source_title": "IEA Energy and AI report",
+      "source_type": "official_report",
+      "source_url": "https://www.iea.org/reports/energy-and-ai/energy-demand-from-ai",
+      "status": "applied",
+      "theme_id": "ai-liquid-cooling",
+      "verified": true
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-high-density-power-and-liquid-cooling-deployment",
+        "co-vertiv",
+        "scn-bull"
+      ],
+      "claim": "Data-center infrastructure demand is driving revenue and earnings growth.",
+      "claim_id": "E2.C1",
+      "confidence": "high",
+      "date": "2026-04-23",
+      "evidence_id": "E2",
+      "extracted_at": "2026-07-04T03:31:20.307498+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-high-density-power-and-liquid-cooling-deployment",
+          "owner_name": "High-density power and liquid-cooling deployment",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-vertiv",
+          "owner_name": "Vertiv",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "expanding 44% on strong data center demand",
+      "reliability": "high",
+      "source_sha256": "d7f311ce37dfad9fcca128403d8abe928a99da680077c0252e7da6894824a5e0",
+      "source_title": "Vertiv first quarter 2026 results",
+      "source_type": "company_disclosure",
+      "source_url": "https://investors.vertiv.com/news/news-details/2026/Vertiv-Reports-Strong-First-Quarter-with-Diluted-EPS-Growth-of-136-Adjusted-Diluted-EPS-Growth-of-83-Raises-Full-Year-Guidance/default.aspx",
+      "status": "applied",
+      "theme_id": "ai-liquid-cooling",
+      "verified": true
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-high-density-power-and-liquid-cooling-deployment",
+        "co-eaton",
+        "scn-bull"
+      ],
+      "claim": "Electrical equipment demand and backlog are supported by data-center and electrification trends.",
+      "claim_id": "E3.C1",
+      "confidence": "high",
+      "date": "2026-05-01",
+      "evidence_id": "E3",
+      "extracted_at": "2026-07-04T03:31:20.307505+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-high-density-power-and-liquid-cooling-deployment",
+          "owner_name": "High-density power and liquid-cooling deployment",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-eaton",
+          "owner_name": "Eaton",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "driven by data center momentum",
+      "reliability": "high",
+      "source_sha256": "c28769d74427df06be813a72b810446295d4de4aaca19bfffab5885e8a7f8600",
+      "source_title": "Eaton first quarter 2026 results",
+      "source_type": "company_disclosure",
+      "source_url": "https://www.eaton.com/us/en-us/company/news-insights/news-releases/2026/eaton-reports-record-first-quarter-2026-results.html",
+      "status": "applied",
+      "theme_id": "ai-liquid-cooling",
+      "verified": true
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-high-density-power-and-liquid-cooling-deployment",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim": "Hyperscaler capex guidance supports continued AI infrastructure buildout.",
+      "claim_id": "E4.C1",
+      "confidence": "high",
+      "date": "2026-04-29",
+      "evidence_id": "E4",
+      "extracted_at": "2026-07-04T03:31:20.307512+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-high-density-power-and-liquid-cooling-deployment",
+          "owner_name": "High-density power and liquid-cooling deployment",
+          "owner_type": "bottleneck"
+        }
+      ],
+      "quote": "Capital expenditures, including principal payments on finance leases, were $19.84 billion",
+      "reliability": "high",
+      "source_sha256": "b595c61563f1e92df58d809a212f9252f94f1b1f2045670e5ab72015baa3c94b",
+      "source_title": "Meta first quarter 2026 results",
+      "source_type": "company_disclosure",
+      "source_url": "https://investor.atmeta.com/investor-news/press-release-details/2026/Meta-Reports-First-Quarter-2026-Results/default.aspx",
+      "status": "applied",
+      "theme_id": "ai-liquid-cooling",
+      "verified": true
+    }
+  ],
+  "theme_id": "ai-liquid-cooling"
+}

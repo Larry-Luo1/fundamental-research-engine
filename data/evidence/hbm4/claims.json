@@ -11,9 +11,9 @@
       "confidence": "high",
       "date": "2026-05-27",
       "evidence_id": "E1",
-      "extracted_at": "2026-07-04T03:03:03.531427+00:00",
+      "extracted_at": "2026-07-04T03:31:20.222006+00:00",
       "extraction_attempts": 0,
-      "extraction_model": "manual",
+      "extraction_model": "curated",
       "extraction_model_name": null,
       "linked_owners": [
         {
@@ -22,9 +22,9 @@
           "owner_type": "bottleneck"
         }
       ],
-      "quote": "Data Center compute revenue was a record $60.4 billion, up 77% from a year ago and up 18% sequentially. Data Center networking revenue was a record $14.8 billion, up 199% from a year ago and up 35% sequentially.",
+      "quote": "Data Center networking revenue was a record $14.8 billion, up 199% from a year ago",
       "reliability": "high",
-      "source_sha256": "9b991876b0c435bb2c0a2ce789220ac586b635afad526a963344a7d140f941c6",
+      "source_sha256": "f6e23117a7e8d93e8d3f534bb3bc6654099700bfe6102559cc9016058c3f38fa",
       "source_title": "NVIDIA announces first quarter fiscal 2027 results",
       "source_type": "company_disclosure",
       "source_url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-first-quarter-fiscal-2027",
@@ -44,9 +44,9 @@
       "confidence": "high",
       "date": "2026-04-24",
       "evidence_id": "E2",
-      "extracted_at": "2026-07-04T03:03:04.086162+00:00",
+      "extracted_at": "2026-07-04T03:31:20.222032+00:00",
       "extraction_attempts": 0,
-      "extraction_model": "manual",
+      "extraction_model": "curated",
       "extraction_model_name": null,
       "linked_owners": [
         {
@@ -60,9 +60,9 @@
           "owner_type": "company"
         }
       ],
-      "quote": "strong demand persisted due to expanded investments in AI infrastructure. The company sustained its upward performance trend by increasing sales of high-value-added products, including HBM, high-capacity server DRAM modules, and eSSDs.",
+      "quote": "strong demand persisted due to expanded investments in AI infrastructure",
       "reliability": "high",
-      "source_sha256": "c2755fbf3d14320b6bd75c91b9b484fbabe2da0b4b4e2f20e80a984ccc1c3cf2",
+      "source_sha256": "eb2b1640f4b4d4bb6acf65f42981bd21153f3cb9847559e70db927a37791d7ea",
       "source_title": "SK hynix announces 1Q26 financial results",
       "source_type": "company_disclosure",
       "source_url": "https://www.prnewswire.com/news-releases/sk-hynix-announces-1q26-financial-results-302750959.html",
@@ -74,16 +74,16 @@
       "bears_on": [
         "bn-hbm4-capacity-and-qualification",
         "co-tsmc",
-        "pool-advanced-packaging-capacity"
+        "scn-bear"
       ],
       "claim": "AI demand creates pressure on advanced wafer processes and 2.5D/3D packaging capacity.",
       "claim_id": "E3.C1",
-      "confidence": "high",
+      "confidence": "medium",
       "date": "2026-04-30",
       "evidence_id": "E3",
-      "extracted_at": "2026-07-04T03:03:05.410175+00:00",
+      "extracted_at": "2026-07-04T03:31:20.222040+00:00",
       "extraction_attempts": 0,
-      "extraction_model": "manual",
+      "extraction_model": "curated",
       "extraction_model_name": null,
       "linked_owners": [
         {
@@ -97,9 +97,9 @@
           "owner_type": "company"
         }
       ],
-      "quote": "AI demand has surged rapidly since 2023, leading to capacity bottlenecks in 3 nm–2 nm wafers and 2.5D/3D advanced packaging.",
+      "quote": "CoWoS has remained in short supply since 2023",
       "reliability": "medium",
-      "source_sha256": "4da5938c29ef031b15b47d64f1facc4945964e2fbcdea92aa918f3efb7a7a444",
+      "source_sha256": "530e420f5172be2aa49f2a88063188dded1033631a87f58169ef963703563553",
       "source_title": "TrendForce discusses AI-driven advanced packaging constraints",
       "source_type": "industry_research",
       "source_url": "https://www.trendforce.com/presscenter/news/20260430-13028.html",
@@ -118,9 +118,9 @@
       "confidence": "high",
       "date": "2026-06-24",
       "evidence_id": "E4",
-      "extracted_at": "2026-07-04T03:03:05.410201+00:00",
+      "extracted_at": "2026-07-04T03:31:20.222046+00:00",
       "extraction_attempts": 0,
-      "extraction_model": "manual",
+      "extraction_model": "curated",
       "extraction_model_name": null,
       "linked_owners": [
         {
@@ -134,12 +134,51 @@
           "owner_type": "company"
         }
       ],
-      "quote": "Micron’s record fiscal Q3 financial results and even stronger outlook for Q4 reflect the strategic value of memory in the AI era",
+      "quote": "reflect the strategic value of memory in the AI era",
       "reliability": "high",
-      "source_sha256": "6edfe2c21d223de8c3fe979090ee06456027954d2e5f306db75b265ba46fe65a",
+      "source_sha256": "cf249cfb8ed0936bd1dc19ebca38da415c982f9d0caccc46cd96cf5bb3cb85d6",
       "source_title": "Micron fiscal 2026 third-quarter results",
       "source_type": "company_disclosure",
       "source_url": "https://investors.micron.com/news-releases/news-release-details/micron-technology-inc-reports-record-results-third-quarter",
+      "status": "applied",
+      "theme_id": "hbm4",
+      "verified": true
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-hbm4-capacity-and-qualification",
+        "co-tsmc",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim": "TSMC links robust AI demand to strong demand for leading-edge, specialty, and advanced packaging technologies.",
+      "claim_id": "E5.C1",
+      "confidence": "high",
+      "date": "2026-04-17",
+      "evidence_id": "E5",
+      "extracted_at": "2026-07-04T03:31:20.222053+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "curated",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-hbm4-capacity-and-qualification",
+          "owner_name": "HBM4 capacity and qualification",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-tsmc",
+          "owner_name": "TSMC",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "strong demand for our leading-edge, specialty and advanced packaging technologies",
+      "reliability": "high",
+      "source_sha256": "423e29e98c9920e6a85747636551525897f993dee41c983c25705ab7ea5ed5ad",
+      "source_title": "TSMC 2025 annual report",
+      "source_type": "company_disclosure",
+      "source_url": "https://investor.tsmc.com/static/annualReports/2025/english/index.html",
       "status": "applied",
       "theme_id": "hbm4",
       "verified": true

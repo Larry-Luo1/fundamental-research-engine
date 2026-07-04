@@ -31,9 +31,9 @@ class EvidenceAuditTest(unittest.TestCase):
             },
         )
 
-        self.assertEqual(audit["inventory"]["evidence_count"], 4)
-        self.assertEqual(audit["inventory"]["claim_count"], 4)
-        self.assertEqual(len(audit["claims"]), 4)
+        self.assertEqual(audit["inventory"]["evidence_count"], 5)
+        self.assertEqual(audit["inventory"]["claim_count"], 5)
+        self.assertEqual(len(audit["claims"]), 5)
         self.assertEqual(audit["claims"][0]["id"], "E1.C1")
         self.assertEqual(audit["source_manifest"][0]["evidence_id"], "E1")
 
@@ -77,8 +77,8 @@ class EvidenceAuditTest(unittest.TestCase):
 
             self.assertEqual(normalized["records"][0]["claim_ids"], ["E1.C1"])
             self.assertEqual(claims["records"][0]["claim_id"], "E1.C1")
-            self.assertEqual(manifest["evidence_count"], 4)
-            self.assertEqual(manifest["claim_count"], 4)
+            self.assertEqual(manifest["evidence_count"], 5)
+            self.assertEqual(manifest["claim_count"], 5)
             self.assertFalse(manifest["fetch_attempted"])
             self.assertEqual(manifest["fetch_results"], [])
 

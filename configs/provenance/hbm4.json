@@ -1,0 +1,62 @@
+{
+  "records": [
+    {
+      "bears_on": [
+        "thesis",
+        "bn-hbm4-capacity-and-qualification",
+        "scn-bull"
+      ],
+      "claim_id": "E1.C1",
+      "confidence": "high",
+      "quote": "Data Center networking revenue was a record $14.8 billion, up 199% from a year ago",
+      "source_text": "Data Center networking revenue was a record $14.8 billion, up 199% from a year ago"
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-hbm4-capacity-and-qualification",
+        "co-sk-hynix",
+        "scn-bull"
+      ],
+      "claim_id": "E2.C1",
+      "confidence": "high",
+      "quote": "strong demand persisted due to expanded investments in AI infrastructure",
+      "source_text": "strong demand persisted due to expanded investments in AI infrastructure"
+    },
+    {
+      "bears_on": [
+        "bn-hbm4-capacity-and-qualification",
+        "co-tsmc",
+        "scn-bear"
+      ],
+      "claim_id": "E3.C1",
+      "confidence": "medium",
+      "quote": "CoWoS has remained in short supply since 2023",
+      "source_text": "CoWoS has remained in short supply since 2023"
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-hbm4-capacity-and-qualification",
+        "co-micron"
+      ],
+      "claim_id": "E4.C1",
+      "confidence": "high",
+      "quote": "reflect the strategic value of memory in the AI era",
+      "source_text": "reflect the strategic value of memory in the AI era"
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-hbm4-capacity-and-qualification",
+        "co-tsmc",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim_id": "E5.C1",
+      "confidence": "high",
+      "quote": "strong demand for our leading-edge, specialty and advanced packaging technologies",
+      "source_text": "strong demand for our leading-edge, specialty and advanced packaging technologies"
+    }
+  ]
+}

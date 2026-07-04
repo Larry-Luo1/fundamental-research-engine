@@ -8,6 +8,10 @@ Positioning labels come from `company_positioning_labels` in the ontology
 below: reserve `core bottleneck owner` for the single best-positioned
 company, not everyone in the segment.
 
+Use the upstream causal map as the starting point. A company should only receive
+a strong label when its product controls, relieves, or monetizes a cited
+bottleneck edge. Do not upgrade a company because it is thematically adjacent.
+
 ## Upstream context (already decided, do not restate or contradict)
 
 ```json
@@ -32,6 +36,10 @@ Return a single JSON object with exactly this field: {{SCHEMA_FIELDS}}
   `company_positioning_labels` in the ontology below), `exposure_quality`
   (short phrase), `moat` (list of strings), `risks` (list of strings),
   `evidence_ids` (list, may be empty if no evidence stage exists yet).
+
+For each company, `evidence_ids` should include the sources that support its
+specific exposure or customer qualification, not only generic theme demand. If
+the evidence is generic, use a weaker `positioning_label` or state the risk.
 
 ## Ontology (valid enum values)
 

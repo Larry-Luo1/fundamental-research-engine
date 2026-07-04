@@ -1,0 +1,31 @@
+{
+  "records": [
+    {
+      "bears_on": [
+        "thesis",
+        "bn-mine-supply-response-and-quality-reserve-scarcity",
+        "co-freeport-mcmoran",
+        "co-southern-copper",
+        "scn-bull"
+      ],
+      "claim_id": "E1.C1",
+      "confidence": "high",
+      "quote": "Copper is essential to global progress",
+      "source_text": "Copper is essential to global progress"
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-mine-supply-response-and-quality-reserve-scarcity",
+        "co-freeport-mcmoran",
+        "co-southern-copper",
+        "scn-bull",
+        "scn-bear"
+      ],
+      "claim_id": "E2.C1",
+      "confidence": "high",
+      "quote": "potential 30% supply shortfall by 2035",
+      "source_text": "potential 30% supply shortfall by 2035"
+    }
+  ]
+}
