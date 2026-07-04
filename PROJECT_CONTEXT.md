@@ -889,12 +889,24 @@ Gears C + D added (2026-07-04, Claude):
   power/cooling is tightest (0.65) AND low/flat mentions → pre-consensus action
   alert, while HBM/CoWoS are already rising in the corpus (priced).
 
-Next increments (designed, not built): `fre watch --weekly` (watchlist + last run +
-diff + radar delta) + digest; auto-derive candidates from `causal_map.target`/
-`segments` (today only surfaced as uncovered_candidates); auto-collect the consensus
-corpus (EDGAR/news over time feeding `--corpus`). Also still open from the earlier
-review: rename the `publishable_memo` readiness tier to something process-neutral
-(Codex agreed in 8.5).
+Weekly closed loop `fre watch` added (2026-07-04, Claude): `watch.py` +
+`configs/watchlists/*.json`. `fre watch <watchlist.json>` runs the radar (A+B+C)
+per theme, gates for material change (driver slope surprise / action|investigate
+migration / pre-consensus window / headroom erosion; everything else is "quiet", no
+noise), optionally registers migration predictions (D) and embeds calibration, adds
+a best-effort analysis run-to-run diff summary, and writes one gated digest to
+`reports/watch/<as_of>/digest.{json,md}` (gitignored). Flags: --as-of, --out-dir,
+--horizon, --no-persist, --no-register, --no-diff. One bad theme is captured as an
+error row, not a crash. `configs/watchlists/ai-compute.json` is a worked example.
+Verified: 189 tests pass (test_watch.py 8). All four gears (A headroom / B slope /
+C consensus / D calibration) are now wired into the standing weekly loop.
+
+Next increments (designed, not built): auto-derive candidates from
+`causal_map.target`/`segments` (today only surfaced as uncovered_candidates);
+auto-collect the consensus corpus (EDGAR/news over time feeding `--corpus`); wire the
+digest into the web layer / notifications (Codex 8.4 step 3). Also still open from the
+earlier review: rename the `publishable_memo` readiness tier to something
+process-neutral (Codex agreed in 8.5).
 
 ## Collaboration Rule
 

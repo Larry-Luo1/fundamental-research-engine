@@ -37,6 +37,13 @@ from .provenance import build_provenance_records, write_provenance_store
 from .quality import build_quality_scorecard, validate_quality_review_shape
 from .radar import build_radar, register_radar_predictions
 from .render import render_diff
+from .watch import (
+    build_digest,
+    render_digest_md,
+    summarize_analysis_diff,
+    theme_result,
+    validate_watchlist,
+)
 from .stages import (
     OPTIONAL_STAGE_ORDER,
     STAGE_ORDER,
@@ -225,6 +232,16 @@ def build_parser() -> argparse.ArgumentParser:
     radar.add_argument("--horizon", default="2 quarters", help="Prediction horizon phrase for registered migration calls.")
     radar.add_argument("--out", type=Path, default=None, help="Write radar report here (defaults to stdout).")
 
+    watch = subparsers.add_parser("watch", help="Weekly monitoring loop over a watchlist -> gated digest (radar + consensus + calibration + run diff).")
+    watch.add_argument("watchlist", type=Path, help="Watchlist JSON (themes with theme/radar_spec/optional corpus).")
+    watch.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root; relative entry paths resolve against it.")
+    watch.add_argument("--as-of", default=None, help="Digest date (defaults to today, UTC).")
+    watch.add_argument("--out-dir", type=Path, default=None, help="Digest output dir (defaults to reports/watch/<as_of>/).")
+    watch.add_argument("--horizon", default="2 quarters", help="Prediction horizon phrase for registered migration calls.")
+    watch.add_argument("--no-persist", action="store_true", help="Do not append radar state per theme.")
+    watch.add_argument("--no-register", action="store_true", help="Do not register migration predictions.")
+    watch.add_argument("--no-diff", action="store_true", help="Skip the analysis run-to-run diff enrichment.")
+
     return parser
 
 
@@ -242,6 +259,11 @@ def _load_corpus(path: Path) -> list[dict]:
     data = read_json(path)
     documents = data.get("documents", data) if isinstance(data, dict) else data
     return documents if isinstance(documents, list) else []
+
+
+def _resolve_watch_path(project_root: Path, value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else project_root / path
 
 
 def default_track_record_path(project_root: Path, theme_id: str) -> Path:
@@ -1029,6 +1051,74 @@ def main(argv: list[str] | None = None) -> int:
         pre = [a for a in migration if a.get("pre_consensus")]
         tightest = radar["ranking"][0] if radar["ranking"] else "n/a"
         print(f"tightest={tightest} migration_alerts={len(migration)} action={len(action)} pre_consensus={len(pre)}")
+        return 0
+
+    if args.command == "watch":
+        watchlist = read_json(args.watchlist)
+        errors = validate_watchlist(watchlist)
+        if errors:
+            print(f"watch: watchlist {args.watchlist} has problems:")
+            for error in errors:
+                print(f"- {error}")
+            return 1
+
+        root = args.project_root
+        as_of = args.as_of or datetime.now(timezone.utc).date().isoformat()
+        results = []
+        for entry in watchlist["themes"]:
+            theme_path = _resolve_watch_path(root, entry["theme"])
+            hint = entry.get("theme_id") or str(theme_path)
+            try:
+                theme = load_and_validate_theme(theme_path, root)
+                spec = read_json(_resolve_watch_path(root, entry["radar_spec"]))
+                corpus = _load_corpus(_resolve_watch_path(root, entry["corpus"])) if entry.get("corpus") else None
+
+                state_path = default_radar_state_path(root, theme.id)
+                state = read_json(state_path) if state_path.exists() else {"theme_id": theme.id, "history": []}
+                prev_entry = state["history"][-1] if state.get("history") else None
+
+                radar = build_radar(theme, spec, prev_entry, corpus=corpus)
+                if radar.get("errors"):
+                    results.append({"theme_id": theme.id, "error": "; ".join(radar["errors"])})
+                    continue
+
+                if not args.no_persist:
+                    state.setdefault("history", []).append(radar["state_entry"])
+                    write_json(state_path, state)
+                if not args.no_register:
+                    track_path = default_radar_predictions_path(root, theme.id)
+                    record = read_json(track_path) if track_path.exists() else {"theme_id": theme.id, "predictions": []}
+                    record = register_radar_predictions(record, radar, horizon=args.horizon)
+                    write_json(track_path, record)
+                    radar["calibration"] = build_calibration(record)
+
+                analysis_diff = None
+                if not args.no_diff:
+                    runs = sorted(find_runs_for_theme(root, theme.id), key=lambda item: item[0])
+                    if len(runs) >= 2:
+                        try:
+                            old = read_json(resolve_analysis_path(runs[-2][1]))
+                            new = read_json(resolve_analysis_path(runs[-1][1]))
+                            analysis_diff = summarize_analysis_diff(diff_analysis(old, new))
+                        except (OSError, KeyError, ValueError):
+                            analysis_diff = None
+
+                results.append(theme_result(radar, analysis_diff=analysis_diff))
+            except Exception as exc:  # one bad theme must not sink the whole digest
+                results.append({"theme_id": hint, "error": str(exc)})
+
+        digest = build_digest(results, as_of=as_of, watchlist_name=watchlist.get("name"))
+        out_dir = args.out_dir or (root / "reports" / "watch" / as_of)
+        write_json(out_dir / "digest.json", digest)
+        write_text(out_dir / "digest.md", render_digest_md(digest))
+
+        summary = digest["summary"]
+        print(f"{out_dir / 'digest.md'}")
+        print(
+            f"scanned={digest['themes_scanned']} flagged={summary['flagged']} "
+            f"action={summary['action']} pre_consensus={summary['pre_consensus']} "
+            f"quiet={summary['quiet']} errored={summary['errored']}"
+        )
         return 0
 
     parser.error(f"unknown command: {args.command}")

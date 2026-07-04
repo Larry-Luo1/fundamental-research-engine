@@ -381,6 +381,21 @@ Two more signals sharpen it:
   `fre calibrate <theme> --track-record <preds> --resolve <key> --outcome true|false`
   to Brier-score the radar against reality.
 
+### Weekly loop
+
+`fre watch` ties it together into a standing weekly sweep over a watchlist:
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine watch configs/watchlists/ai-compute.json
+```
+
+For each theme it runs the radar (headroom + slope + consensus), **gates** for
+material change — surfacing only themes with a slope surprise, an
+`investigate`/`action` migration, a pre-consensus window, or headroom erosion (the
+rest are listed as "quiet", no noise) — registers migration calls as predictions,
+and writes one digest to `reports/watch/<date>/digest.{json,md}`. Point a
+`systemd` timer or cron at it for the standing cadence.
+
 See `docs/monitoring-and-constraint-radar.md` for the full monitoring design.
 
 ## Methodology

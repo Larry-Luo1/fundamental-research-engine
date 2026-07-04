@@ -206,6 +206,14 @@ demo(`configs/radar/hbm4.json`):HBM=0.79 为承认约束,**rack power/cooling=0.
   事后用现有 `fre calibrate <theme> --track-record <preds> --resolve <key> --outcome true|false` 兑现 → **Brier**。
   demo:power/cooling 判为绑定(概率 0.75,outcome=true)→ Brier 0.0625。
 
-**下一增量**:`fre watch --weekly`(watchlist + 上次 run + diff + radar delta)+ digest;
-把候选从 `causal_map.target`/`segments` 自动派生(目前仅 `uncovered_candidates` 提示);
-共识语料的自动采集(EDGAR/news 按时间入库,喂 `--corpus`)。
+**周频闭环 `fre watch` 已落地**(2026-07-04,`watch.py` + `configs/watchlists/*.json`):
+`fre watch <watchlist.json>` 对清单里每个题材跑一遍雷达(A 余量比 + B 斜率 + C 共识),
+**门控**(只在 driver slope surprise / action·investigate 迁移 / pre-consensus 窗口 / 余量比侵蚀 时才 flag,
+其余归入 quiet,不制造噪声),按需注册迁移预测(D)并内嵌 calibration,附带 analysis run 的 diff 摘要,
+最后产出**一份 gated digest**(`reports/watch/<date>/digest.{json,md}`,默认不提交)。这就把四齿轮串成了
+"发现 → 打分 → 门控 → 摘要 → 回写校准"的常驻回路。节奏由调度器(systemd timer / cron)按周触发即可,
+重活按事件下发、别压小 VPS(见第 5 节红线)。demo:`configs/watchlists/ai-compute.json` 扫 hbm4 →
+digest 顶部直接给出 "hbm4 — ACTION,tightest rack-power-cooling@0.65,pre-consensus alpha window"。
+
+**下一增量**:把候选从 `causal_map.target`/`segments` 自动派生(目前仅 `uncovered_candidates` 提示);
+共识语料的自动采集(EDGAR/news 按时间入库,喂 `--corpus`);把 digest 接到 Web 层 / 消息推送(Codex 8.4 第 3 步)。

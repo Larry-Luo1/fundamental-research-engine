@@ -1,0 +1,13 @@
+{
+  "name": "ai-compute",
+  "cadence": "weekly",
+  "description": "Standing weekly constraint-radar sweep of AI compute supply-chain themes. Surfaces only themes with material change (migration / slope surprise / pre-consensus window / headroom erosion).",
+  "themes": [
+    {
+      "theme_id": "hbm4",
+      "theme": "configs/themes/hbm4.json",
+      "radar_spec": "configs/radar/hbm4.json",
+      "corpus": "configs/radar/hbm4.corpus.json"
+    }
+  ]
+}
