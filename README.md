@@ -398,6 +398,16 @@ rest are listed as "quiet", no noise) — registers migration calls as predictio
 and writes one digest to `reports/watch/<date>/digest.{json,md}`. Point a
 `systemd` timer or cron at it for the standing cadence.
 
+A watchlist entry can auto-build its corpus by giving a broad `corpus_query`
+(+ optional `corpus_forms`/`corpus_from`/`corpus_to`/`corpus_limit`) instead of a
+static `corpus` file; `--no-corpus-fetch` skips the EDGAR fetch for offline runs.
+Digests are served read-only at `GET /api/watch/digests` and
+`GET /api/watch/digests/<as_of>` in the web layer.
+
+To bootstrap a radar spec, `fre radar-scaffold <theme>` derives a candidate skeleton
+(bottlenecks → current-binding; causal-map targets / segments / profit pools →
+adjacent-latent) with growth numbers left blank for you to fill.
+
 See `docs/monitoring-and-constraint-radar.md` for the full monitoring design.
 
 ## Methodology

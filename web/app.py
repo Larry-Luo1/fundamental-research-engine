@@ -211,6 +211,19 @@ def promote_framing(sid: str, body: PromoteBody, _: None = Depends(require_auth)
 
 
 # ---- frontend --------------------------------------------------------------
+@app.get("/api/watch/digests")
+def list_watch_digests(_: None = Depends(require_auth)) -> list:
+    return service.list_watch_digests()
+
+
+@app.get("/api/watch/digests/{as_of}")
+def get_watch_digest(as_of: str, _: None = Depends(require_auth)) -> dict:
+    try:
+        return service.get_watch_digest(as_of)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="no watch digest for that date")
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(_STATIC / "index.html")

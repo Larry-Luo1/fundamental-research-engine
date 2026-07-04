@@ -18,6 +18,7 @@ F (persisted radar_state time series).
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .calibration import prediction_key
@@ -117,6 +118,51 @@ def _level(ratio: float | None, ratio_delta: float | None, tighter_than_current:
     ):
         return "investigate"
     return "watch"
+
+
+def _slug(text: str) -> str:
+    return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", text.strip().lower())).strip("-")
+
+
+def derive_candidate_spec(theme: Any) -> dict[str, Any]:
+    """Scaffold a radar spec from a theme (gear #2: auto-derive candidates).
+
+    Bottlenecks seed the `current_binding` ring; causal-map downstream targets,
+    segments, and profit pools seed `adjacent_latent`. Growth numbers and `driver`
+    are left null for the analyst to fill — the radar can only rank once those exist.
+    This turns the radar's `uncovered_candidates` hint into an actionable skeleton.
+    """
+    constraints: list[dict[str, Any]] = []
+    seen: set[str] = set()
+
+    def add(name: str, ring: str, cid: str | None = None) -> None:
+        name = (name or "").strip()
+        if not name:
+            return
+        key = _slug(name)
+        if not key or key in seen:
+            return
+        seen.add(key)
+        constraints.append(
+            {"id": cid or key, "name": name, "ring": ring, "demand_growth": None, "capacity_growth": None, "terms": []}
+        )
+
+    for bottleneck in getattr(theme, "bottlenecks", []):
+        add(bottleneck.name, "current_binding", getattr(bottleneck, "id", None))
+    for edge in getattr(theme, "causal_map", []):
+        add(getattr(edge, "target", ""), "adjacent_latent")
+    for segment in getattr(theme, "segments", []):
+        add(segment.name, "adjacent_latent", getattr(segment, "id", None))
+    for pool in getattr(theme, "profit_pools", []):
+        add(pool.name, "adjacent_latent", getattr(pool, "id", None))
+
+    return {
+        "theme_id": getattr(theme, "id", None),
+        "as_of": getattr(theme, "as_of", None),
+        "driver": {"name": None, "realized_growth": None, "assumed_growth": None},
+        "constraints": constraints,
+        "_note": "Scaffold: fill driver.* and each constraint's demand_growth/capacity_growth/terms, then adjust rings. Exogenous constraints -> ring second_order_external with a signpost instead of growth.",
+    }
 
 
 def build_radar(

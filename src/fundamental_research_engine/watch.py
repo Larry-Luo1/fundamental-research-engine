@@ -61,6 +61,8 @@ def validate_watchlist(data: Any) -> list[str]:
                 errors.append(f"{prefix}.{field}: expected non-empty str (path)")
         if "corpus" in entry and not isinstance(entry["corpus"], str):
             errors.append(f"{prefix}.corpus: expected str (path)")
+        if "corpus_query" in entry and not isinstance(entry["corpus_query"], str):
+            errors.append(f"{prefix}.corpus_query: expected str (broad EDGAR query)")
     return errors
 
 

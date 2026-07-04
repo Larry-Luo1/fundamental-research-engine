@@ -143,6 +143,36 @@ class Service:
         items.sort(key=lambda m: m.get("created_at") or "", reverse=True)
         return items
 
+    # ---- constraint-radar watch digests (read-only) --------------------
+    def _watch_root(self) -> Path:
+        return self.project_root / "reports" / "watch"
+
+    def list_watch_digests(self) -> list[dict[str, Any]]:
+        """Newest-first index of watch digests written by `fre watch`."""
+        root = self._watch_root()
+        if not root.exists():
+            return []
+        items: list[dict[str, Any]] = []
+        for date_dir in sorted(root.iterdir(), key=lambda p: p.name, reverse=True):
+            digest_path = date_dir / "digest.json"
+            if not digest_path.is_file():
+                continue
+            try:
+                data = read_json(digest_path)
+            except Exception:  # noqa: BLE001 - skip corrupt digests
+                continue
+            items.append({"as_of": date_dir.name, "watchlist": data.get("watchlist"), "summary": data.get("summary", {})})
+        return items
+
+    def get_watch_digest(self, as_of: str) -> dict[str, Any]:
+        """Full digest for a date. Raises KeyError if absent or the date is unsafe."""
+        if not as_of or "/" in as_of or "\\" in as_of or ".." in as_of:
+            raise KeyError(as_of)
+        path = self._watch_root() / as_of / "digest.json"
+        if not path.is_file():
+            raise KeyError(as_of)
+        return read_json(path)
+
     def get_analysis(self, sid: str) -> dict[str, Any]:
         meta = self._read_meta(sid)
         theme_dir = self._session_dir(sid) / "theme"

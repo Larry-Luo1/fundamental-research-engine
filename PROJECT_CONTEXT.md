@@ -914,12 +914,23 @@ intermittently 500s under load. Verified: 197 tests pass (test_corpus.py 5,
 test_edgar.py retry 3); live keyless smoke collected real Micron/Netlist/Credo 10-Ks
 and fed them through the radar consensus proxy end to end.
 
-Next increments (designed, not built): auto-derive candidates from
-`causal_map.target`/`segments` (today only surfaced as uncovered_candidates); wire
-`fre sources corpus` into `fre watch` (build each theme's corpus automatically instead
-of hand-feeding `--corpus`); wire the digest into the web layer / notifications (Codex
-8.4 step 3). Also still open from the earlier review: rename the `publishable_memo`
-readiness tier to something process-neutral (Codex agreed in 8.5).
+Monitoring follow-ups completed (2026-07-04, Claude):
+- Candidate auto-derivation: `fre radar-scaffold <theme>` (radar.derive_candidate_spec)
+  scaffolds a radar spec from bottlenecks (current_binding) + causal_map targets /
+  segments / profit_pools (adjacent_latent), growth/driver left null to fill.
+- Corpus auto-collection wired into `fre watch`: a watchlist entry can carry
+  `corpus_query` (+ corpus_forms/from/to/limit/fetch_text) and watch builds the corpus
+  from EDGAR, feeds the consensus proxy, and writes reports/watch/<as_of>/corpus-<theme>.json
+  as an audit trail. `--no-corpus-fetch` skips it; EDGAR failure degrades to no-consensus
+  (theme still scanned), never crashes the sweep. Live-verified end to end.
+- Digest into the web layer: Service.list_watch_digests / get_watch_digest (path-traversal
+  guarded) + routes GET /api/watch/digests and /api/watch/digests/{as_of}.
+- Readiness tier renamed publishable_memo -> review_ready (process-neutral; the human
+  still judges the memo).
+- Verified: 204 tests pass (test_radar scaffold, test_watch corpus_query, test_web_watch).
+
+Still open (lower priority): a front-end UI card / push notification for digests (Codex
+8.4 step 3 push part); extend the consensus corpus to non-filing sources (news).
 
 ## Collaboration Rule
 

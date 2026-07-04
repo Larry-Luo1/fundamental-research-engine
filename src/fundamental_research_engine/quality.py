@@ -305,7 +305,7 @@ def build_quality_status(
     if quote_verified and not multi_source_causal:
         blockers.append("causal map still has single-source, weak, or low-confidence edges")
 
-    publishable = (
+    review_ready = (
         multi_source_causal
         and grounding_score >= 0.7
         and not grounding.get("ungrounded")
@@ -314,9 +314,9 @@ def build_quality_status(
         and disconfirmation.get("open_critical", 0) == 0
         and not flags
     )
-    if multi_source_causal and not publishable:
+    if multi_source_causal and not review_ready:
         blockers.append(
-            "publishable memo requires stronger grounding, adversarial review, and no open quality flags"
+            "review-ready requires stronger grounding, adversarial review, and no open quality flags"
         )
 
     tiers = ["draft"]
@@ -326,8 +326,8 @@ def build_quality_status(
         tiers.append("quote-verified")
     if multi_source_causal:
         tiers.append("multi-source causal map")
-    if publishable:
-        tiers.append("publishable memo")
+    if review_ready:
+        tiers.append("review-ready")
 
     return {
         "tier": tiers[-1],
@@ -337,7 +337,7 @@ def build_quality_status(
             "evidence_backed": "grounding_score >= 0.5 and at least one grounded owner",
             "quote_verified": "all causal edges are backed by quote-verified claim ids",
             "multi_source_causal_map": "quote-verified causal map with no single-source, weak, or low-confidence edges",
-            "publishable_memo": "multi-source causal map, grounding_score >= 0.7, adversarial review complete, no ungrounded owners, no critical concerns, no flags",
+            "review_ready": "multi-source causal map, grounding_score >= 0.7, adversarial review complete, no ungrounded owners, no critical concerns, no flags — the process gate is met; the human still judges the memo",
         },
     }
 

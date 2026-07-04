@@ -36,7 +36,7 @@ from .prompts import (
 )
 from .provenance import build_provenance_records, write_provenance_store
 from .quality import build_quality_scorecard, validate_quality_review_shape
-from .radar import build_radar, register_radar_predictions
+from .radar import build_radar, derive_candidate_spec, register_radar_predictions
 from .render import render_diff
 from .watch import (
     build_digest,
@@ -242,6 +242,11 @@ def build_parser() -> argparse.ArgumentParser:
     radar.add_argument("--horizon", default="2 quarters", help="Prediction horizon phrase for registered migration calls.")
     radar.add_argument("--out", type=Path, default=None, help="Write radar report here (defaults to stdout).")
 
+    scaffold = subparsers.add_parser("radar-scaffold", help="Derive a radar spec skeleton from a theme (bottlenecks + causal map + segments).")
+    scaffold.add_argument("theme", type=Path, help="Theme config (monolithic JSON or stage directory).")
+    scaffold.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/.")
+    scaffold.add_argument("--out", type=Path, default=None, help="Write the spec skeleton here (defaults to stdout).")
+
     watch = subparsers.add_parser("watch", help="Weekly monitoring loop over a watchlist -> gated digest (radar + consensus + calibration + run diff).")
     watch.add_argument("watchlist", type=Path, help="Watchlist JSON (themes with theme/radar_spec/optional corpus).")
     watch.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root; relative entry paths resolve against it.")
@@ -251,6 +256,7 @@ def build_parser() -> argparse.ArgumentParser:
     watch.add_argument("--no-persist", action="store_true", help="Do not append radar state per theme.")
     watch.add_argument("--no-register", action="store_true", help="Do not register migration predictions.")
     watch.add_argument("--no-diff", action="store_true", help="Skip the analysis run-to-run diff enrichment.")
+    watch.add_argument("--no-corpus-fetch", action="store_true", help="Skip auto-building corpora from entry corpus_query (offline runs).")
 
     return parser
 
@@ -1084,6 +1090,20 @@ def main(argv: list[str] | None = None) -> int:
         print(f"tightest={tightest} migration_alerts={len(migration)} action={len(action)} pre_consensus={len(pre)}")
         return 0
 
+    if args.command == "radar-scaffold":
+        theme = load_and_validate_theme(args.theme, args.project_root)
+        skeleton = derive_candidate_spec(theme)
+        if args.out is not None:
+            write_json(args.out, skeleton)
+            print(args.out)
+        else:
+            print(json.dumps(skeleton, ensure_ascii=False, indent=2, sort_keys=True))
+        rings = {}
+        for c in skeleton["constraints"]:
+            rings[c["ring"]] = rings.get(c["ring"], 0) + 1
+        print(f"scaffolded {len(skeleton['constraints'])} candidate(s): {rings}")
+        return 0
+
     if args.command == "watch":
         watchlist = read_json(args.watchlist)
         errors = validate_watchlist(watchlist)
@@ -1095,6 +1115,7 @@ def main(argv: list[str] | None = None) -> int:
 
         root = args.project_root
         as_of = args.as_of or datetime.now(timezone.utc).date().isoformat()
+        out_dir = args.out_dir or (root / "reports" / "watch" / as_of)
         results = []
         for entry in watchlist["themes"]:
             theme_path = _resolve_watch_path(root, entry["theme"])
@@ -1102,7 +1123,24 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 theme = load_and_validate_theme(theme_path, root)
                 spec = read_json(_resolve_watch_path(root, entry["radar_spec"]))
-                corpus = _load_corpus(_resolve_watch_path(root, entry["corpus"])) if entry.get("corpus") else None
+                corpus = None
+                if entry.get("corpus"):
+                    corpus = _load_corpus(_resolve_watch_path(root, entry["corpus"]))
+                elif entry.get("corpus_query") and not args.no_corpus_fetch:
+                    forms = [f.strip() for f in entry["corpus_forms"].split(",") if f.strip()] if entry.get("corpus_forms") else None
+                    try:
+                        built = build_corpus(
+                            entry["corpus_query"],
+                            forms=forms,
+                            date_from=entry.get("corpus_from"),
+                            date_to=entry.get("corpus_to"),
+                            limit=entry.get("corpus_limit", 40),
+                            fetch_text=default_fetch_text if entry.get("corpus_fetch_text") else None,
+                        )
+                        corpus = built["documents"]
+                        write_json(out_dir / f"corpus-{theme.id}.json", built)  # audit trail
+                    except (urllib.error.URLError, urllib.error.HTTPError, ValueError):
+                        corpus = None  # EDGAR unreachable -> scan without consensus, don't crash the sweep
 
                 state_path = default_radar_state_path(root, theme.id)
                 state = read_json(state_path) if state_path.exists() else {"theme_id": theme.id, "history": []}
@@ -1139,7 +1177,6 @@ def main(argv: list[str] | None = None) -> int:
                 results.append({"theme_id": hint, "error": str(exc)})
 
         digest = build_digest(results, as_of=as_of, watchlist_name=watchlist.get("name"))
-        out_dir = args.out_dir or (root / "reports" / "watch" / as_of)
         write_json(out_dir / "digest.json", digest)
         write_text(out_dir / "digest.md", render_digest_md(digest))
 

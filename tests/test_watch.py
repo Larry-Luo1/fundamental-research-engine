@@ -51,6 +51,10 @@ class ValidateWatchlistTest(unittest.TestCase):
         errors = validate_watchlist({"themes": [{"theme": "a.json"}]})
         self.assertTrue(any("radar_spec" in e for e in errors))
 
+    def test_corpus_query_must_be_str(self) -> None:
+        errors = validate_watchlist({"themes": [{"theme": "a.json", "radar_spec": "b.json", "corpus_query": 5}]})
+        self.assertTrue(any("corpus_query" in e for e in errors))
+
 
 class GateTest(unittest.TestCase):
     def test_action_radar_is_material(self) -> None:
@@ -124,6 +128,33 @@ class WatchCliTest(unittest.TestCase):
             self.assertEqual(digest["flagged"][0]["theme_id"], "hbm4")
             self.assertEqual(digest["flagged"][0]["tightest"], "rack-power-cooling")
             self.assertTrue((out_dir / "digest.md").exists())
+
+    def test_watch_corpus_query_skipped_with_no_corpus_fetch(self) -> None:
+        # corpus_query would hit EDGAR; --no-corpus-fetch skips it, and the theme is
+        # still scanned/flagged via headroom (just without a consensus signal).
+        project_root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            wl = {
+                "name": "t",
+                "themes": [{
+                    "theme_id": "hbm4",
+                    "theme": "configs/themes/hbm4.json",
+                    "radar_spec": "configs/radar/hbm4.json",
+                    "corpus_query": "high bandwidth memory",
+                }],
+            }
+            wl_path = Path(tmp) / "wl.json"
+            wl_path.write_text(json.dumps(wl), encoding="utf-8")
+            out_dir = Path(tmp) / "w"
+            code = main([
+                "watch", str(wl_path), "--project-root", str(project_root),
+                "--as-of", "2026-07-04", "--out-dir", str(out_dir),
+                "--no-persist", "--no-register", "--no-diff", "--no-corpus-fetch",
+            ])
+            self.assertEqual(code, 0)
+            digest = json.loads((out_dir / "digest.json").read_text(encoding="utf-8"))
+            self.assertEqual(digest["flagged"][0]["theme_id"], "hbm4")
+            self.assertFalse((out_dir / "corpus-hbm4.json").exists())  # no fetch happened
 
 
 if __name__ == "__main__":

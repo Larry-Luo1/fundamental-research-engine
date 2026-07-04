@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from fundamental_research_engine.cli import main
 from fundamental_research_engine.radar import (
     build_radar,
+    derive_candidate_spec,
     radar_migration_predictions,
     register_radar_predictions,
     validate_radar_spec,
@@ -130,6 +131,32 @@ class ConsensusIntegrationTest(unittest.TestCase):
         self.assertIsNone(power["consensus"])
         power_alert = next(a for a in radar["alerts"] if a.get("constraint_id") == "power")
         self.assertFalse(power_alert["pre_consensus"])
+
+
+class DeriveCandidateSpecTest(unittest.TestCase):
+    def test_scaffolds_rings_from_theme(self) -> None:
+        theme = _theme()
+        theme.profit_pools = [SimpleNamespace(id="pp1", name="Memory margin pool")]
+        spec = derive_candidate_spec(theme)
+
+        self.assertEqual(spec["theme_id"], "hbm4")
+        current = [c for c in spec["constraints"] if c["ring"] == "current_binding"]
+        adjacent = [c for c in spec["constraints"] if c["ring"] == "adjacent_latent"]
+        self.assertTrue(any("HBM" in c["name"] for c in current))          # bottleneck -> current
+        self.assertGreaterEqual(len(adjacent), 3)                            # causal target + segment + pool
+        # growth is left null for the analyst; so the scaffold is not runnable as-is
+        self.assertIsNone(spec["constraints"][0]["demand_growth"])
+        self.assertTrue(validate_radar_spec(spec))  # complains about null growth -> must be filled
+
+    def test_dedupes_by_name(self) -> None:
+        theme = SimpleNamespace(
+            id="t", as_of="2026-07-01",
+            bottlenecks=[SimpleNamespace(id="b1", name="HBM")],
+            causal_map=[SimpleNamespace(target="HBM")],  # same name as bottleneck
+            segments=[], profit_pools=[],
+        )
+        spec = derive_candidate_spec(theme)
+        self.assertEqual(len(spec["constraints"]), 1)
 
 
 class RadarPredictionsTest(unittest.TestCase):

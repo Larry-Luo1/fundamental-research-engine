@@ -224,6 +224,15 @@ digest 顶部直接给出 "hbm4 — ACTION,tightest rack-power-cooling@0.65,pre-
 EDGAR EFTS 在负载下会间歇性 500,重试后实测可稳定采集(Micron/Netlist/Credo 等真实 10-K)。
 诚实提示:信号质量取决于语料**广度与数量**,小样本 + 偏窄查询会噪声很大。
 
-**下一增量**:把候选从 `causal_map.target`/`segments` 自动派生(目前仅 `uncovered_candidates` 提示);
-把 `fre sources corpus` 接进 `fre watch`(按题材自动建语料,免手工喂 `--corpus`);
-把 digest 接到 Web 层 / 消息推送(Codex 8.4 第 3 步)。
+**收尾增量已完成**(2026-07-04):
+- **候选自动派生**:`fre radar-scaffold <theme>`(`radar.derive_candidate_spec`)从 bottlenecks(→ current_binding)+
+  causal_map 下游 target / segments / profit_pools(→ adjacent_latent)生成**雷达 spec 骨架**(增长率/driver 留空待填),
+  把 `uncovered_candidates` 从提示升级成可直接编辑的脚手架。
+- **语料自动接入 `fre watch`**:watchlist 条目支持 `corpus_query`(+`corpus_forms`/`corpus_from`/`corpus_to`/`corpus_limit`/`corpus_fetch_text`),
+  `fre watch` 自动建语料喂共识代理并落 `reports/watch/<date>/corpus-<theme>.json` 审计;`--no-corpus-fetch` 跳过(离线);
+  EDGAR 不可达时该题材照常扫描、仅缺共识,不崩。实测 live 跑通(自动建 6 篇语料 → digest)。
+- **digest 接 Web 层**:`GET /api/watch/digests`(索引)、`GET /api/watch/digests/<as_of>`(全量),
+  由 `Service.list_watch_digests` / `get_watch_digest` 读 `reports/watch/`(带路径穿越校验)。前端卡片展示为后续小活。
+- **口径**:readiness tier `publishable_memo` → **`review_ready`**("过程门槛已达、仍由人判断",Codex 8.5)。
+
+**仍开放**:把 watch digest 做成前端 UI 卡片 / 主动消息推送(Codex 8.4 第 3 步的推送部分);共识语料扩展到新闻等非 filing 源。
