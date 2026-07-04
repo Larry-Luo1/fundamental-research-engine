@@ -1,0 +1,149 @@
+{
+  "records": [
+    {
+      "bears_on": [
+        "thesis",
+        "bn-hbm4-capacity-and-qualification",
+        "scn-bull"
+      ],
+      "claim": "Data-center demand remains large and networking growth indicates system-level AI infrastructure pressure.",
+      "claim_id": "E1.C1",
+      "confidence": "high",
+      "date": "2026-05-27",
+      "evidence_id": "E1",
+      "extracted_at": "2026-07-04T03:03:03.531427+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "manual",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-hbm4-capacity-and-qualification",
+          "owner_name": "HBM4 capacity and qualification",
+          "owner_type": "bottleneck"
+        }
+      ],
+      "quote": "Data Center compute revenue was a record $60.4 billion, up 77% from a year ago and up 18% sequentially. Data Center networking revenue was a record $14.8 billion, up 199% from a year ago and up 35% sequentially.",
+      "reliability": "high",
+      "source_sha256": "9b991876b0c435bb2c0a2ce789220ac586b635afad526a963344a7d140f941c6",
+      "source_title": "NVIDIA announces first quarter fiscal 2027 results",
+      "source_type": "company_disclosure",
+      "source_url": "https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-first-quarter-fiscal-2027",
+      "status": "applied",
+      "theme_id": "hbm4",
+      "verified": true
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-hbm4-capacity-and-qualification",
+        "co-sk-hynix",
+        "scn-bull"
+      ],
+      "claim": "High-value HBM and server memory demand are tied to AI infrastructure buildout.",
+      "claim_id": "E2.C1",
+      "confidence": "high",
+      "date": "2026-04-24",
+      "evidence_id": "E2",
+      "extracted_at": "2026-07-04T03:03:04.086162+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "manual",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-hbm4-capacity-and-qualification",
+          "owner_name": "HBM4 capacity and qualification",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-sk-hynix",
+          "owner_name": "SK hynix",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "strong demand persisted due to expanded investments in AI infrastructure. The company sustained its upward performance trend by increasing sales of high-value-added products, including HBM, high-capacity server DRAM modules, and eSSDs.",
+      "reliability": "high",
+      "source_sha256": "c2755fbf3d14320b6bd75c91b9b484fbabe2da0b4b4e2f20e80a984ccc1c3cf2",
+      "source_title": "SK hynix announces 1Q26 financial results",
+      "source_type": "company_disclosure",
+      "source_url": "https://www.prnewswire.com/news-releases/sk-hynix-announces-1q26-financial-results-302750959.html",
+      "status": "applied",
+      "theme_id": "hbm4",
+      "verified": true
+    },
+    {
+      "bears_on": [
+        "bn-hbm4-capacity-and-qualification",
+        "co-tsmc",
+        "pool-advanced-packaging-capacity"
+      ],
+      "claim": "AI demand creates pressure on advanced wafer processes and 2.5D/3D packaging capacity.",
+      "claim_id": "E3.C1",
+      "confidence": "high",
+      "date": "2026-04-30",
+      "evidence_id": "E3",
+      "extracted_at": "2026-07-04T03:03:05.410175+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "manual",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-hbm4-capacity-and-qualification",
+          "owner_name": "HBM4 capacity and qualification",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-tsmc",
+          "owner_name": "TSMC",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "AI demand has surged rapidly since 2023, leading to capacity bottlenecks in 3 nm–2 nm wafers and 2.5D/3D advanced packaging.",
+      "reliability": "medium",
+      "source_sha256": "4da5938c29ef031b15b47d64f1facc4945964e2fbcdea92aa918f3efb7a7a444",
+      "source_title": "TrendForce discusses AI-driven advanced packaging constraints",
+      "source_type": "industry_research",
+      "source_url": "https://www.trendforce.com/presscenter/news/20260430-13028.html",
+      "status": "applied",
+      "theme_id": "hbm4",
+      "verified": true
+    },
+    {
+      "bears_on": [
+        "thesis",
+        "bn-hbm4-capacity-and-qualification",
+        "co-micron"
+      ],
+      "claim": "AI-related memory demand is improving revenue mix and profitability.",
+      "claim_id": "E4.C1",
+      "confidence": "high",
+      "date": "2026-06-24",
+      "evidence_id": "E4",
+      "extracted_at": "2026-07-04T03:03:05.410201+00:00",
+      "extraction_attempts": 0,
+      "extraction_model": "manual",
+      "extraction_model_name": null,
+      "linked_owners": [
+        {
+          "owner_id": "bn-hbm4-capacity-and-qualification",
+          "owner_name": "HBM4 capacity and qualification",
+          "owner_type": "bottleneck"
+        },
+        {
+          "owner_id": "co-micron",
+          "owner_name": "Micron",
+          "owner_type": "company"
+        }
+      ],
+      "quote": "Micron’s record fiscal Q3 financial results and even stronger outlook for Q4 reflect the strategic value of memory in the AI era",
+      "reliability": "high",
+      "source_sha256": "6edfe2c21d223de8c3fe979090ee06456027954d2e5f306db75b265ba46fe65a",
+      "source_title": "Micron fiscal 2026 third-quarter results",
+      "source_type": "company_disclosure",
+      "source_url": "https://investors.micron.com/news-releases/news-release-details/micron-technology-inc-reports-record-results-third-quarter",
+      "status": "applied",
+      "theme_id": "hbm4",
+      "verified": true
+    }
+  ],
+  "theme_id": "hbm4"
+}

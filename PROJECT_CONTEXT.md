@@ -707,12 +707,40 @@ PYTHONPATH=src python3 -m fundamental_research_engine validate configs/themes_st
 git diff --check
 ```
 
-Current known gap: HBM4's theme claims validate, but no committed
-`data/evidence/hbm4/claims.json` sidecar exists, so HBM4 correctly reports
-`quote-verified` causal edges as `0` and flags missing quote provenance. The
-next high-leverage step is to run quote-backed claim extraction for HBM4's cited
-sources, persist the sidecar, and then move toward automated evidence discovery
-and extraction batches for additional themes.
+At this point, HBM4 still had no committed `data/evidence/hbm4/claims.json`
+sidecar, so it correctly reported `quote-verified` causal edges as `0` and
+flagged missing quote provenance. That gap is closed in the next section.
+
+## HBM4 Claim Provenance Sample (2026-07-04, Codex)
+
+Completed the HBM4 evidence sidecar as the first committed sample of the
+evidence-to-causal-map loop.
+
+- Fixed `fre extract-claims --store` so repeated source extractions preserve
+  existing `data/evidence/<theme>/claims.json` records instead of overwriting
+  prior rich provenance.
+- Updated `.gitignore` to allow committed
+  `data/evidence/<theme>/claims.json` sidecars while still ignoring generated
+  raw source snapshots, normalized evidence, audit, coverage, and manifest
+  files.
+- Added `data/evidence/hbm4/claims.json` with quote-verified provenance for
+  `E1.C1`, `E2.C1`, `E3.C1`, and `E4.C1`.
+- Regenerated the HBM4 golden memo: causal quality now reports
+  `quote-verified 3/3` for causal edges. The remaining causal quality flag is
+  the advanced-packaging edge being supported by a single source (`E3.C1`).
+- Added a CLI regression test proving sequential `extract-claims --store`
+  calls preserve prior sidecar records.
+
+Verification:
+```bash
+PYTHONPATH=src python3 -m unittest tests.test_cli.ExtractClaimsCliTest tests.test_quality tests.test_pipeline
+PYTHONPATH=src python3 -m fundamental_research_engine qc configs/themes/hbm4.json --grounding-only --out /tmp/hbm4-qc.json
+```
+
+Next recommended step: add a second independent source for the advanced
+packaging causal edge (for example a foundry/packaging company disclosure or a
+second credible industry source) so `edge-hbm-attach-to-packaging-capacity`
+is no longer single-source.
 
 ## Collaboration Rule
 

@@ -311,6 +311,64 @@ class ExtractClaimsCliTest(unittest.TestCase):
             self.assertTrue(stored_claim["verified"])
             self.assertTrue(stored_claim["source_sha256"])
 
+    def test_extract_claims_store_preserves_existing_sidecar_records(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            theme = json.loads(self.hbm4_path.read_text(encoding="utf-8"))
+            claim_by_source = {
+                item["id"]: item["claims"][0]
+                for item in theme["evidence"]
+                if item["id"] in {"E1", "E2"}
+            }
+
+            for source_id in ("E1", "E2"):
+                source_path = tmp_path / f"{source_id}.txt"
+                source_path.write_text(claim_by_source[source_id], encoding="utf-8")
+                claims_path = tmp_path / f"{source_id}.claims.json"
+                claims_path.write_text(
+                    json.dumps(
+                        {
+                            "claims": [
+                                {
+                                    "text": claim_by_source[source_id],
+                                    "quote": claim_by_source[source_id],
+                                    "confidence": "high",
+                                    "bears_on": ["thesis"],
+                                }
+                            ]
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+
+                exit_code = main(
+                    [
+                        "extract-claims",
+                        str(self.hbm4_path),
+                        "--source",
+                        source_id,
+                        "--source-text",
+                        str(source_path),
+                        "--claims",
+                        str(claims_path),
+                        "--store",
+                        "--store-root",
+                        str(tmp_path),
+                        "--project-root",
+                        str(self.project_root),
+                    ]
+                )
+                self.assertEqual(exit_code, 0)
+
+            claims_store = json.loads(
+                (tmp_path / "data" / "evidence" / "hbm4" / "claims.json").read_text(encoding="utf-8")
+            )
+            by_id = {item["claim_id"]: item for item in claims_store["records"]}
+            self.assertTrue(by_id["E1.C1"]["verified"])
+            self.assertTrue(by_id["E2.C1"]["verified"])
+            self.assertEqual(by_id["E1.C1"]["quote"], claim_by_source["E1"])
+            self.assertEqual(by_id["E2.C1"]["quote"], claim_by_source["E2"])
+
     def test_extract_claims_manual_mode_writes_prompt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)

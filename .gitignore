@@ -19,6 +19,9 @@ data/evidence/*
 !data/raw_sources/.gitkeep
 !data/normalized/.gitkeep
 !data/evidence/.gitkeep
+!data/evidence/*/
+data/evidence/*/*
+!data/evidence/*/claims.json
 
 # Web layer runtime
 .env

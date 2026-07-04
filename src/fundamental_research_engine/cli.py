@@ -855,11 +855,13 @@ def main(argv: list[str] | None = None) -> int:
                 model_name=args.model_name,
                 attempts=report["attempts"],
             )
+            store_root = args.store_root or args.project_root
+            rich_claims = [*load_claim_provenance(store_root, store_theme.id), *rich_claims]
             paths = write_evidence_store(
                 store_theme.id,
                 store_theme.evidence,
                 _store_owners(store_theme),
-                args.store_root or args.project_root,
+                store_root,
                 rich_claims=rich_claims,
             )
             report["stored"] = True
