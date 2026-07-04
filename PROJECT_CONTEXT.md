@@ -632,6 +632,48 @@ Next recommended step: add a `causal_map` stage whose edges must cite claim ids
 from this provenance store. That is the bridge from evidence collection to real
 industry-chain insight.
 
+## Causal Map Stage (2026-07-04, Codex)
+
+Implemented the next research-depth layer: an optional `causal_map` stage that
+turns mechanism narrative into explicit, evidence-backed causal edges.
+
+- Schema/model:
+  - Added `CausalEdge` and `Theme.causal_map` in `models.py`.
+  - Each edge carries `id`, `source`, `target`, `relationship`, `transmission`,
+    `direction`, `lag`, `confidence`, and non-empty `claim_ids`.
+  - `direction` is `positive|negative|mixed`; `confidence` is `high|medium|low`.
+- Stage system:
+  - `causal_map` is optional for backward compatibility. Existing themes without
+    it still validate and run.
+  - `prompts/causal_map.md` supports explicit `fre fill --stage causal_map`.
+  - `draft --auto` still walks only the required stages, so old workflows are not
+    forced to author causal maps.
+- Validation:
+  - Stage validation checks causal-edge shape and enum values.
+  - Full theme validation checks `E*.C*` claim ids against actual
+    `evidence[].claims`; `E*.Q*` candidate ids are allowed when the evidence id
+    exists, because they live in the provenance sidecar.
+- Pipeline/output:
+  - `analysis.json` now includes `causal_map`.
+  - `memo.md` renders a `Causal Map` table only when edges exist.
+  - `diff` tracks causal edge additions/removals/changes.
+- Sample:
+  - `configs/themes/hbm4.json` and `configs/themes_staged/hbm4/causal_map.json`
+    now include three evidence-backed edges: AI capex → HBM demand, HBM demand →
+    memory supplier mix, and HBM attach → advanced packaging utilization.
+
+Verification:
+```bash
+PYTHONPATH=src python3 -m unittest discover -s tests            # 152 pass
+for f in configs/themes/*.json; do PYTHONPATH=src python3 -m fundamental_research_engine validate "$f" || exit 1; done
+PYTHONPATH=src python3 -m fundamental_research_engine validate configs/themes_staged/hbm4
+```
+
+Next recommended step: make quality scoring aware of causal maps. The quality
+gate should flag causal edges with weak evidence, missing quote provenance, too
+many single-source links, or low-confidence edges that drive high-conviction
+theses.
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:

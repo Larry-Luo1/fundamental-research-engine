@@ -129,6 +129,13 @@ def diff_analysis(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
             ["name", "score", "rating", "positive_score", "risk_penalty"],
             "name",
         ),
+        "causal_map": _diff_keyed_list(
+            old.get("causal_map", []),
+            new.get("causal_map", []),
+            "id",
+            ["source", "target", "relationship", "direction", "lag", "confidence", "claim_ids"],
+            "relationship",
+        ),
         "segments": _diff_keyed_list(old["segments"], new["segments"], "id", display_field="name"),
         "profit_pools": _diff_keyed_list(old["profit_pools"], new["profit_pools"], "id", display_field="name"),
         "companies": _diff_keyed_list(old["companies"], new["companies"], "id", display_field="name"),
@@ -146,7 +153,7 @@ def has_changes(report: dict[str, Any]) -> bool:
         section = report[key]
         if section["added"] or section["removed"]:
             return True
-    for key in ["bottleneck_scores", "segments", "profit_pools", "companies", "scenarios", "evidence"]:
+    for key in ["bottleneck_scores", "causal_map", "segments", "profit_pools", "companies", "scenarios", "evidence"]:
         section = report[key]
         if section["added"] or section["removed"] or section["changed"]:
             return True

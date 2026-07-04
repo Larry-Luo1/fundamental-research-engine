@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .stages import STAGE_FIELDS, STAGE_ORDER
+from .stages import STAGE_CONTEXT_ORDER, STAGE_FIELDS
 
 
 def _json_block(value: Any) -> str:
@@ -30,7 +30,7 @@ def render_stage_prompt(
         raise FileNotFoundError(f"no prompt template for stage '{stage}' at {template_path}")
     template = template_path.read_text(encoding="utf-8")
 
-    upstream = {name: completed_stages[name] for name in STAGE_ORDER if name in completed_stages}
+    upstream = {name: completed_stages[name] for name in STAGE_CONTEXT_ORDER if name in completed_stages}
 
     substitutions = {
         "SCHEMA_FIELDS": ", ".join(STAGE_FIELDS[stage]),
@@ -93,7 +93,7 @@ def render_critique_prompt(
     template = template_path.read_text(encoding="utf-8")
 
     upstream = {
-        name: completed_stages[name] for name in STAGE_ORDER if name in completed_stages and name != stage
+        name: completed_stages[name] for name in STAGE_CONTEXT_ORDER if name in completed_stages and name != stage
     }
 
     substitutions = {

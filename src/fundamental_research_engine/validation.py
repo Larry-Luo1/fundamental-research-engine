@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .stages import SCORECARD_FIELDS
+from .stages import CAUSAL_CONFIDENCE_VALUES, CAUSAL_DIRECTIONS, SCORECARD_FIELDS
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -21,6 +21,7 @@ _REQUIRED_TOP_LEVEL: dict[str, type] = {
 
 _LIST_FIELDS = [
     "drivers",
+    "causal_map",
     "bottlenecks",
     "segments",
     "profit_pools",
@@ -97,6 +98,58 @@ def _validate_evidence_ids(owner_prefix: str, evidence_ids: Any, known_ids: set[
             errors.append(f"{owner_prefix}.evidence_ids: unknown evidence id '{eid}'")
 
 
+def _known_claim_ids(evidence_items: Any) -> set[str]:
+    known: set[str] = set()
+    if not isinstance(evidence_items, list):
+        return known
+    for item in evidence_items:
+        if not isinstance(item, dict):
+            continue
+        evidence_id = item.get("id")
+        claims = item.get("claims", [])
+        if not isinstance(evidence_id, str) or not isinstance(claims, list):
+            continue
+        for index, claim in enumerate(claims, start=1):
+            if isinstance(claim, str):
+                known.add(f"{evidence_id}.C{index}")
+    return known
+
+
+def _validate_claim_ids(
+    owner_prefix: str,
+    claim_ids: Any,
+    known_evidence_ids: set[str],
+    known_claim_ids: set[str],
+    errors: list[str],
+) -> None:
+    if not isinstance(claim_ids, list):
+        errors.append(f"{owner_prefix}.claim_ids: expected list")
+        return
+    if not claim_ids:
+        errors.append(f"{owner_prefix}.claim_ids: at least one claim id is required")
+        return
+    for index, claim_id in enumerate(claim_ids):
+        path = f"{owner_prefix}.claim_ids[{index}]"
+        if not isinstance(claim_id, str):
+            errors.append(f"{path}: expected str, got {type(claim_id).__name__}")
+            continue
+        evidence_id, separator, suffix = claim_id.partition(".")
+        if not separator:
+            errors.append(f"{path}: expected '<evidence_id>.C<n>' or '<evidence_id>.Q<n>'")
+            continue
+        if evidence_id not in known_evidence_ids:
+            errors.append(f"{path}: unknown evidence id '{evidence_id}'")
+            continue
+        if suffix.startswith("C") and suffix[1:].isdigit():
+            if claim_id not in known_claim_ids:
+                errors.append(f"{path}: unknown applied claim id '{claim_id}'")
+        elif suffix.startswith("Q") and suffix[1:].isdigit():
+            # Q ids refer to quote-verified candidate records in the evidence store sidecar.
+            continue
+        else:
+            errors.append(f"{path}: expected '<evidence_id>.C<n>' or '<evidence_id>.Q<n>'")
+
+
 def _validate_optional_id(item: dict[str, Any], prefix: str, errors: list[str]) -> None:
     if "id" in item:
         _check_type(item["id"], str, f"{prefix}.id", errors)
@@ -157,6 +210,46 @@ def _validate_bottlenecks(items: Any, ontology: dict[str, Any], known_evidence_i
                 elif not 0 <= value <= 5:
                     errors.append(f"{prefix}.scorecard.{key}: {value} outside 0-5 scale")
         _validate_evidence_ids(prefix, item.get("evidence_ids", []), known_evidence_ids, errors)
+
+
+def _validate_causal_map(
+    items: Any,
+    known_evidence_ids: set[str],
+    known_claim_ids: set[str],
+    errors: list[str],
+) -> None:
+    if not isinstance(items, list):
+        errors.append("causal_map: expected list")
+        return
+    _validate_unique_ids(items, "causal_map", errors)
+    for index, item in enumerate(items):
+        prefix = f"causal_map[{index}]"
+        if not isinstance(item, dict):
+            errors.append(f"{prefix}: expected object")
+            continue
+        _check_required_fields(
+            item,
+            {
+                "id": str,
+                "source": str,
+                "target": str,
+                "relationship": str,
+                "transmission": str,
+                "direction": str,
+                "lag": str,
+                "confidence": str,
+                "claim_ids": list,
+            },
+            prefix,
+            errors,
+        )
+        direction = item.get("direction")
+        if isinstance(direction, str) and direction not in CAUSAL_DIRECTIONS:
+            errors.append(f"{prefix}.direction: unknown value '{direction}'")
+        confidence = item.get("confidence")
+        if isinstance(confidence, str) and confidence not in CAUSAL_CONFIDENCE_VALUES:
+            errors.append(f"{prefix}.confidence: unknown value '{confidence}'")
+        _validate_claim_ids(prefix, item.get("claim_ids", []), known_evidence_ids, known_claim_ids, errors)
 
 
 def _validate_segments(items: Any, ontology: dict[str, Any], errors: list[str]) -> None:
@@ -306,7 +399,10 @@ def validate_theme_dict(data: dict[str, Any], ontology: dict[str, Any]) -> list[
                 if not isinstance(value, str):
                     errors.append(f"theme.{field}[{index}]: expected str, got {type(value).__name__}")
 
-    known_evidence_ids = _validate_evidence(data.get("evidence", []), errors)
+    evidence_items = data.get("evidence", [])
+    known_evidence_ids = _validate_evidence(evidence_items, errors)
+    known_claim_ids = _known_claim_ids(evidence_items)
+    _validate_causal_map(data.get("causal_map", []), known_evidence_ids, known_claim_ids, errors)
     _validate_bottlenecks(data.get("bottlenecks", []), ontology, known_evidence_ids, errors)
     _validate_segments(data.get("segments", []), ontology, errors)
     _validate_profit_pools(data.get("profit_pools", []), ontology, errors)

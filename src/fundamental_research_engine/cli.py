@@ -35,6 +35,7 @@ from .prompts import (
 from .quality import build_quality_scorecard, validate_quality_review_shape
 from .render import render_diff
 from .stages import (
+    OPTIONAL_STAGE_ORDER,
     STAGE_ORDER,
     load_theme_source,
     merge_stage_dicts,
@@ -50,6 +51,7 @@ from .validation import validate_theme_dict
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="fre", description="Run a fundamental research pipeline.")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    stage_choices = [*STAGE_ORDER, *OPTIONAL_STAGE_ORDER]
 
     run = subparsers.add_parser("run", help="Run analysis for a theme config.")
     run.add_argument("theme", type=Path, help="Path to a theme JSON config.")
@@ -105,7 +107,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     fill = subparsers.add_parser("fill", help="Draft the next missing stage of a theme directory with a model adapter.")
     fill.add_argument("theme_dir", type=Path, help="Directory containing (partial) theme stage JSON files.")
-    fill.add_argument("--stage", choices=STAGE_ORDER, default=None, help="Stage to fill. Defaults to the first missing one.")
+    fill.add_argument("--stage", choices=stage_choices, default=None, help="Stage to fill. Defaults to the first missing one.")
     fill.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter to use.")
     fill.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
     fill.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")
@@ -117,7 +119,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Draft theme stages with a model adapter; stops after each stage for review unless --auto.",
     )
     draft.add_argument("theme_dir", type=Path, help="Directory containing (partial) theme stage JSON files.")
-    draft.add_argument("--stage", choices=STAGE_ORDER, default=None, help="Stage to draft. Defaults to the first missing one. Not usable with --auto.")
+    draft.add_argument("--stage", choices=stage_choices, default=None, help="Stage to draft. Defaults to the first missing one. Not usable with --auto.")
     draft.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter to use.")
     draft.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
     draft.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts per stage when JSON parsing or validation fails.")
@@ -131,7 +133,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     critique = subparsers.add_parser("critique", help="Adversarially review an already-drafted theme stage.")
     critique.add_argument("theme_dir", type=Path, help="Directory containing theme stage JSON files.")
-    critique.add_argument("--stage", choices=STAGE_ORDER, required=True, help="Stage to critique; it must already be drafted.")
+    critique.add_argument("--stage", choices=stage_choices, required=True, help="Stage to critique; it must already be drafted.")
     critique.add_argument("--model", choices=["manual", "openai", "claude"], default="manual", help="Model adapter to use.")
     critique.add_argument("--model-name", default=None, help="Model name/id for the openai/claude adapters.")
     critique.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")

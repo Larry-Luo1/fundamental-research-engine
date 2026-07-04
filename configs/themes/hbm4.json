@@ -1,5 +1,48 @@
 {
   "as_of": "2026-07-01",
+  "causal_map": [
+    {
+      "claim_ids": [
+        "E1.C1",
+        "E2.C1"
+      ],
+      "confidence": "high",
+      "direction": "positive",
+      "id": "edge-ai-capex-to-qualified-hbm-demand",
+      "lag": "0-4 quarters",
+      "relationship": "raises demand for qualified HBM supply",
+      "source": "hyperscaler AI infrastructure buildout",
+      "target": "qualified HBM demand",
+      "transmission": "Accelerator deployments require high-bandwidth memory close to compute. As AI infrastructure capex expands, customers reserve qualified HBM capacity and intensify supplier qualification pressure."
+    },
+    {
+      "claim_ids": [
+        "E2.C1",
+        "E4.C1"
+      ],
+      "confidence": "medium",
+      "direction": "positive",
+      "id": "edge-qualified-hbm-demand-to-memory-mix",
+      "lag": "1-4 quarters",
+      "relationship": "improves supplier mix and pricing power",
+      "source": "qualified HBM demand",
+      "target": "memory supplier revenue mix and profitability",
+      "transmission": "When qualified HBM demand outpaces available supply, bit allocation shifts toward higher-value AI memory products. That can lift supplier revenue mix, ASP resilience, and gross-margin contribution."
+    },
+    {
+      "claim_ids": [
+        "E3.C1"
+      ],
+      "confidence": "medium",
+      "direction": "positive",
+      "id": "edge-hbm-attach-to-packaging-capacity",
+      "lag": "2-6 quarters",
+      "relationship": "increases advanced packaging load",
+      "source": "higher HBM attach and stack complexity",
+      "target": "advanced packaging capacity utilization",
+      "transmission": "HBM value is realized through package-level integration with accelerators. Higher attach rates and stack complexity increase demand for interposers, CoWoS-like capacity, and packaging yield control."
+    }
+  ],
   "bottlenecks": [
     {
       "evidence_ids": [

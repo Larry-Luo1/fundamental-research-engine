@@ -35,6 +35,19 @@ def _base_analysis() -> dict:
                 "dimensions": {},
             }
         ],
+        "causal_map": [
+            {
+                "id": "edge-a",
+                "source": "driver",
+                "target": "margin",
+                "relationship": "raises margin",
+                "transmission": "driver lifts mix",
+                "direction": "positive",
+                "lag": "0-2 quarters",
+                "confidence": "medium",
+                "claim_ids": ["E1.C1"],
+            }
+        ],
         "segments": [
             {
                 "id": "seg-s1",
@@ -128,6 +141,20 @@ class DiffTest(unittest.TestCase):
         self.assertEqual(changed[0]["display_name"], "C1 renamed")
         self.assertEqual(changed[0]["previous_display_name"], "C1")
         self.assertEqual(changed[0]["changes"][0]["field"], "name")
+
+    def test_causal_map_change(self) -> None:
+        old = _base_analysis()
+        new = copy.deepcopy(old)
+        new["causal_map"][0]["lag"] = "1-4 quarters"
+        new["causal_map"][0]["confidence"] = "high"
+
+        report = diff_analysis(old, new)
+
+        changed = report["causal_map"]["changed"]
+        self.assertEqual(len(changed), 1)
+        self.assertEqual(changed[0]["id"], "edge-a")
+        changed_fields = {change["field"] for change in changed[0]["changes"]}
+        self.assertEqual(changed_fields, {"lag", "confidence"})
 
     def test_added_evidence(self) -> None:
         old = _base_analysis()

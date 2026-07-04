@@ -34,6 +34,14 @@ AI model scaling and inference workloads increase memory bandwidth, memory capac
 | --- | --- | --- | --- | --- |
 | HBM4 capacity and qualification | strong | 3.46 | 4.34 | 2.50 |
 
+## Causal Map
+
+| Source | Relationship | Target | Direction | Lag | Confidence | Claims |
+| --- | --- | --- | --- | --- | --- | --- |
+| hyperscaler AI infrastructure buildout | raises demand for qualified HBM supply | qualified HBM demand | positive | 0-4 quarters | high | E1.C1, E2.C1 |
+| qualified HBM demand | improves supplier mix and pricing power | memory supplier revenue mix and profitability | positive | 1-4 quarters | medium | E2.C1, E4.C1 |
+| higher HBM attach and stack complexity | increases advanced packaging load | advanced packaging capacity utilization | positive | 2-6 quarters | medium | E3.C1 |
+
 ## Industry Chain
 
 | Segment | Layer | Class | Role | Representative companies |

@@ -50,6 +50,19 @@ class PromptsTest(unittest.TestCase):
         )
         self.assertIn(self.theme["core_question"], prompt)
 
+    def test_causal_map_prompt_embeds_mechanism_context(self) -> None:
+        stages = split_theme_dict(self.theme)
+        completed = {
+            "theme_definition": stages["theme_definition"],
+            "mechanism_analysis": stages["mechanism_analysis"],
+        }
+        prompt = render_stage_prompt("causal_map", self.prompts_dir, completed, self.ontology, self.methodology)
+
+        self.assertNotIn("{{", prompt)
+        self.assertNotIn("}}", prompt)
+        self.assertIn("claim_ids", prompt)
+        self.assertIn(self.theme["mechanism"], prompt)
+
     def test_unknown_stage_raises(self) -> None:
         with self.assertRaises(ValueError):
             render_stage_prompt("not_a_stage", self.prompts_dir, {}, self.ontology)

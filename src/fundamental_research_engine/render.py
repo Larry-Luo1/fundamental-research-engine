@@ -73,6 +73,30 @@ def _render_quality_scorecard(analysis: dict[str, Any]) -> list[str]:
     ]
 
 
+def _render_causal_map(analysis: dict[str, Any]) -> list[str]:
+    causal_map = analysis.get("causal_map") or []
+    if not causal_map:
+        return []
+    rows = [
+        [
+            item["source"],
+            item["relationship"],
+            item["target"],
+            item["direction"],
+            item["lag"],
+            item["confidence"],
+            ", ".join(item.get("claim_ids", [])),
+        ]
+        for item in causal_map
+    ]
+    return [
+        "## Causal Map",
+        "",
+        _table(["Source", "Relationship", "Target", "Direction", "Lag", "Confidence", "Claims"], rows),
+        "",
+    ]
+
+
 def render_memo(analysis: dict[str, Any]) -> str:
     theme = analysis["theme"]
     bottleneck_rows = [
@@ -164,6 +188,7 @@ def render_memo(analysis: dict[str, Any]) -> str:
             "",
             _table(["Bottleneck", "Rating", "Score", "Positive", "Risk penalty"], bottleneck_rows),
             "",
+            *_render_causal_map(analysis),
             "## Industry Chain",
             "",
             _table(["Segment", "Layer", "Class", "Role", "Representative companies"], segment_rows),
@@ -272,6 +297,7 @@ def render_diff(report: dict[str, Any]) -> str:
 
     lines.extend(_render_string_diff_section("Drivers", report["drivers"]))
     lines.extend(_render_keyed_diff_section("Bottleneck Diagnosis", "name", report["bottleneck_scores"]))
+    lines.extend(_render_keyed_diff_section("Causal Map", "id", report["causal_map"]))
     lines.extend(_render_keyed_diff_section("Industry Chain", "name", report["segments"]))
     lines.extend(_render_keyed_diff_section("Profit Pools", "name", report["profit_pools"]))
     lines.extend(_render_keyed_diff_section("Company Positioning", "name", report["companies"]))

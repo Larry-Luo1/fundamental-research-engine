@@ -8,6 +8,7 @@ The project is designed to turn a research question into a repeatable chain:
 theme definition
   -> driver classification
   -> mechanism chain
+  -> causal map
   -> maturity assessment
   -> bottleneck diagnosis
   -> value-chain mapping
@@ -132,13 +133,15 @@ directory of six per-stage JSON files, mirroring the universal pipeline:
 
 - `theme_definition.json`: id, title, as_of, theme_type, domain, core_question, thesis, hype_stage, technology_readiness_level, drivers
 - `mechanism_analysis.json`: mechanism
+- `causal_map.json`: optional causal edges from drivers/bottlenecks to price, volume, margin, capex, adoption, or risk variables, each backed by claim ids
 - `bottleneck_diagnosis.json`: bottlenecks
 - `value_chain_map.json`: segments, profit_pools
 - `company_positioning.json`: companies
 - `scenario_analysis.json`: scenarios, counter_theses, tracking_signals, evidence
 
 `run`, `validate`, and `diff` (via run directories) all accept either form.
-`configs/themes_staged/hbm4/` is a worked example produced from
+`causal_map.json` is optional for backward compatibility, but recommended once
+quote-backed claims exist. `configs/themes_staged/hbm4/` is a worked example produced from
 `configs/themes/hbm4.json` via:
 
 ```bash

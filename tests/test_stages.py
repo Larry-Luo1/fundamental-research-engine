@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from fundamental_research_engine.stages import (
+    OPTIONAL_STAGE_ORDER,
     STAGE_ORDER,
     StageError,
     load_theme_source,
@@ -30,7 +31,10 @@ class StagesTest(unittest.TestCase):
 
     def test_split_covers_every_theme_field(self) -> None:
         stages = split_theme_dict(self.theme)
-        self.assertEqual(set(stages), set(STAGE_ORDER))
+        expected_stages = set(STAGE_ORDER)
+        if "causal_map" in self.theme:
+            expected_stages.update(OPTIONAL_STAGE_ORDER)
+        self.assertEqual(set(stages), expected_stages)
         recombined_fields = {field for stage in stages.values() for field in stage}
         self.assertEqual(recombined_fields, set(self.theme))
 
@@ -51,6 +55,7 @@ class StagesTest(unittest.TestCase):
             write_theme_stage_dir(theme_dir, self.theme)
             for stage in STAGE_ORDER:
                 self.assertTrue((theme_dir / f"{stage}.json").exists())
+            self.assertTrue((theme_dir / "causal_map.json").exists())
             loaded = load_theme_stage_dir(theme_dir)
             self.assertEqual(loaded, self.theme)
 
@@ -81,7 +86,10 @@ class StagesTest(unittest.TestCase):
 
             stages = read_stage_dir_partial(theme_dir)
 
-            self.assertEqual(set(stages), {"theme_definition", "mechanism_analysis", "bottleneck_diagnosis", "value_chain_map"})
+            self.assertEqual(
+                set(stages),
+                {"theme_definition", "mechanism_analysis", "causal_map", "bottleneck_diagnosis", "value_chain_map"},
+            )
             self.assertEqual(next_missing_stage(stages), "company_positioning")
 
     def test_next_missing_stage_none_when_complete(self) -> None:
@@ -99,6 +107,14 @@ class StagesTest(unittest.TestCase):
         stages = split_theme_dict(self.theme)
         for stage, data in stages.items():
             self.assertEqual(validate_stage_shape(stage, data, self.ontology), [])
+
+    def test_validate_stage_shape_rejects_causal_edge_without_claims(self) -> None:
+        data = split_theme_dict(self.theme)["causal_map"]
+        data["causal_map"][0]["claim_ids"] = []
+
+        errors = validate_stage_shape("causal_map", data, self.ontology)
+
+        self.assertTrue(any("claim_ids" in item and "required" in item for item in errors))
 
     def test_validate_stage_shape_rejects_non_dict(self) -> None:
         self.assertEqual(

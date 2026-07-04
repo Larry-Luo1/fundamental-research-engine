@@ -19,6 +19,10 @@ class ValidationTest(unittest.TestCase):
     def test_valid_theme_has_no_errors(self) -> None:
         self.assertEqual(validate_theme_dict(self.theme, self.ontology), [])
 
+    def test_valid_causal_map_claim_ids_pass(self) -> None:
+        self.assertTrue(self.theme["causal_map"])
+        self.assertEqual(validate_theme_dict(self.theme, self.ontology), [])
+
     def test_missing_required_field(self) -> None:
         data = copy.deepcopy(self.theme)
         del data["core_question"]
@@ -90,6 +94,18 @@ class ValidationTest(unittest.TestCase):
         data["scenarios"][0]["evidence_ids"] = ["E999"]
         errors = validate_theme_dict(data, self.ontology)
         self.assertTrue(any("unknown evidence id 'E999'" in item for item in errors))
+
+    def test_dangling_causal_claim_id(self) -> None:
+        data = copy.deepcopy(self.theme)
+        data["causal_map"][0]["claim_ids"] = ["E1.C99"]
+        errors = validate_theme_dict(data, self.ontology)
+        self.assertTrue(any("unknown applied claim id 'E1.C99'" in item for item in errors))
+
+    def test_unknown_causal_direction(self) -> None:
+        data = copy.deepcopy(self.theme)
+        data["causal_map"][0]["direction"] = "sideways"
+        errors = validate_theme_dict(data, self.ontology)
+        self.assertTrue(any("direction" in item and "sideways" in item for item in errors))
 
 
 if __name__ == "__main__":

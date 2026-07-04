@@ -68,6 +68,19 @@ class Scenario:
 
 
 @dataclass(frozen=True)
+class CausalEdge:
+    id: str
+    source: str
+    target: str
+    relationship: str
+    transmission: str
+    direction: str
+    lag: str
+    confidence: str
+    claim_ids: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class Theme:
     id: str
     title: str
@@ -88,6 +101,7 @@ class Theme:
     evidence: list[Evidence]
     counter_theses: list[str]
     tracking_signals: list[str]
+    causal_map: list[CausalEdge] = field(default_factory=list)
     thesis_evidence_ids: list[str] = field(default_factory=list)
 
 
@@ -160,6 +174,20 @@ def scenario_from_dict(data: dict[str, Any]) -> Scenario:
     )
 
 
+def causal_edge_from_dict(data: dict[str, Any]) -> CausalEdge:
+    return CausalEdge(
+        id=str(data.get("id", f"{data['source']}->{data['target']}")),
+        source=str(data["source"]),
+        target=str(data["target"]),
+        relationship=str(data["relationship"]),
+        transmission=str(data["transmission"]),
+        direction=str(data["direction"]),
+        lag=str(data["lag"]),
+        confidence=str(data["confidence"]),
+        claim_ids=[str(item) for item in data.get("claim_ids", [])],
+    )
+
+
 def theme_from_dict(data: dict[str, Any]) -> Theme:
     drivers = data.get("drivers", data.get("workload_drivers", []))
     return Theme(
@@ -182,5 +210,6 @@ def theme_from_dict(data: dict[str, Any]) -> Theme:
         evidence=[evidence_from_dict(item) for item in data.get("evidence", [])],
         counter_theses=[str(item) for item in data.get("counter_theses", [])],
         tracking_signals=[str(item) for item in data.get("tracking_signals", [])],
+        causal_map=[causal_edge_from_dict(item) for item in data.get("causal_map", [])],
         thesis_evidence_ids=[str(item) for item in data.get("thesis_evidence_ids", [])],
     )

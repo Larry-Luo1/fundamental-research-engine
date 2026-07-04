@@ -5,6 +5,7 @@ stages, one file per stage in `fundamental_research_engine.stages.STAGE_ORDER`:
 
 - `theme_definition.md`
 - `mechanism_analysis.md`
+- `causal_map.md` (optional; explicit `--stage causal_map`)
 - `bottleneck_diagnosis.md`
 - `value_chain_map.md`
 - `company_positioning.md`

@@ -344,6 +344,7 @@ def _theme_dir_with_definition_only(hbm4_path: Path, tmp_path: Path) -> Path:
     theme_dir = tmp_path / "hbm4"
     assert main(["split", str(hbm4_path), str(theme_dir)]) == 0
     for stage in [
+        "causal_map",
         "mechanism_analysis",
         "bottleneck_diagnosis",
         "value_chain_map",

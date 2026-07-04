@@ -67,6 +67,7 @@ def build_analysis(theme: Theme, rules: dict[str, Any]) -> dict[str, Any]:
             "drivers": theme.drivers,
         },
         "bottleneck_scores": [asdict(item) for item in bottleneck_scores],
+        "causal_map": [asdict(item) for item in theme.causal_map],
         "segments": [asdict(item) for item in theme.segments],
         "profit_pools": [asdict(item) for item in theme.profit_pools],
         "companies": [asdict(item) for item in theme.companies],

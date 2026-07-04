@@ -15,6 +15,20 @@ STAGE_ORDER: list[str] = [
     "scenario_analysis",
 ]
 
+OPTIONAL_STAGE_ORDER: list[str] = [
+    "causal_map",
+]
+
+STAGE_CONTEXT_ORDER: list[str] = [
+    "theme_definition",
+    "mechanism_analysis",
+    "causal_map",
+    "bottleneck_diagnosis",
+    "value_chain_map",
+    "company_positioning",
+    "scenario_analysis",
+]
+
 STAGE_FIELDS: dict[str, list[str]] = {
     "theme_definition": [
         "id",
@@ -29,6 +43,7 @@ STAGE_FIELDS: dict[str, list[str]] = {
         "drivers",
     ],
     "mechanism_analysis": ["mechanism"],
+    "causal_map": ["causal_map"],
     "bottleneck_diagnosis": ["bottlenecks"],
     "value_chain_map": ["segments", "profit_pools"],
     "company_positioning": ["companies"],
@@ -52,6 +67,9 @@ SCORECARD_FIELDS: list[str] = [
     "architecture_bypass_risk",
 ]
 
+CAUSAL_DIRECTIONS = {"positive", "negative", "mixed"}
+CAUSAL_CONFIDENCE_VALUES = {"high", "medium", "low"}
+
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -65,9 +83,13 @@ def stage_path(theme_dir: Path, stage: str) -> Path:
 
 def split_theme_dict(theme: dict[str, Any]) -> dict[str, dict[str, Any]]:
     stages: dict[str, dict[str, Any]] = {}
-    for stage, fields in STAGE_FIELDS.items():
+    for stage in STAGE_CONTEXT_ORDER:
+        fields = STAGE_FIELDS[stage]
         allowed = [*fields, *OPTIONAL_STAGE_FIELDS.get(stage, [])]
-        stages[stage] = {field: theme[field] for field in allowed if field in theme}
+        stage_data = {field: theme[field] for field in allowed if field in theme}
+        if stage in OPTIONAL_STAGE_ORDER and not stage_data:
+            continue
+        stages[stage] = stage_data
     return stages
 
 
@@ -77,8 +99,9 @@ def merge_stage_dicts(stages: dict[str, dict[str, Any]]) -> dict[str, Any]:
         raise StageError(f"missing stage(s): {', '.join(missing_stages)}")
 
     theme: dict[str, Any] = {}
-    for stage in STAGE_ORDER:
-        theme.update(stages[stage])
+    for stage in STAGE_CONTEXT_ORDER:
+        if stage in stages:
+            theme.update(stages[stage])
     return theme
 
 
@@ -89,7 +112,7 @@ def write_theme_stage_dir(theme_dir: Path, theme: dict[str, Any]) -> None:
 
 def read_stage_dir_partial(theme_dir: Path) -> dict[str, dict[str, Any]]:
     stages: dict[str, dict[str, Any]] = {}
-    for stage in STAGE_ORDER:
+    for stage in STAGE_CONTEXT_ORDER:
         path = stage_path(theme_dir, stage)
         if path.exists():
             stages[stage] = read_json(path)
@@ -215,6 +238,34 @@ def _validate_theme_definition_stage(data: dict[str, Any], ontology: dict[str, A
 
 def _validate_mechanism_stage(data: dict[str, Any], errors: list[str]) -> None:
     _check_required_fields(data, {"mechanism": str}, "mechanism_analysis", errors)
+
+
+def _validate_causal_map_stage(data: dict[str, Any], errors: list[str]) -> None:
+    edges = _check_object_list(data.get("causal_map", []), "causal_map.causal_map", errors)
+    _check_unique_ids(edges, "causal_map.causal_map", errors)
+    for index, item in enumerate(edges):
+        prefix = f"causal_map.causal_map[{index}]"
+        _check_required_fields(
+            item,
+            {
+                "id": str,
+                "source": str,
+                "target": str,
+                "relationship": str,
+                "transmission": str,
+                "direction": str,
+                "lag": str,
+                "confidence": str,
+                "claim_ids": list,
+            },
+            prefix,
+            errors,
+        )
+        _check_enum(item.get("direction"), CAUSAL_DIRECTIONS, f"{prefix}.direction", errors)
+        _check_enum(item.get("confidence"), CAUSAL_CONFIDENCE_VALUES, f"{prefix}.confidence", errors)
+        _check_string_list(item.get("claim_ids", []), f"{prefix}.claim_ids", errors)
+        if isinstance(item.get("claim_ids"), list) and not item["claim_ids"]:
+            errors.append(f"{prefix}.claim_ids: at least one claim id is required")
 
 
 def _validate_bottleneck_stage(data: dict[str, Any], ontology: dict[str, Any] | None, errors: list[str]) -> None:
@@ -369,6 +420,8 @@ def validate_stage_shape(stage: str, data: Any, ontology: dict[str, Any] | None 
         _validate_theme_definition_stage(data, ontology, errors)
     elif stage == "mechanism_analysis":
         _validate_mechanism_stage(data, errors)
+    elif stage == "causal_map":
+        _validate_causal_map_stage(data, errors)
     elif stage == "bottleneck_diagnosis":
         _validate_bottleneck_stage(data, ontology, errors)
     elif stage == "value_chain_map":
