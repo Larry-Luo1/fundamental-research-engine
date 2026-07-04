@@ -1,0 +1,13 @@
+{
+  "note": "Illustrative dated corpus for the consensus proxy (gear C). In production this is built from EDGAR filings / news over time; here it is a small hand-authored sample.",
+  "documents": [
+    {"id": "d1", "date": "2025-01-15", "text": "AI compute demand accelerates as accelerator shipments ramp across hyperscalers."},
+    {"id": "d2", "date": "2025-04-10", "text": "Datacenter buildout continues; capex rising across cloud providers."},
+    {"id": "d3", "date": "2025-07-20", "text": "Training clusters scale further; compute density and interconnect bandwidth increase."},
+    {"id": "d4", "date": "2025-10-05", "text": "HBM supply tightness noted for high bandwidth memory in AI accelerators."},
+    {"id": "d5", "date": "2026-01-12", "text": "HBM shortage deepens and high bandwidth memory pricing climbs; advanced packaging (CoWoS) capacity also cited as tight."},
+    {"id": "d6", "date": "2026-03-18", "text": "HBM remains the gating item and memory bandwidth constraints dominate; CoWoS advanced packaging expansions announced."},
+    {"id": "d7", "date": "2026-05-22", "text": "HBM capacity is central to accelerator roadmaps; memory bandwidth scaling stays in focus."},
+    {"id": "d8", "date": "2026-06-15", "text": "HBM continues to dominate the supply discussion for high bandwidth memory."}
+  ]
+}

@@ -7,7 +7,12 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from fundamental_research_engine.cli import main
-from fundamental_research_engine.radar import build_radar, validate_radar_spec
+from fundamental_research_engine.radar import (
+    build_radar,
+    radar_migration_predictions,
+    register_radar_predictions,
+    validate_radar_spec,
+)
 
 
 def _theme():
@@ -94,6 +99,62 @@ class BuildRadarTest(unittest.TestCase):
         self.assertTrue(radar["errors"])
 
 
+class ConsensusIntegrationTest(unittest.TestCase):
+    def _corpus(self):
+        # HBM mentions rise over time; rack power is never mentioned.
+        return [
+            {"id": "d1", "date": "2025-01-01", "text": "AI compute demand accelerates"},
+            {"id": "d2", "date": "2025-06-01", "text": "datacenter capex rising"},
+            {"id": "d3", "date": "2026-01-01", "text": "HBM shortage deepens, high bandwidth memory tight"},
+            {"id": "d4", "date": "2026-06-01", "text": "HBM dominates, high bandwidth memory pricing climbs"},
+        ]
+
+    def test_migrating_but_unmentioned_constraint_is_pre_consensus(self) -> None:
+        spec = _spec()
+        for c in spec["constraints"]:
+            if c["id"] == "power":
+                c["terms"] = ["rack power", "cooling"]
+            if c["id"] == "hbm":
+                c["terms"] = ["hbm", "high bandwidth memory"]
+        radar = build_radar(_theme(), spec, corpus=self._corpus())
+        power_alert = next(a for a in radar["alerts"] if a.get("constraint_id") == "power")
+        self.assertTrue(power_alert["pre_consensus"])
+        self.assertIn("[pre-consensus]", power_alert["message"])
+        # the acknowledged HBM constraint is instead widely mentioned (rising)
+        hbm = next(c for c in radar["constraints"] if c["id"] == "hbm")
+        self.assertEqual(hbm["consensus"]["trend"], "rising")
+
+    def test_no_corpus_leaves_consensus_none(self) -> None:
+        radar = build_radar(_theme(), _spec())
+        power = next(c for c in radar["constraints"] if c["id"] == "power")
+        self.assertIsNone(power["consensus"])
+        power_alert = next(a for a in radar["alerts"] if a.get("constraint_id") == "power")
+        self.assertFalse(power_alert["pre_consensus"])
+
+
+class RadarPredictionsTest(unittest.TestCase):
+    def test_migration_calls_become_dated_predictions(self) -> None:
+        radar = build_radar(_theme(), _spec())
+        preds = radar_migration_predictions(radar, horizon="2 quarters")
+        ids = {p["kind"] for p in preds}
+        self.assertEqual(ids, {"constraint_migration"})
+        # action-level migration (power) registered at higher probability than watch (packaging)
+        by_stmt = {p["statement"]: p["probability"] for p in preds}
+        power_p = next(v for k, v in by_stmt.items() if "'power'" in k)
+        packaging_p = next(v for k, v in by_stmt.items() if "'packaging'" in k)
+        self.assertGreater(power_p, packaging_p)
+        for p in preds:
+            self.assertFalse(p["resolved"])
+            self.assertEqual(p["registered_as_of"], "2026-07-01")
+
+    def test_register_is_idempotent_by_key(self) -> None:
+        radar = build_radar(_theme(), _spec())
+        record = register_radar_predictions(None, radar)
+        first = len(record["predictions"])
+        record = register_radar_predictions(record, radar)  # same calls again
+        self.assertEqual(len(record["predictions"]), first)
+
+
 class RadarCliTest(unittest.TestCase):
     def setUp(self) -> None:
         self.project_root = Path(__file__).resolve().parents[1]
@@ -117,6 +178,27 @@ class RadarCliTest(unittest.TestCase):
             # second run appends to the state series
             main(["radar", str(self.hbm4), str(self.spec), "--project-root", str(self.project_root), "--state", str(state), "--out", str(out)])
             self.assertEqual(len(json.loads(state.read_text(encoding="utf-8"))["history"]), 2)
+
+    def test_radar_cli_corpus_and_register_predictions(self) -> None:
+        corpus = self.project_root / "configs" / "radar" / "hbm4.corpus.json"
+        with tempfile.TemporaryDirectory() as tmp:
+            state = Path(tmp) / "state.json"
+            track = Path(tmp) / "preds.json"
+            out = Path(tmp) / "radar.json"
+            code = main(
+                ["radar", str(self.hbm4), str(self.spec), "--project-root", str(self.project_root),
+                 "--state", str(state), "--corpus", str(corpus), "--track-record", str(track),
+                 "--register-predictions", "--out", str(out)]
+            )
+            self.assertEqual(code, 0)
+            report = json.loads(out.read_text(encoding="utf-8"))
+            # rack power/cooling is the tightest and barely mentioned -> pre-consensus alpha window
+            power = next(a for a in report["alerts"] if a.get("constraint_id") == "rack-power-cooling")
+            self.assertTrue(power["pre_consensus"])
+            # predictions were registered and a calibration summary computed
+            self.assertTrue(track.exists())
+            self.assertIn("calibration", report)
+            self.assertGreater(report["calibration"]["predictions"], 0)
 
 
 if __name__ == "__main__":

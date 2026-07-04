@@ -20,7 +20,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from .calibration import prediction_key
+from .consensus import consensus_signal, constraint_terms
+
 RINGS = {"current_binding", "adjacent_latent", "second_order_external"}
+
+# gear D: a migration alert's level maps to the probability we register for it.
+MIGRATION_LEVEL_PROBABILITY = {"action": 0.75, "investigate": 0.55, "watch": 0.35}
 
 # Defaults; overridable per call.
 DEFAULT_MIGRATION_RATIO = 1.15   # a latent link this tight is a migration candidate
@@ -118,11 +124,17 @@ def build_radar(
     spec: dict[str, Any],
     prev_entry: dict[str, Any] | None = None,
     *,
+    corpus: list[dict[str, Any]] | None = None,
     migration_ratio: float = DEFAULT_MIGRATION_RATIO,
     erosion: float = DEFAULT_EROSION,
     slope_surprise_threshold: float = DEFAULT_SLOPE_SURPRISE,
 ) -> dict[str, Any]:
-    """Score candidate constraints, rank by headroom, and flag migration vs the prior run."""
+    """Score candidate constraints, rank by headroom, and flag migration vs the prior run.
+
+    If `corpus` (a list of dated `{date, text}` documents) is given, each constraint
+    also gets a consensus signal (gear C): a migration alert on a constraint whose
+    mentions are still low and flat is tagged `pre_consensus` — the alpha window.
+    """
     errors = validate_radar_spec(spec)
     if errors:
         return {"errors": errors}
@@ -145,6 +157,7 @@ def build_radar(
             ratio = round(capacity / demand, 4)
         prev_ratio = prev_ratios.get(cid)
         ratio_delta = round(ratio - prev_ratio, 4) if ratio is not None and isinstance(prev_ratio, (int, float)) else None
+        consensus = consensus_signal(constraint_terms(item), corpus) if corpus else None
         scored.append(
             {
                 "id": cid,
@@ -157,6 +170,7 @@ def build_radar(
                 "ratio_delta": ratio_delta,
                 "binding": ratio is not None and ratio < 1.0,
                 "signpost": item.get("signpost"),
+                "consensus": consensus,
             }
         )
 
@@ -183,19 +197,27 @@ def build_radar(
             tighter_than_current = tightest_current is not None and ratio < tightest_current
             eroding = ratio_delta is not None and ratio_delta <= -erosion
             if ratio <= migration_ratio or tighter_than_current or eroding:
+                consensus = constraint.get("consensus") or {}
+                pre_consensus = bool(consensus.get("pre_consensus"))
                 alerts.append(
                     {
                         "type": "constraint_migration_alert",
                         "level": _level(ratio, ratio_delta, tighter_than_current),
                         "constraint_id": constraint["id"],
                         "message": (
-                            f"latent constraint '{constraint['name']}' headroom ratio {ratio}"
+                            ("[pre-consensus] " if pre_consensus else "")
+                            + f"latent constraint '{constraint['name']}' headroom ratio {ratio}"
                             + (f" (eroded {ratio_delta} vs last run)" if ratio_delta is not None else "")
                             + (" — now tighter than any acknowledged constraint" if tighter_than_current else "")
+                            + (" — mentions still low/flat, likely not yet priced" if pre_consensus else "")
+                            + (" — mentions rising, likely already priced" if consensus.get("trend") == "rising" else "")
                         ),
                         "old_ratio": constraint["prev_ratio"],
                         "new_ratio": ratio,
                         "driver_path": f"{driver.get('name', 'driver')} -> {constraint['name']}",
+                        "pre_consensus": pre_consensus,
+                        "consensus_level": consensus.get("level"),
+                        "consensus_trend": consensus.get("trend"),
                         "disconfirming": "capacity growth rises to restore headroom ratio above the migration threshold",
                     }
                 )
@@ -223,3 +245,57 @@ def build_radar(
         },
         "errors": [],
     }
+
+
+# --- gear D: radar self-calibration -----------------------------------------
+# Every migration call is a dated, falsifiable prediction. Registering them into a
+# calibration track record (and resolving later with `fre calibrate --resolve`) lets
+# the radar be Brier-scored against reality, instead of being an untested oracle.
+
+
+def radar_migration_predictions(radar_report: dict[str, Any], *, horizon: str = "2 quarters") -> list[dict[str, Any]]:
+    """Turn each migration alert into a calibration-shaped prediction record."""
+    theme_id = radar_report.get("theme_id")
+    as_of = radar_report.get("as_of")
+    predictions: list[dict[str, Any]] = []
+    for alert in radar_report.get("alerts", []):
+        if alert.get("type") != "constraint_migration_alert":
+            continue
+        cid = alert.get("constraint_id")
+        predictions.append(
+            {
+                "key": prediction_key("constraint_migration", f"{theme_id}::{cid}::{horizon}"),
+                "kind": "constraint_migration",
+                "statement": (
+                    f"[{theme_id}] constraint '{cid}' becomes binding (headroom ratio < 1.0) "
+                    f"or tighter than the acknowledged constraint within {horizon}"
+                ),
+                "registered_as_of": as_of,
+                "probability": MIGRATION_LEVEL_PROBABILITY.get(alert.get("level"), 0.4),
+                "resolved": False,
+                "outcome": None,
+                "resolved_as_of": None,
+                "horizon": horizon,
+            }
+        )
+    return predictions
+
+
+def register_radar_predictions(
+    record: dict[str, Any] | None,
+    radar_report: dict[str, Any],
+    *,
+    horizon: str = "2 quarters",
+) -> dict[str, Any]:
+    """Merge migration predictions into a track record, de-duplicating by key.
+
+    Existing predictions are preserved as-is (a resolved call is never re-opened);
+    only genuinely new (theme, constraint, horizon) calls are appended.
+    """
+    existing = list((record or {}).get("predictions", []))
+    seen = {p.get("key") for p in existing}
+    for prediction in radar_migration_predictions(radar_report, horizon=horizon):
+        if prediction["key"] not in seen:
+            existing.append(prediction)
+            seen.add(prediction["key"])
+    return {"theme_id": radar_report.get("theme_id"), "predictions": existing}

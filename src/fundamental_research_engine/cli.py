@@ -35,7 +35,7 @@ from .prompts import (
 )
 from .provenance import build_provenance_records, write_provenance_store
 from .quality import build_quality_scorecard, validate_quality_review_shape
-from .radar import build_radar
+from .radar import build_radar, register_radar_predictions
 from .render import render_diff
 from .stages import (
     OPTIONAL_STAGE_ORDER,
@@ -219,6 +219,10 @@ def build_parser() -> argparse.ArgumentParser:
     radar.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/.")
     radar.add_argument("--state", type=Path, default=None, help="Radar state time series (defaults to radar_state/<theme_id>.json).")
     radar.add_argument("--no-persist", action="store_true", help="Do not append this run to the radar state series.")
+    radar.add_argument("--corpus", type=Path, default=None, help="Dated document corpus JSON for the consensus proxy (gear C).")
+    radar.add_argument("--track-record", type=Path, default=None, help="Radar prediction track record (defaults to radar_state/<theme_id>.predictions.json).")
+    radar.add_argument("--register-predictions", action="store_true", help="Register migration calls as dated predictions for later Brier scoring (gear D).")
+    radar.add_argument("--horizon", default="2 quarters", help="Prediction horizon phrase for registered migration calls.")
     radar.add_argument("--out", type=Path, default=None, help="Write radar report here (defaults to stdout).")
 
     return parser
@@ -227,6 +231,17 @@ def build_parser() -> argparse.ArgumentParser:
 def default_radar_state_path(project_root: Path, theme_id: str) -> Path:
     safe_id = theme_id.replace("/", "-").replace(" ", "-")
     return project_root / "radar_state" / f"{safe_id}.json"
+
+
+def default_radar_predictions_path(project_root: Path, theme_id: str) -> Path:
+    safe_id = theme_id.replace("/", "-").replace(" ", "-")
+    return project_root / "radar_state" / f"{safe_id}.predictions.json"
+
+
+def _load_corpus(path: Path) -> list[dict]:
+    data = read_json(path)
+    documents = data.get("documents", data) if isinstance(data, dict) else data
+    return documents if isinstance(documents, list) else []
 
 
 def default_track_record_path(project_root: Path, theme_id: str) -> Path:
@@ -979,8 +994,9 @@ def main(argv: list[str] | None = None) -> int:
         state_path = args.state or default_radar_state_path(args.project_root, theme.id)
         state = read_json(state_path) if state_path.exists() else {"theme_id": theme.id, "history": []}
         prev_entry = state["history"][-1] if state.get("history") else None
+        corpus = _load_corpus(args.corpus) if args.corpus is not None else None
 
-        radar = build_radar(theme, spec, prev_entry)
+        radar = build_radar(theme, spec, prev_entry, corpus=corpus)
         if radar.get("errors"):
             print(f"radar: spec {args.spec} has problems:")
             for error in radar["errors"]:
@@ -991,6 +1007,17 @@ def main(argv: list[str] | None = None) -> int:
             state.setdefault("history", []).append(radar["state_entry"])
             write_json(state_path, state)
 
+        # gear D: register migration calls as predictions, and score past calls.
+        track_path = args.track_record or default_radar_predictions_path(args.project_root, theme.id)
+        record = read_json(track_path) if track_path.exists() else {"theme_id": theme.id, "predictions": []}
+        if args.register_predictions:
+            before = len(record.get("predictions", []))
+            record = register_radar_predictions(record, radar, horizon=args.horizon)
+            write_json(track_path, record)
+            radar["registered_predictions"] = len(record["predictions"]) - before
+        if record.get("predictions"):
+            radar["calibration"] = build_calibration(record)
+
         if args.out is not None:
             write_json(args.out, radar)
             print(args.out)
@@ -999,8 +1026,9 @@ def main(argv: list[str] | None = None) -> int:
 
         migration = [a for a in radar["alerts"] if a["type"] == "constraint_migration_alert"]
         action = [a for a in radar["alerts"] if a.get("level") == "action"]
+        pre = [a for a in migration if a.get("pre_consensus")]
         tightest = radar["ranking"][0] if radar["ranking"] else "n/a"
-        print(f"tightest={tightest} migration_alerts={len(migration)} action={len(action)}")
+        print(f"tightest={tightest} migration_alerts={len(migration)} action={len(action)} pre_consensus={len(pre)}")
         return 0
 
     parser.error(f"unknown command: {args.command}")

@@ -871,13 +871,30 @@ deterministic + offline + hermetically tested, and does not touch the pipeline.
   → action migration alert; a second run shows it eroding 0.65→0.575 (delta −0.075)
   off the persisted state.
 
-Next increments (designed, not built): gear C consensus proxy (mention-frequency
-trend over the fetched corpus → only escalate when migrating AND not yet priced);
-gear D radar self-calibration (each migration call → a dated calibration prediction
-→ Brier); `fre watch --weekly` (watchlist + last run + diff + radar delta) + digest;
-auto-derive candidates from `causal_map.target`/`segments` (today only surfaced as
-uncovered_candidates). Also still open from the earlier review: rename the
-`publishable_memo` readiness tier to something process-neutral (Codex agreed in 8.5).
+Gears C + D added (2026-07-04, Claude):
+- Gear C consensus proxy (`consensus.py`): `fre radar --corpus <dated docs>` scores
+  each candidate's recent-vs-earlier mention rate → `{level, trend, pre_consensus}`.
+  A migration alert on a constraint whose mentions are still low+flat is tagged
+  `pre_consensus` (the alpha window — migrating but not yet priced); a rising trend
+  is tagged "likely already priced". Constraints declare `terms` for matching;
+  `configs/radar/hbm4.corpus.json` is a worked corpus.
+- Gear D radar self-calibration (`radar.py`: radar_migration_predictions /
+  register_radar_predictions): `fre radar --register-predictions` writes each
+  migration call as a dated, falsifiable prediction (action/investigate/watch →
+  prob 0.75/0.55/0.35) into `radar_state/<theme>.predictions.json`; the report
+  embeds a `calibration` summary. Resolve later with the existing
+  `fre calibrate <theme> --track-record <preds> --resolve <key> --outcome true|false`
+  → Brier. Demo: power/cooling resolved true at prob 0.75 → Brier 0.0625.
+- Verified: 181 tests pass (test_radar.py 15, test_consensus.py 6). Demo: rack
+  power/cooling is tightest (0.65) AND low/flat mentions → pre-consensus action
+  alert, while HBM/CoWoS are already rising in the corpus (priced).
+
+Next increments (designed, not built): `fre watch --weekly` (watchlist + last run +
+diff + radar delta) + digest; auto-derive candidates from `causal_map.target`/
+`segments` (today only surfaced as uncovered_candidates); auto-collect the consensus
+corpus (EDGAR/news over time feeding `--corpus`). Also still open from the earlier
+review: rename the `publishable_memo` readiness tier to something process-neutral
+(Codex agreed in 8.5).
 
 ## Collaboration Rule
 
