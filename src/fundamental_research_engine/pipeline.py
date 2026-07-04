@@ -9,7 +9,7 @@ from typing import Any
 from .evidence import build_evidence_audit
 from .io import read_json, write_json, write_text
 from .models import Theme, theme_from_dict
-from .quality import build_grounding, build_quality_scorecard
+from .quality import build_causal_quality, build_grounding, build_quality_scorecard
 from .render import render_memo
 from .scoring import score_bottleneck
 from .stages import load_theme_source
@@ -29,7 +29,27 @@ def default_run_dir(project_root: Path, theme: Theme) -> Path:
     return project_root / "runs" / f"{theme.as_of}-{safe_id}"
 
 
-def build_analysis(theme: Theme, rules: dict[str, Any]) -> dict[str, Any]:
+def default_claim_provenance_path(project_root: Path, theme_id: str) -> Path:
+    return project_root / "data" / "evidence" / theme_id / "claims.json"
+
+
+def load_claim_provenance(project_root: Path, theme_id: str) -> list[dict[str, Any]]:
+    path = default_claim_provenance_path(project_root, theme_id)
+    if not path.exists():
+        return []
+    payload = read_json(path)
+    if isinstance(payload, dict) and isinstance(payload.get("records"), list):
+        return [item for item in payload["records"] if isinstance(item, dict)]
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    return []
+
+
+def build_analysis(
+    theme: Theme,
+    rules: dict[str, Any],
+    claim_provenance: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     evidence_by_id = {item.id: item for item in theme.evidence}
     bottleneck_scores = [score_bottleneck(item, rules) for item in theme.bottlenecks]
     evidence_audit = build_evidence_audit(
@@ -49,7 +69,8 @@ def build_analysis(theme: Theme, rules: dict[str, Any]) -> dict[str, Any]:
             "scenario": theme.scenarios,
         },
     )
-    quality_scorecard = build_quality_scorecard(grounding)
+    causal_quality = build_causal_quality(theme.causal_map, theme.evidence, claim_provenance)
+    quality_scorecard = build_quality_scorecard(grounding, causal_quality=causal_quality)
 
     return {
         "generated_on": date.today().isoformat(),
@@ -96,7 +117,8 @@ def load_and_validate_theme(theme_path: Path, project_root: Path) -> Theme:
 def run_pipeline(theme_path: Path, project_root: Path, out_dir: Path | None = None) -> Path:
     theme = load_and_validate_theme(theme_path, project_root)
     rules = read_json(default_rules_path(project_root))
-    analysis = build_analysis(theme, rules)
+    claim_provenance = load_claim_provenance(project_root, theme.id)
+    analysis = build_analysis(theme, rules, claim_provenance=claim_provenance)
     output_dir = out_dir or default_run_dir(project_root, theme)
     write_json(output_dir / "analysis.json", analysis)
     write_text(output_dir / "memo.md", render_memo(analysis))

@@ -46,6 +46,7 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(analysis["theme"]["id"], "hbm4")
             self.assertEqual(analysis["bottleneck_scores"][0]["id"], "bn-hbm4-capacity-and-qualification")
             self.assertEqual(analysis["causal_map"][0]["id"], "edge-ai-capex-to-qualified-hbm-demand")
+            self.assertEqual(analysis["quality_scorecard"]["causal_quality"]["summary"]["edges"], 3)
             self.assertEqual(analysis["companies"][0]["id"], "co-sk-hynix")
             self.assertEqual(analysis["evidence_audit"]["inventory"]["evidence_count"], 4)
             self.assertTrue(analysis["evidence_audit"]["coverage"])

@@ -257,6 +257,12 @@ exits non-zero when the grounding score is below `--grounding-threshold` or an
 open critical concern exists. Optional `thesis_evidence_ids` (theme-level) and
 per-scenario `evidence_ids` let the thesis and scenarios be graded too.
 
+When a theme includes `causal_map`, the deterministic quality gate also checks
+each edge's cited `claim_ids`: whether the claims resolve, whether the support
+comes from more than one source, whether the cited claims have quote-verified
+provenance in `data/evidence/<theme_id>/claims.json`, and whether any
+low-confidence edge is being used as a core mechanism link.
+
 To keep quality honest *over time*, `fre calibrate` turns a theme's tracking
 signals, counter-theses, and scenario triggers into dated predictions, lets you
 resolve them as outcomes arrive, and scores calibration (resolution rate +

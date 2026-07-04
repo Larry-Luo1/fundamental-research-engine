@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .models import Evidence
+from .models import CausalEdge, Evidence
 
 # Same policy weights as the evidence audit; kept local so this module is
 # self-contained and importable without pulling in the fetch machinery.
@@ -72,6 +72,204 @@ def _source_key(ev: Evidence) -> str:
     """Identify an independent source: prefer URL, fall back to title."""
     url = (ev.url or "").strip()
     return url if url else (ev.title or "").strip()
+
+
+def _edge_value(edge: CausalEdge | dict[str, Any] | Any, field: str, default: Any = None) -> Any:
+    if isinstance(edge, dict):
+        return edge.get(field, default)
+    return getattr(edge, field, default)
+
+
+def _normalize_provenance_records(claim_provenance: Any) -> list[dict[str, Any]]:
+    if claim_provenance is None:
+        return []
+    if isinstance(claim_provenance, dict):
+        records = claim_provenance.get("records", [])
+        if isinstance(records, list):
+            return [item for item in records if isinstance(item, dict)]
+        return []
+    if isinstance(claim_provenance, list):
+        return [item for item in claim_provenance if isinstance(item, dict)]
+    return []
+
+
+def _claim_index(
+    evidence: list[Evidence],
+    claim_provenance: Any = None,
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+    evidence_by_id = {item.id: item for item in evidence}
+    provenance_by_id = {
+        str(item.get("claim_id")): item
+        for item in _normalize_provenance_records(claim_provenance)
+        if item.get("claim_id")
+    }
+
+    claims: dict[str, dict[str, Any]] = {}
+    for ev in evidence:
+        for index, claim in enumerate(ev.claims, start=1):
+            claim_id = f"{ev.id}.C{index}"
+            provenance = provenance_by_id.get(claim_id, {})
+            claims[claim_id] = {
+                "claim_id": claim_id,
+                "evidence_id": ev.id,
+                "claim": claim,
+                "source_type": ev.source_type,
+                "reliability": ev.reliability,
+                "source_key": _source_key(ev) or ev.id,
+                "status": "applied",
+                "provenance": provenance,
+            }
+
+    for claim_id, provenance in provenance_by_id.items():
+        if claim_id in claims:
+            continue
+        evidence_id = str(provenance.get("evidence_id", claim_id.partition(".")[0]))
+        ev = evidence_by_id.get(evidence_id)
+        source_key = str(provenance.get("source_url") or provenance.get("source_title") or "").strip()
+        if not source_key and ev is not None:
+            source_key = _source_key(ev)
+        claims[claim_id] = {
+            "claim_id": claim_id,
+            "evidence_id": evidence_id,
+            "claim": str(provenance.get("claim", "")),
+            "source_type": str(provenance.get("source_type") or (ev.source_type if ev else "")),
+            "reliability": str(provenance.get("reliability") or (ev.reliability if ev else "")),
+            "source_key": source_key or evidence_id,
+            "status": str(provenance.get("status", "candidate")),
+            "provenance": provenance,
+        }
+
+    return claims, provenance_by_id
+
+
+def _quote_verified(provenance: dict[str, Any]) -> bool:
+    quote = str(provenance.get("quote") or "").strip()
+    return bool(provenance.get("verified")) and bool(quote)
+
+
+def build_causal_quality(
+    causal_map: list[CausalEdge] | list[dict[str, Any]] | list[Any],
+    evidence: list[Evidence],
+    claim_provenance: Any = None,
+) -> dict[str, Any]:
+    """Score whether causal edges are supported by cited claim provenance."""
+    claims_by_id, provenance_by_id = _claim_index(evidence, claim_provenance)
+    edges_out: list[dict[str, Any]] = []
+    flags: list[str] = []
+    supported_count = 0
+    fully_quote_verified_count = 0
+    thin_count = 0
+    low_confidence_count = 0
+    missing_claim_edges = 0
+    weak_count = 0
+
+    for edge in causal_map:
+        edge_id = str(_edge_value(edge, "id", "") or "causal_edge")
+        claim_ids = [str(item) for item in (_edge_value(edge, "claim_ids", []) or [])]
+        confidence = str(_edge_value(edge, "confidence", "") or "")
+        resolved = [claims_by_id[item] for item in claim_ids if item in claims_by_id]
+        missing = [item for item in claim_ids if item not in claims_by_id]
+        distinct_sources = {item["source_key"] for item in resolved if item.get("source_key")}
+        distinct_source_types = {item["source_type"] for item in resolved if item.get("source_type")}
+        reliability_max = max((item["reliability"] for item in resolved), key=_weight, default="")
+
+        quote_verified_ids: list[str] = []
+        unverified_claim_ids: list[str] = []
+        for claim_id in claim_ids:
+            if claim_id in missing:
+                continue
+            provenance = provenance_by_id.get(claim_id) or claims_by_id.get(claim_id, {}).get("provenance", {})
+            if _quote_verified(provenance):
+                quote_verified_ids.append(claim_id)
+            else:
+                unverified_claim_ids.append(claim_id)
+
+        supported = bool(resolved) and not missing
+        thin = bool(resolved) and len(distinct_sources) <= 1
+        low_confidence = confidence == "low"
+        weak_evidence = not supported or reliability_max in {"", "low"}
+        fully_quote_verified = bool(resolved) and not missing and not unverified_claim_ids
+
+        if supported:
+            supported_count += 1
+        if fully_quote_verified:
+            fully_quote_verified_count += 1
+        if thin:
+            thin_count += 1
+        if low_confidence:
+            low_confidence_count += 1
+        if missing:
+            missing_claim_edges += 1
+        if weak_evidence:
+            weak_count += 1
+
+        if missing:
+            flags.append(f"causal edge '{edge_id}' has missing claim ids: {', '.join(missing)}")
+        if weak_evidence:
+            flags.append(f"causal edge '{edge_id}' has weak evidence coverage")
+        if unverified_claim_ids:
+            flags.append(
+                f"causal edge '{edge_id}' lacks quote-verified provenance for: "
+                f"{', '.join(unverified_claim_ids)}"
+            )
+        if thin:
+            flags.append(f"causal edge '{edge_id}' is supported by a single source")
+        if low_confidence:
+            flags.append(f"causal edge '{edge_id}' is low confidence; do not let it drive a high-conviction thesis")
+
+        edges_out.append(
+            {
+                "id": edge_id,
+                "claim_ids": claim_ids,
+                "resolved_claim_ids": [item["claim_id"] for item in resolved],
+                "missing_claim_ids": missing,
+                "evidence_count": len({item["evidence_id"] for item in resolved if item.get("evidence_id")}),
+                "distinct_sources": len(distinct_sources),
+                "distinct_source_types": len(distinct_source_types),
+                "reliability_max": reliability_max or None,
+                "quote_verified_claim_count": len(quote_verified_ids),
+                "unverified_claim_ids": unverified_claim_ids,
+                "supported": supported,
+                "fully_quote_verified": fully_quote_verified,
+                "thin": thin,
+                "low_confidence": low_confidence,
+                "weak_evidence": weak_evidence,
+            }
+        )
+
+    edge_count = len(causal_map)
+    if edge_count and thin_count / edge_count > 0.5:
+        flags.append(f"causal map has {thin_count}/{edge_count} single-source edges")
+
+    return {
+        "edges": edges_out,
+        "summary": {
+            "edges": edge_count,
+            "supported": supported_count,
+            "fully_quote_verified": fully_quote_verified_count,
+            "thin": thin_count,
+            "low_confidence": low_confidence_count,
+            "missing_claims": missing_claim_edges,
+            "weak_evidence": weak_count,
+        },
+        "flags": flags,
+    }
+
+
+def _empty_causal_quality() -> dict[str, Any]:
+    return {
+        "edges": [],
+        "summary": {
+            "edges": 0,
+            "supported": 0,
+            "fully_quote_verified": 0,
+            "thin": 0,
+            "low_confidence": 0,
+            "missing_claims": 0,
+            "weak_evidence": 0,
+        },
+        "flags": [],
+    }
 
 
 def build_grounding(
@@ -144,6 +342,7 @@ def build_quality_scorecard(
     grounding: dict[str, Any],
     review: dict[str, Any] | None = None,
     calibration: dict[str, Any] | None = None,
+    causal_quality: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Aggregate grounding (+ optional adversarial review / calibration) into a scorecard."""
     rwc = grounding["reliability_weighted_coverage"]
@@ -182,10 +381,13 @@ def build_quality_scorecard(
         for concern in review.get("open_concerns", []):
             if concern.get("severity") == "high":
                 flags.append(f"critical: {concern.get('issue', '')}")
+    if causal_quality:
+        flags.extend(str(item) for item in causal_quality.get("flags", []))
 
     return {
         "grounding_score": grounding_score,
         "grounding": grounding,
+        "causal_quality": causal_quality or _empty_causal_quality(),
         "disconfirmation": disconfirmation,
         "calibration": calibration,
         "flags": flags,

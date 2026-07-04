@@ -23,6 +23,7 @@ from .pipeline import (
     build_analysis,
     default_ontology_path,
     default_rules_path,
+    load_claim_provenance,
     load_and_validate_theme,
     run_pipeline,
 )
@@ -660,8 +661,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "qc":
         theme = load_and_validate_theme(args.theme, args.project_root)
         rules = read_json(default_rules_path(args.project_root))
-        analysis = build_analysis(theme, rules)
+        claim_provenance = load_claim_provenance(args.project_root, theme.id)
+        analysis = build_analysis(theme, rules, claim_provenance=claim_provenance)
         grounding = analysis["quality_scorecard"]["grounding"]
+        causal_quality = analysis["quality_scorecard"].get("causal_quality")
 
         review = None
         if not args.grounding_only:
@@ -703,7 +706,12 @@ def main(argv: list[str] | None = None) -> int:
         if track_record_path.exists():
             calibration = build_calibration(read_json(track_record_path))
 
-        scorecard = build_quality_scorecard(grounding, review=review, calibration=calibration)
+        scorecard = build_quality_scorecard(
+            grounding,
+            review=review,
+            calibration=calibration,
+            causal_quality=causal_quality,
+        )
         report = {
             "theme_id": theme.id,
             "as_of": theme.as_of,

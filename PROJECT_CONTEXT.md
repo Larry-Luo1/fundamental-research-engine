@@ -674,6 +674,46 @@ gate should flag causal edges with weak evidence, missing quote provenance, too
 many single-source links, or low-confidence edges that drive high-conviction
 theses.
 
+## Causal Map Quality Gate (2026-07-04, Codex)
+
+Implemented the next recommended step: causal maps are now first-class inputs
+to the deterministic quality gate.
+
+- `quality.build_causal_quality(...)` evaluates every causal edge's cited
+  `claim_ids`:
+  - resolves applied theme claims such as `E1.C1`;
+  - resolves candidate sidecar claims such as `E1.Q1` when present in
+    `data/evidence/<theme>/claims.json`;
+  - flags missing claim ids, missing quote-verified provenance, single-source
+    causal links, weak evidence coverage, and low-confidence causal edges.
+- `pipeline.load_claim_provenance(...)` reads the optional claim provenance
+  sidecar. If no sidecar exists, the engine still runs and surfaces the missing
+  quote provenance as a quality flag.
+- `build_analysis(...)`, `run_pipeline(...)`, and `fre qc` now all include
+  `quality_scorecard.causal_quality`, so the normal run path and standalone QC
+  command stay consistent.
+- `render.py` adds a compact causal edge summary to the Quality Scorecard and
+  keeps detailed causal issues in Quality Flags.
+- README, `docs/quality-gate-design.md`, unit tests, and the HBM4 golden memo
+  snapshot were updated.
+
+Verification:
+```bash
+PYTHONPATH=src python3 -m py_compile src/fundamental_research_engine/quality.py src/fundamental_research_engine/pipeline.py src/fundamental_research_engine/cli.py src/fundamental_research_engine/render.py
+PYTHONPATH=src python3 -m unittest tests.test_quality tests.test_pipeline tests.test_cli
+PYTHONPATH=src python3 -m unittest discover -s tests            # 157 pass
+for f in configs/themes/*.json; do PYTHONPATH=src python3 -m fundamental_research_engine validate "$f" || exit 1; done
+PYTHONPATH=src python3 -m fundamental_research_engine validate configs/themes_staged/hbm4
+git diff --check
+```
+
+Current known gap: HBM4's theme claims validate, but no committed
+`data/evidence/hbm4/claims.json` sidecar exists, so HBM4 correctly reports
+`quote-verified` causal edges as `0` and flags missing quote provenance. The
+next high-leverage step is to run quote-backed claim extraction for HBM4's cited
+sources, persist the sidecar, and then move toward automated evidence discovery
+and extraction batches for additional themes.
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:

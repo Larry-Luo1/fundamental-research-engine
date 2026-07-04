@@ -52,7 +52,7 @@ def _render_quality_scorecard(analysis: dict[str, Any]) -> list[str]:
         return []
     grounding = scorecard["grounding"]
     summary = grounding["summary"]
-    return [
+    lines = [
         "## Quality Scorecard",
         "",
         f"- Grounding score: `{scorecard['grounding_score']:.2f}`",
@@ -63,14 +63,28 @@ def _render_quality_scorecard(analysis: dict[str, Any]) -> list[str]:
             f"(grounded `{summary['grounded']}`, corroborated `{summary['corroborated']}`, "
             f"single-source `{summary['thin']}`, ungrounded `{summary['ungrounded']}`)"
         ),
-        "",
-        "### Quality Flags",
-        "",
-        _bullet(scorecard["flags"]),
-        "",
-        "> Process-health signal, not a truth score for the thesis.",
-        "",
     ]
+    causal_summary = scorecard.get("causal_quality", {}).get("summary", {})
+    if causal_summary.get("edges", 0):
+        lines.append(
+            f"- Causal edges: `{causal_summary['edges']}` "
+            f"(supported `{causal_summary['supported']}`, "
+            f"quote-verified `{causal_summary['fully_quote_verified']}`, "
+            f"single-source `{causal_summary['thin']}`, "
+            f"weak-evidence `{causal_summary['weak_evidence']}`)"
+        )
+    lines.extend(
+        [
+            "",
+            "### Quality Flags",
+            "",
+            _bullet(scorecard["flags"]),
+            "",
+            "> Process-health signal, not a truth score for the thesis.",
+            "",
+        ]
+    )
+    return lines
 
 
 def _render_causal_map(analysis: dict[str, Any]) -> list[str]:

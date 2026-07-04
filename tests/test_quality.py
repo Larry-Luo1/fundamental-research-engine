@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 from fundamental_research_engine.models import Evidence
 from fundamental_research_engine.quality import (
+    build_causal_quality,
     build_grounding,
     build_quality_scorecard,
     validate_quality_review_shape,
@@ -24,8 +25,16 @@ def _valid_review():
     }
 
 
-def _ev(eid, source_type, url, reliability):
-    return Evidence(id=eid, title=eid, source_type=source_type, date="2026-01-01", url=url, reliability=reliability)
+def _ev(eid, source_type, url, reliability, claims=None):
+    return Evidence(
+        id=eid,
+        title=eid,
+        source_type=source_type,
+        date="2026-01-01",
+        url=url,
+        reliability=reliability,
+        claims=claims or [],
+    )
 
 
 def _owner(oid, name, evidence_ids):
@@ -100,6 +109,80 @@ class ScorecardTest(unittest.TestCase):
         self.assertEqual(sc["disconfirmation"]["open_critical"], 1)
         self.assertEqual(sc["disconfirmation"]["open_major"], 1)
         self.assertTrue(any(f.startswith("critical:") for f in sc["flags"]))
+
+    def test_scorecard_includes_causal_quality_flags(self) -> None:
+        causal_quality = {
+            "edges": [],
+            "summary": {"edges": 0},
+            "flags": ["causal edge 'edge-a' lacks quote-verified provenance for: E1.C1"],
+        }
+        sc = build_quality_scorecard(self._grounding(), causal_quality=causal_quality)
+        self.assertEqual(sc["causal_quality"], causal_quality)
+        self.assertTrue(any("lacks quote-verified provenance" in f for f in sc["flags"]))
+
+
+class CausalQualityTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.evidence = [
+            _ev("E1", "company_disclosure", "http://a", "high", ["A claim"]),
+            _ev("E2", "industry_research", "http://b", "medium", ["B claim"]),
+            _ev("E3", "blog", "http://c", "low", ["C claim"]),
+        ]
+
+    def test_flags_missing_quote_provenance_single_source_and_low_confidence(self) -> None:
+        edge = SimpleNamespace(id="edge-a", confidence="low", claim_ids=["E1.C1"])
+        cq = build_causal_quality([edge], self.evidence)
+
+        self.assertEqual(cq["summary"]["edges"], 1)
+        self.assertEqual(cq["summary"]["supported"], 1)
+        self.assertEqual(cq["summary"]["fully_quote_verified"], 0)
+        self.assertEqual(cq["summary"]["thin"], 1)
+        self.assertEqual(cq["summary"]["low_confidence"], 1)
+        self.assertTrue(any("lacks quote-verified provenance" in f for f in cq["flags"]))
+        self.assertTrue(any("supported by a single source" in f for f in cq["flags"]))
+        self.assertTrue(any("low confidence" in f for f in cq["flags"]))
+
+    def test_quote_verified_two_source_edge_passes_core_checks(self) -> None:
+        edge = SimpleNamespace(id="edge-b", confidence="high", claim_ids=["E1.C1", "E2.C1"])
+        provenance = [
+            {"claim_id": "E1.C1", "verified": True, "quote": "A claim"},
+            {"claim_id": "E2.C1", "verified": True, "quote": "B claim"},
+        ]
+        cq = build_causal_quality([edge], self.evidence, provenance)
+
+        edge_report = cq["edges"][0]
+        self.assertEqual(cq["summary"]["fully_quote_verified"], 1)
+        self.assertEqual(edge_report["distinct_sources"], 2)
+        self.assertFalse(edge_report["thin"])
+        self.assertFalse(edge_report["weak_evidence"])
+        self.assertEqual(cq["flags"], [])
+
+    def test_candidate_claim_can_be_resolved_from_sidecar(self) -> None:
+        edge = SimpleNamespace(id="edge-q", confidence="medium", claim_ids=["E1.Q1"])
+        provenance = [
+            {
+                "claim_id": "E1.Q1",
+                "evidence_id": "E1",
+                "claim": "candidate",
+                "source_type": "company_disclosure",
+                "reliability": "high",
+                "source_url": "http://a",
+                "verified": True,
+                "quote": "candidate",
+            }
+        ]
+        cq = build_causal_quality([edge], self.evidence, provenance)
+
+        self.assertEqual(cq["edges"][0]["resolved_claim_ids"], ["E1.Q1"])
+        self.assertEqual(cq["summary"]["missing_claims"], 0)
+        self.assertEqual(cq["summary"]["fully_quote_verified"], 1)
+
+    def test_missing_candidate_claim_is_flagged(self) -> None:
+        edge = SimpleNamespace(id="edge-missing", confidence="medium", claim_ids=["E1.Q1"])
+        cq = build_causal_quality([edge], self.evidence)
+
+        self.assertEqual(cq["summary"]["missing_claims"], 1)
+        self.assertTrue(any("missing claim ids: E1.Q1" in f for f in cq["flags"]))
 
 
 class ReviewShapeTest(unittest.TestCase):

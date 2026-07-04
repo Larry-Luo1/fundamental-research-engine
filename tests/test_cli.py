@@ -871,6 +871,7 @@ class QcCliTest(unittest.TestCase):
             report = json.loads(out.read_text(encoding="utf-8"))
             self.assertIsNone(report["review"])
             self.assertIn("grounding_score", report["quality_scorecard"])
+            self.assertEqual(report["quality_scorecard"]["causal_quality"]["summary"]["edges"], 3)
             self.assertFalse(report["quality_scorecard"]["disconfirmation"]["premortem_done"])
 
     def test_mocked_adapter_runs_adversarial_review(self) -> None:

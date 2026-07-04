@@ -142,3 +142,29 @@ fre qc configs/themes/hbm4.json --grounding-only
 - 记分卡永远标注"过程健康,非真值"。
 - 对抗式 QC 默认不改写、不阻断 `run`/`fill`/`draft` 输出——人决定是否采纳(与现有 `critique` 一致)。
 - 确定性部分零新增依赖、可离线、进 CI;LLM 部分单独触发、测试用 fake adapter。
+
+## 9. Causal Map 质量扩展(2026-07-04)
+
+`causal_map` 已接入确定性质量门。目标是让"产业链机制洞察"不只停留在
+叙述层,而是逐条边检查证据强度。
+
+新增检查项:
+
+- 每条 causal edge 的 `claim_ids` 是否能解析到主题内 `E*.C*` 声明,或
+  解析到 `data/evidence/<theme>/claims.json` 里的候选 `E*.Q*` provenance。
+- 每条边是否有 quote-verified provenance。没有 sidecar 时不阻断运行,但会
+  在 `quality_scorecard.flags` 中明确暴露。
+- 每条边是否只由单一来源支撑。
+- 每条边是否低置信度;低置信边会被标记为不应支撑高确信 thesis。
+- causal map 级别汇总:总边数、supported、fully_quote_verified、thin、
+  low_confidence、missing_claims、weak_evidence。
+
+接入点:
+
+- `quality.build_causal_quality(...)`:纯确定性检查。
+- `pipeline.load_claim_provenance(...)`:可选读取
+  `data/evidence/<theme>/claims.json` sidecar。
+- `pipeline.build_analysis(...)` 和 `fre qc`:都把 causal quality 合并进
+  `quality_scorecard`。
+- `render.py`:memo 的 Quality Scorecard 增加 causal edge 汇总,详细问题仍
+  汇总在 Quality Flags。

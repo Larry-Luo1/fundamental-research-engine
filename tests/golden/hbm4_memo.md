@@ -113,6 +113,7 @@ AI model scaling and inference workloads increase memory bandwidth, memory capac
 - Reliability-weighted coverage: `0.81`
 - Corroboration ratio: `0.43`
 - Owners: `7` (grounded `6`, corroborated `3`, single-source `3`, ungrounded `1`)
+- Causal edges: `3` (supported `3`, quote-verified `0`, single-source `1`, weak-evidence `0`)
 
 ### Quality Flags
 
@@ -120,5 +121,9 @@ AI model scaling and inference workloads increase memory bandwidth, memory capac
 - company 'SK hynix' is supported by a single source
 - company 'Micron' is supported by a single source
 - company 'TSMC' is supported by a single source
+- causal edge 'edge-ai-capex-to-qualified-hbm-demand' lacks quote-verified provenance for: E1.C1, E2.C1
+- causal edge 'edge-qualified-hbm-demand-to-memory-mix' lacks quote-verified provenance for: E2.C1, E4.C1
+- causal edge 'edge-hbm-attach-to-packaging-capacity' lacks quote-verified provenance for: E3.C1
+- causal edge 'edge-hbm-attach-to-packaging-capacity' is supported by a single source
 
 > Process-health signal, not a truth score for the thesis.
