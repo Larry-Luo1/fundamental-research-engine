@@ -1,59 +1,288 @@
 #Requires -Version 5
 <#
-  runner-windows.ps1 — 运行机(Windows)一键运行:自动跟随 GitHub + FastAPI 热重载
+  Windows runner for the local display/debug machine.
 
-  用途:在「运行机」上把本工程前后端跑起来,并每 N 秒跟随 origin/main。
-        编辑机(VPS 上的 Claude/Codex)push 后,这里自动 git reset --hard
-        并触发 uvicorn --reload 重启 —— 刷新浏览器即可看到改动。
+  What it does:
+    1. Starts the FastAPI app with uvicorn --reload.
+    2. Polls origin/<branch> every few seconds.
+    3. When a new commit appears, resets this checkout to origin/<branch>.
 
-  首次准备(只做一次):
-        git clone git@github.com:Larry-Luo1/fundamental-research-engine.git
-        cd fundamental-research-engine
-        python -m pip install -e .
-        python -m pip install "uvicorn[standard]"     # --reload 依赖 watchfiles
-        copy .env.example .env   （按需填好密钥）
+  Important:
+    This machine is treated as a read-only consumer. Do not edit code here while
+    the runner is active, because updates intentionally use git reset --hard.
 
-  运行:  powershell -ExecutionPolicy Bypass -File runner-windows.ps1
-  访问:  http://localhost:8000
+  Daily use:
+    powershell -ExecutionPolicy Bypass -File runner-windows.ps1
 
-  铁律:  本机是「只读消费者」,永远不要在这里改代码。
-         同步用 reset --hard(不是 pull/merge),对冲突免疫。
+  Open:
+    http://localhost:8000
 #>
 param(
   [int]$Port = 8000,
+  [string]$HostAddress = "127.0.0.1",
   [string]$Branch = "main",
-  [int]$IntervalSec = 3
+  [int]$IntervalSec = 3,
+  [bool]$StopExistingPythonOnPort = $true,
+  [switch]$NoInstall
 )
+
 $ErrorActionPreference = "Stop"
-Set-Location -Path $PSScriptRoot
+Set-Location -LiteralPath $PSScriptRoot
 
-Write-Host "启动 uvicorn(热重载) http://localhost:$Port ..." -ForegroundColor Cyan
-$uvicorn = Start-Process -PassThru -NoNewWindow python `
-  -ArgumentList "-m","uvicorn","web.app:app","--host","0.0.0.0","--port","$Port","--reload"
+function Write-Step {
+  param(
+    [string]$Message,
+    [ConsoleColor]$Color = "Cyan"
+  )
+  Write-Host "[runner] $Message" -ForegroundColor $Color
+}
 
-Write-Host "进入同步循环:每 ${IntervalSec}s 检查 origin/$Branch,Ctrl+C 退出。" -ForegroundColor Cyan
+function Assert-Command {
+  param([string]$Name)
+  if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+    throw "Required command not found: $Name"
+  }
+}
+
+function Invoke-Checked {
+  param(
+    [string]$FilePath,
+    [string[]]$Arguments,
+    [string]$FailureMessage
+  )
+  & $FilePath @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "$FailureMessage (exit code $LASTEXITCODE)"
+  }
+}
+
+function Import-DotEnv {
+  param([string]$Path)
+
+  if (-not (Test-Path -LiteralPath $Path)) {
+    if (Test-Path -LiteralPath ".env.example") {
+      Copy-Item -LiteralPath ".env.example" -Destination $Path
+      Write-Step "Created .env from .env.example. Fill API keys if model calls are needed." Yellow
+    } else {
+      Write-Step ".env not found. The app may fail if required env vars are missing." Yellow
+      return
+    }
+  }
+
+  foreach ($rawLine in Get-Content -LiteralPath $Path) {
+    $line = $rawLine.Trim()
+    if (-not $line -or $line.StartsWith("#")) {
+      continue
+    }
+
+    $parts = $line -split "=", 2
+    if ($parts.Count -ne 2) {
+      continue
+    }
+
+    $key = $parts[0].Trim().TrimStart([char]0xFEFF)
+    $value = $parts[1].Trim()
+    if (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+      $value = $value.Substring(1, $value.Length - 2)
+    }
+
+    [Environment]::SetEnvironmentVariable($key, $value, "Process")
+  }
+}
+
+function Resolve-Python {
+  $venvPython = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+  if (Test-Path -LiteralPath $venvPython) {
+    return $venvPython
+  }
+
+  Assert-Command "python"
+  if ($NoInstall) {
+    return "python"
+  }
+
+  Write-Step "Creating local virtual environment: .venv"
+  Invoke-Checked -FilePath "python" -Arguments @("-m", "venv", ".venv") -FailureMessage "Failed to create .venv"
+
+  if (-not (Test-Path -LiteralPath $venvPython)) {
+    throw "Virtual environment was created, but python.exe was not found at $venvPython"
+  }
+
+  return $venvPython
+}
+
+function Test-WebDependencies {
+  param([string]$PythonExe)
+  & $PythonExe -c "import fastapi, uvicorn" *> $null
+  return ($LASTEXITCODE -eq 0)
+}
+
+function Ensure-WebDependencies {
+  param(
+    [string]$PythonExe,
+    [switch]$Force
+  )
+
+  if (-not $Force -and (Test-WebDependencies -PythonExe $PythonExe)) {
+    return
+  }
+
+  if ($NoInstall) {
+    throw "Web dependencies are missing. Re-run without -NoInstall or install: python -m pip install -e `".[web]`" `"uvicorn[standard]`""
+  }
+
+  Write-Step "Installing web dependencies into the local environment..."
+  Invoke-Checked -FilePath $PythonExe -Arguments @("-m", "pip", "install", "-e", ".[web]") -FailureMessage "Failed to install project web extra"
+  Invoke-Checked -FilePath $PythonExe -Arguments @("-m", "pip", "install", "uvicorn[standard]") -FailureMessage "Failed to install uvicorn standard extra"
+}
+
+function Get-ListenerProcessIds {
+  param([int]$ListenPort)
+  if (-not (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue)) {
+    return @()
+  }
+
+  return @(Get-NetTCPConnection -LocalPort $ListenPort -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique)
+}
+
+function Stop-CompatibleListeners {
+  param([int]$ListenPort)
+
+  $processIds = Get-ListenerProcessIds -ListenPort $ListenPort
+  foreach ($processId in $processIds) {
+    if (-not $processId -or $processId -eq $PID) {
+      continue
+    }
+
+    if ($StopExistingPythonOnPort -and (Test-PythonProcessGroup -RootProcessId $processId)) {
+      Write-Step "Stopping existing Python listener on port $ListenPort (PID $processId)." Yellow
+      Stop-PythonProcessGroup -RootProcessId $processId
+      Start-Sleep -Milliseconds 500
+      continue
+    }
+
+    $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+    if (-not $process) {
+      throw "Port $ListenPort is already in use by PID $processId, but the process is not visible."
+    }
+
+    throw "Port $ListenPort is already in use by PID $processId ($($process.ProcessName)). Stop it or run with -Port <other>."
+  }
+}
+
+function Test-PythonProcessGroup {
+  param([int]$RootProcessId)
+
+  $process = Get-Process -Id $RootProcessId -ErrorAction SilentlyContinue
+  if ($process -and $process.ProcessName -match "^python") {
+    return $true
+  }
+
+  $children = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.ParentProcessId -eq $RootProcessId })
+  foreach ($child in $children) {
+    if ($child.Name -match "^python" -or (Test-PythonProcessGroup -RootProcessId $child.ProcessId)) {
+      return $true
+    }
+  }
+
+  return $false
+}
+
+function Stop-PythonProcessGroup {
+  param([int]$RootProcessId)
+
+  $children = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.ParentProcessId -eq $RootProcessId })
+  foreach ($child in $children) {
+    Stop-PythonProcessGroup -RootProcessId $child.ProcessId
+  }
+
+  $process = Get-Process -Id $RootProcessId -ErrorAction SilentlyContinue
+  if ($process -and $process.ProcessName -match "^python") {
+    Stop-Process -Id $RootProcessId -Force -ErrorAction SilentlyContinue
+  }
+}
+
+function Stop-PythonListenersOnPort {
+  param([int]$ListenPort)
+
+  $processIds = Get-ListenerProcessIds -ListenPort $ListenPort
+  foreach ($processId in $processIds) {
+    if ($processId -and (Test-PythonProcessGroup -RootProcessId $processId)) {
+      Stop-PythonProcessGroup -RootProcessId $processId
+    }
+  }
+}
+
+function Stop-ProcessTree {
+  param([int]$RootProcessId)
+
+  $children = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.ParentProcessId -eq $RootProcessId })
+  foreach ($child in $children) {
+    Stop-ProcessTree -RootProcessId $child.ProcessId
+  }
+
+  Stop-Process -Id $RootProcessId -Force -ErrorAction SilentlyContinue
+}
+
+Assert-Command "git"
+$pythonExe = Resolve-Python
+Import-DotEnv ".env"
+Ensure-WebDependencies -PythonExe $pythonExe
+Stop-CompatibleListeners -ListenPort $Port
+
+Write-Step "Starting uvicorn at http://localhost:$Port ..."
+$uvicorn = Start-Process -PassThru -NoNewWindow -FilePath $pythonExe `
+  -ArgumentList @("-m", "uvicorn", "web.app:app", "--host", $HostAddress, "--port", "$Port", "--reload")
+
+Start-Sleep -Seconds 2
+if ($uvicorn.HasExited) {
+  throw "uvicorn exited immediately. Check the error output above."
+}
+
+Write-Step "Watching origin/$Branch every ${IntervalSec}s. Press Ctrl+C to stop."
 try {
   while ($true) {
-    git fetch -q origin $Branch
-    $local  = (git rev-parse HEAD).Trim()
-    $remote = (git rev-parse "origin/$Branch").Trim()
+    & git fetch -q origin $Branch
+    if ($LASTEXITCODE -ne 0) {
+      Write-Step "git fetch failed; will retry." Yellow
+      Start-Sleep -Seconds $IntervalSec
+      continue
+    }
+
+    $local = (& git rev-parse HEAD).Trim()
+    $remote = (& git rev-parse "origin/$Branch").Trim()
+    if ($LASTEXITCODE -ne 0 -or -not $remote) {
+      Write-Step "Could not resolve origin/$Branch; will retry." Yellow
+      Start-Sleep -Seconds $IntervalSec
+      continue
+    }
+
     if ($local -ne $remote) {
       $ts = Get-Date -Format "HH:mm:ss"
-      Write-Host "[$ts] 新提交,同步 $($local.Substring(0,7)) -> $($remote.Substring(0,7))" -ForegroundColor Yellow
-      $changed = git diff --name-only $local $remote
-      git reset --hard "origin/$Branch"
-      if ($changed -match "pyproject\.toml") {
-        Write-Host "  依赖变化,重装…" -ForegroundColor Yellow
-        python -m pip install -e . -q
+      Write-Step "[$ts] New commit found: $($local.Substring(0, 7)) -> $($remote.Substring(0, 7))" Yellow
+      $changed = @(& git diff --name-only $local $remote)
+
+      & git reset --hard "origin/$Branch"
+      if ($LASTEXITCODE -ne 0) {
+        Write-Step "git reset failed; will retry." Red
+        Start-Sleep -Seconds $IntervalSec
+        continue
       }
-      Write-Host "  已同步到 $((git rev-parse --short HEAD).Trim()),uvicorn 自动重启中。" -ForegroundColor Green
+
+      if ($changed -match "pyproject\.toml") {
+        Ensure-WebDependencies -PythonExe $pythonExe -Force
+      }
+
+      Write-Step "Synced to $((git rev-parse --short HEAD).Trim()). uvicorn reload will pick up changes." Green
     }
+
     Start-Sleep -Seconds $IntervalSec
   }
 }
 finally {
   if ($uvicorn -and -not $uvicorn.HasExited) {
-    Write-Host "停止 uvicorn…" -ForegroundColor Cyan
-    Stop-Process -Id $uvicorn.Id -Force -ErrorAction SilentlyContinue
+    Write-Step "Stopping uvicorn..."
+    Stop-ProcessTree -RootProcessId $uvicorn.Id
   }
+  Stop-PythonListenersOnPort -ListenPort $Port
 }
