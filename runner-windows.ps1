@@ -44,6 +44,70 @@ function Assert-Command {
   }
 }
 
+function Format-ProxyUrl {
+  param([string]$Proxy)
+
+  if (-not $Proxy) {
+    return $null
+  }
+
+  $candidate = $Proxy.Trim()
+  if ($candidate -match ";") {
+    if ($candidate -match "(^|;)https=([^;]+)") {
+      $candidate = $Matches[2]
+    } elseif ($candidate -match "(^|;)http=([^;]+)") {
+      $candidate = $Matches[2]
+    } else {
+      return $null
+    }
+  }
+
+  if ($candidate -notmatch "^[a-zA-Z][a-zA-Z0-9+.-]*://") {
+    $candidate = "http://$candidate"
+  }
+
+  return $candidate
+}
+
+function Resolve-GitProxy {
+  foreach ($name in @("HTTPS_PROXY", "HTTP_PROXY", "ALL_PROXY")) {
+    $value = [Environment]::GetEnvironmentVariable($name, "Process")
+    $proxy = Format-ProxyUrl -Proxy $value
+    if ($proxy) {
+      return $proxy
+    }
+  }
+
+  try {
+    $settings = Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings" -ErrorAction Stop
+    if ($settings.ProxyEnable -eq 1) {
+      return (Format-ProxyUrl -Proxy ([string]$settings.ProxyServer))
+    }
+  } catch {
+    return $null
+  }
+
+  return $null
+}
+
+function Initialize-GitNetwork {
+  $script:GitNetworkArgs = @()
+  $proxy = Resolve-GitProxy
+  if ($proxy) {
+    $script:GitNetworkArgs = @("-c", "http.proxy=$proxy", "-c", "https.proxy=$proxy")
+    Write-Step "Using proxy for git network calls: $proxy" Yellow
+  }
+}
+
+function Invoke-GitNetwork {
+  param([string[]]$Arguments)
+
+  $allArgs = @()
+  $allArgs += $script:GitNetworkArgs
+  $allArgs += $Arguments
+  & git @allArgs
+}
+
 function Invoke-Checked {
   param(
     [string]$FilePath,
@@ -225,6 +289,7 @@ function Stop-ProcessTree {
 }
 
 Assert-Command "git"
+Initialize-GitNetwork
 $pythonExe = Resolve-Python
 Import-DotEnv ".env"
 Ensure-WebDependencies -PythonExe $pythonExe
@@ -242,7 +307,7 @@ if ($uvicorn.HasExited) {
 Write-Step "Watching origin/$Branch every ${IntervalSec}s. Press Ctrl+C to stop."
 try {
   while ($true) {
-    & git fetch -q origin $Branch
+    Invoke-GitNetwork -Arguments @("fetch", "-q", "origin", $Branch)
     if ($LASTEXITCODE -ne 0) {
       Write-Step "git fetch failed; will retry." Yellow
       Start-Sleep -Seconds $IntervalSec
