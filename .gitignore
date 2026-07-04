@@ -26,3 +26,6 @@ data/evidence/*/*
 # Web layer runtime
 .env
 web_data/
+
+# Constraint radar persisted state (time series, regenerated)
+radar_state/

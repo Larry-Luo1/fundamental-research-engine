@@ -350,6 +350,27 @@ This is the preferred path for worked examples and team handoff: the theme file
 stores the compact claim, while `data/evidence/<theme_id>/claims.json` stores
 quote provenance used by the causal-map quality gate.
 
+## Constraint Radar (early bottleneck-migration detection)
+
+`fre radar` operationalizes a hard problem: the binding constraint *migrates* when
+an upstream driver accelerates (compute outran expectations → HBM, then power/
+cooling, became the constraint). Instead of re-scoring a component and watching its
+score rise (lagging), it watches each candidate constraint's **headroom ratio**
+(`capacity_growth / demand_growth`) erode, and flags the adjacent link that is
+tightest and eroding fastest — before consensus.
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine radar \
+  configs/themes/hbm4.json configs/radar/hbm4.json --state radar_state/hbm4.json
+```
+
+Reads a radar spec (driver + candidate constraints in three rings: current-binding
+/ adjacent-latent / second-order-external, the last monitored by signpost rather
+than ratio), ranks by headroom, detects migration against the persisted prior run,
+and emits typed alerts (`driver_slope_alert`, `constraint_migration_alert`) at
+`watch`/`investigate`/`action` levels with a disconfirming condition each. See
+`docs/monitoring-and-constraint-radar.md` for the full monitoring design.
+
 ## Methodology
 
 The engine adapts several industry frameworks:

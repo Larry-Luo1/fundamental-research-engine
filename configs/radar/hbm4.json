@@ -1,0 +1,41 @@
+{
+  "theme_id": "hbm4",
+  "as_of": "2026-07-01",
+  "driver": {
+    "name": "AI accelerator compute deployment",
+    "realized_growth": 1.9,
+    "assumed_growth": 1.4
+  },
+  "constraints": [
+    {
+      "id": "hbm-bandwidth",
+      "name": "HBM bandwidth/capacity",
+      "ring": "current_binding",
+      "demand_growth": 1.9,
+      "capacity_growth": 1.5,
+      "note": "Acknowledged binding constraint: qualified HBM supply."
+    },
+    {
+      "id": "advanced-packaging",
+      "name": "Advanced packaging (CoWoS)",
+      "ring": "adjacent_latent",
+      "demand_growth": 1.9,
+      "capacity_growth": 2.0,
+      "note": "HBM value only realized through package-level integration."
+    },
+    {
+      "id": "rack-power-cooling",
+      "name": "Rack power and cooling",
+      "ring": "adjacent_latent",
+      "demand_growth": 2.0,
+      "capacity_growth": 1.3,
+      "note": "Power/thermal envelope per rack rises with accelerator density; datacenter power delivery lags."
+    },
+    {
+      "id": "grid-interconnect",
+      "name": "Grid interconnection capacity",
+      "ring": "second_order_external",
+      "signpost": "utility interconnection queue for new datacenter load exceeds multi-year backlog"
+    }
+  ]
+}

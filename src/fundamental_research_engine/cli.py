@@ -35,6 +35,7 @@ from .prompts import (
 )
 from .provenance import build_provenance_records, write_provenance_store
 from .quality import build_quality_scorecard, validate_quality_review_shape
+from .radar import build_radar
 from .render import render_diff
 from .stages import (
     OPTIONAL_STAGE_ORDER,
@@ -212,7 +213,20 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build_provenance.add_argument("--out", type=Path, default=None, help="Write build report here (defaults to stdout).")
 
+    radar = subparsers.add_parser("radar", help="Rank candidate constraints by headroom and flag migration (constraint radar).")
+    radar.add_argument("theme", type=Path, help="Theme config (monolithic JSON or stage directory).")
+    radar.add_argument("spec", type=Path, help="Radar spec JSON (driver + candidate constraints with growth rates).")
+    radar.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/.")
+    radar.add_argument("--state", type=Path, default=None, help="Radar state time series (defaults to radar_state/<theme_id>.json).")
+    radar.add_argument("--no-persist", action="store_true", help="Do not append this run to the radar state series.")
+    radar.add_argument("--out", type=Path, default=None, help="Write radar report here (defaults to stdout).")
+
     return parser
+
+
+def default_radar_state_path(project_root: Path, theme_id: str) -> Path:
+    safe_id = theme_id.replace("/", "-").replace(" ", "-")
+    return project_root / "radar_state" / f"{safe_id}.json"
 
 
 def default_track_record_path(project_root: Path, theme_id: str) -> Path:
@@ -958,6 +972,36 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         parser.error(f"unknown sources command: {args.sources_command}")
         return 2
+
+    if args.command == "radar":
+        theme = load_and_validate_theme(args.theme, args.project_root)
+        spec = read_json(args.spec)
+        state_path = args.state or default_radar_state_path(args.project_root, theme.id)
+        state = read_json(state_path) if state_path.exists() else {"theme_id": theme.id, "history": []}
+        prev_entry = state["history"][-1] if state.get("history") else None
+
+        radar = build_radar(theme, spec, prev_entry)
+        if radar.get("errors"):
+            print(f"radar: spec {args.spec} has problems:")
+            for error in radar["errors"]:
+                print(f"- {error}")
+            return 1
+
+        if not args.no_persist:
+            state.setdefault("history", []).append(radar["state_entry"])
+            write_json(state_path, state)
+
+        if args.out is not None:
+            write_json(args.out, radar)
+            print(args.out)
+        else:
+            print(json.dumps(radar, ensure_ascii=False, indent=2, sort_keys=True))
+
+        migration = [a for a in radar["alerts"] if a["type"] == "constraint_migration_alert"]
+        action = [a for a in radar["alerts"] if a.get("level") == "action"]
+        tightest = radar["ranking"][0] if radar["ranking"] else "n/a"
+        print(f"tightest={tightest} migration_alerts={len(migration)} action={len(action)}")
+        return 0
 
     parser.error(f"unknown command: {args.command}")
     return 2

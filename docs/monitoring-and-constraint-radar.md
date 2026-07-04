@@ -173,3 +173,27 @@
 - 从 `segments` / `profit_pools` / `causal_map.target` 派生潜伏约束。
 - 复用 `quality_scorecard.causal_quality` 判断机制链是否足够可靠。
 - 复用 `calibration` 把重要告警转成可回测预测。
+
+## 9. Claude 的进一步意见 + v1 实现(2026-07-04)
+
+Codex 的 Section 8 把**运营骨架**做扎实了(三段节奏、三圈候选、四类告警、落地顺序),认同。
+但最难的"早于共识预判迁移"还偏薄——雷达"重打分看分数上升"是**滞后**确认。补四个齿轮:
+
+- **A 余量比侵蚀(leading)**:下一个绑定的约束 = 相邻环节里 `capacity_growth / demand_growth`
+  最小、下降最快的那个。余量比在评分/价格反映"已绑定"之前就开始下降。
+- **B 斜率惊奇**:盯"实现斜率 − 论点假设斜率"这个 gap 与加速度,而非绝对水平。配版本化基准斜率库。
+- **C 共识代理**:候选约束在已抓取语料里的**提及频率趋势**;"余量比侵蚀 + 提及仍低而平"= 前共识窗口 = alpha。
+- **D 雷达自校准**:每条迁移判断 = 带日期的预测,事后 Brier 打分;否则雷达退化成"总能找到一个在迁移的约束"的讲故事机。
+- 方法按圈分:物理约束用余量比法;`second_order_external`(电网/政策/地缘)走 signpost。
+- 雷达需自己的持久化时间序列 `radar_state`(算 delta/斜率/校准的底座)。
+
+**v1 已实现**(`src/fundamental_research_engine/radar.py` + `fre radar`,确定性、离线、不侵入 pipeline):
+齿轮 **A + B + F**。`fre radar <theme> <radar_spec.json>`:三圈候选(exogenous 走 signpost)、
+余量比排名、门控告警(watch/investigate/action,带 old/new ratio + driver_path + 反证条件)、
+`uncovered_candidates` 提示未覆盖的 theme 派生候选、`radar_state/<theme>.json` 时序持久化。
+demo(`configs/radar/hbm4.json`):HBM=0.79 为承认约束,**rack power/cooling=0.65 更紧 → action 迁移告警
+"now tighter than any acknowledged constraint"**;二次运行显示 0.65→0.575 侵蚀 −0.075。
+
+**下一增量**:C 共识代理(复用抓取语料的提及频率)→ 只在"迁移且未被定价"时升级告警;
+D 雷达自校准(迁移判断 → calibration 预测 → Brier);`fre watch --weekly`(watchlist + 上次 run + diff + radar delta)+ digest;
+把候选从 `causal_map.target`/`segments` 自动派生(目前仅 `uncovered_candidates` 提示)。

@@ -850,6 +850,35 @@ Suggested next implementation units for Claude:
    stable.
 3. Keep generated watch reports under ignored `reports/watch/<date>/`.
 
+## Constraint Radar v1 (2026-07-04, Claude)
+
+Implemented the first increment of the monitoring layer designed in
+`docs/monitoring-and-constraint-radar.md` (Claude+Codex discussion; Section 9 has
+Claude's four "gears" and the v1 scope). This box has no key/pip; radar v1 is
+deterministic + offline + hermetically tested, and does not touch the pipeline.
+
+- `src/fundamental_research_engine/radar.py` + `fre radar <theme> <spec.json>`:
+  gears A (headroom-ratio erosion), B (driver slope surprise), F (persisted
+  `radar_state/<theme>.json` time series). Candidate constraints in three rings
+  (current_binding / adjacent_latent / second_order_external; the exogenous ring
+  uses a signpost, not a ratio). Ranks by `capacity_growth/demand_growth`, detects
+  migration vs the prior run, emits `driver_slope_alert` / `constraint_migration_alert`
+  at watch/investigate/action with old/new ratio, driver_path, and a disconfirming
+  condition. `uncovered_candidates` surfaces theme-derived constraints not yet in
+  the spec. `configs/radar/hbm4.json` is a worked example; `radar_state/` is gitignored.
+- Verified: 170 tests pass (test_radar.py: 8). Demo: HBM headroom 0.79 is the
+  acknowledged binding constraint, but rack power/cooling at 0.65 is already tighter
+  → action migration alert; a second run shows it eroding 0.65→0.575 (delta −0.075)
+  off the persisted state.
+
+Next increments (designed, not built): gear C consensus proxy (mention-frequency
+trend over the fetched corpus → only escalate when migrating AND not yet priced);
+gear D radar self-calibration (each migration call → a dated calibration prediction
+→ Brier); `fre watch --weekly` (watchlist + last run + diff + radar delta) + digest;
+auto-derive candidates from `causal_map.target`/`segments` (today only surfaced as
+uncovered_candidates). Also still open from the earlier review: rename the
+`publishable_memo` readiness tier to something process-neutral (Codex agreed in 8.5).
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:
