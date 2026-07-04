@@ -215,5 +215,15 @@ demo(`configs/radar/hbm4.json`):HBM=0.79 为承认约束,**rack power/cooling=0.
 重活按事件下发、别压小 VPS(见第 5 节红线)。demo:`configs/watchlists/ai-compute.json` 扫 hbm4 →
 digest 顶部直接给出 "hbm4 — ACTION,tightest rack-power-cooling@0.65,pre-consensus alpha window"。
 
+**共识语料自动采集已落地**(2026-07-04,`corpus.py` + `fre sources corpus`):
+`fre sources corpus "<宽泛主题查询>" --forms --from --to --limit [--fetch-text] --out corpus.json`
+用 EDGAR keyless 全文检索建一份**带日期的文档语料**(`{documents:[{id,date,text,url,company,form}]}`),
+直接喂 `fre radar --corpus` / watchlist 的 `corpus` 字段。要点:查询要**宽泛**(题材层面,不是单个约束词),
+否则每篇都提及该约束、信号失真;`--fetch-text` 抓全文是重活(每份 filing 一次 GET),按需下发别压小 VPS,
+不加则只用标题(轻,仅供打通/冒烟)。顺带把 `default_edgar_get` 加了 **5xx 重试 + 线性退避**——
+EDGAR EFTS 在负载下会间歇性 500,重试后实测可稳定采集(Micron/Netlist/Credo 等真实 10-K)。
+诚实提示:信号质量取决于语料**广度与数量**,小样本 + 偏窄查询会噪声很大。
+
 **下一增量**:把候选从 `causal_map.target`/`segments` 自动派生(目前仅 `uncovered_candidates` 提示);
-共识语料的自动采集(EDGAR/news 按时间入库,喂 `--corpus`);把 digest 接到 Web 层 / 消息推送(Codex 8.4 第 3 步)。
+把 `fre sources corpus` 接进 `fre watch`(按题材自动建语料,免手工喂 `--corpus`);
+把 digest 接到 Web 层 / 消息推送(Codex 8.4 第 3 步)。

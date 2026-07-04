@@ -16,6 +16,7 @@ import json
 import os
 import re
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any, Callable
@@ -47,12 +48,42 @@ def _throttle() -> None:
     _last_call[0] = time.monotonic()
 
 
-def default_edgar_get(url: str, timeout: float = 15.0) -> Any:
-    """Rate-limited JSON GET against EDGAR with the SEC-required User-Agent."""
-    _throttle()
-    request = urllib.request.Request(url, headers={"User-Agent": _sec_user_agent(), "Accept": "application/json"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
-        return json.loads(response.read().decode("utf-8", "replace"))
+def _retry(operation: Any, *, retries: int, backoff: float, sleep: Any) -> Any:
+    """Run `operation` with linear backoff, retrying transient 5xx / connection errors.
+
+    A 4xx HTTPError (a genuine client error) is raised immediately, not retried.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(max(1, retries)):
+        try:
+            return operation()
+        except urllib.error.HTTPError as exc:
+            last_exc = exc
+            if exc.code < 500 or attempt == retries - 1:
+                raise
+        except urllib.error.URLError as exc:
+            last_exc = exc
+            if attempt == retries - 1:
+                raise
+        sleep(backoff * (attempt + 1))
+    if last_exc is not None:
+        raise last_exc
+    raise RuntimeError("unreachable")  # pragma: no cover
+
+
+def default_edgar_get(url: str, timeout: float = 15.0, *, retries: int = 3, backoff: float = 0.6) -> Any:
+    """Rate-limited JSON GET against EDGAR with the SEC-required User-Agent.
+
+    EDGAR full-text search (efts.sec.gov) intermittently returns 5xx under load, so
+    transient server errors and connection failures are retried with linear backoff.
+    """
+    def operation() -> Any:
+        _throttle()
+        request = urllib.request.Request(url, headers={"User-Agent": _sec_user_agent(), "Accept": "application/json"})
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return json.loads(response.read().decode("utf-8", "replace"))
+
+    return _retry(operation, retries=retries, backoff=backoff, sleep=time.sleep)
 
 
 def _build_search_url(query: str, forms: list[str] | None, date_from: str | None, date_to: str | None, offset: int) -> str:

@@ -901,12 +901,25 @@ error row, not a crash. `configs/watchlists/ai-compute.json` is a worked example
 Verified: 189 tests pass (test_watch.py 8). All four gears (A headroom / B slope /
 C consensus / D calibration) are now wired into the standing weekly loop.
 
+Consensus corpus auto-collection added (2026-07-04, Claude): `corpus.py` +
+`fre sources corpus "<broad query>" --forms --from --to --limit [--fetch-text] --out`.
+Builds a dated document corpus from EDGAR full-text search
+(`{documents:[{id,date,text,url,company,form}]}`) that feeds `fre radar --corpus` /
+a watchlist `corpus` field. `--fetch-text` pulls full filing text (heavy, one GET per
+filing — offload it); without it, documents fall back to title metadata (light, for
+wiring/smoke). Guidance baked into the docstring: use a BROAD theme query, not a
+per-constraint term, or the signal is meaningless. Also hardened `default_edgar_get`
+with 5xx retry + linear backoff (extracted testable `_retry`) — EDGAR EFTS
+intermittently 500s under load. Verified: 197 tests pass (test_corpus.py 5,
+test_edgar.py retry 3); live keyless smoke collected real Micron/Netlist/Credo 10-Ks
+and fed them through the radar consensus proxy end to end.
+
 Next increments (designed, not built): auto-derive candidates from
-`causal_map.target`/`segments` (today only surfaced as uncovered_candidates);
-auto-collect the consensus corpus (EDGAR/news over time feeding `--corpus`); wire the
-digest into the web layer / notifications (Codex 8.4 step 3). Also still open from the
-earlier review: rename the `publishable_memo` readiness tier to something
-process-neutral (Codex agreed in 8.5).
+`causal_map.target`/`segments` (today only surfaced as uncovered_candidates); wire
+`fre sources corpus` into `fre watch` (build each theme's corpus automatically instead
+of hand-feeding `--corpus`); wire the digest into the web layer / notifications (Codex
+8.4 step 3). Also still open from the earlier review: rename the `publishable_memo`
+readiness tier to something process-neutral (Codex agreed in 8.5).
 
 ## Collaboration Rule
 

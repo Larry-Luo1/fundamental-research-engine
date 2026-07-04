@@ -14,6 +14,7 @@ from .calibration import build_calibration, register_predictions, resolve_predic
 from .claims import claim_texts, extract_claims, validate_claims_shape, verify_quotes
 from .critique import summarize_critique, validate_critique_shape
 from .diff import default_diff_dir, diff_analysis, find_runs_for_theme, resolve_analysis_path
+from .corpus import build_corpus, default_fetch_text
 from .edgar import filing_to_evidence, search_filings
 from .evidence import build_evidence_audit, default_fetch, write_evidence_store
 from .io import read_json, write_json, write_text
@@ -184,6 +185,15 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--to", dest="date_to", default=None, help="Filed on/before (YYYY-MM-DD).")
     search.add_argument("--limit", type=int, default=10, help="Max filings to return.")
     search.add_argument("--out", type=Path, default=None, help="Write evidence-shaped results here (defaults to stdout).")
+
+    corpus_cmd = sources_sub.add_parser("corpus", help="Build a dated document corpus from EDGAR for the consensus proxy (gear C).")
+    corpus_cmd.add_argument("query", help="BROAD theme query (e.g. 'artificial intelligence accelerator'), not a per-constraint term.")
+    corpus_cmd.add_argument("--forms", default=None, help="Comma-separated form types, e.g. 10-K,10-Q,8-K.")
+    corpus_cmd.add_argument("--from", dest="date_from", default=None, help="Filed on/after (YYYY-MM-DD).")
+    corpus_cmd.add_argument("--to", dest="date_to", default=None, help="Filed on/before (YYYY-MM-DD).")
+    corpus_cmd.add_argument("--limit", type=int, default=40, help="Max filings to collect.")
+    corpus_cmd.add_argument("--fetch-text", action="store_true", help="Fetch each filing's full text (heavy; needed for a real signal). Off = titles only.")
+    corpus_cmd.add_argument("--out", type=Path, default=None, help="Write corpus JSON here (defaults to stdout).")
 
     extract = subparsers.add_parser("extract-claims", help="Extract quote-verified claims from a source.")
     extract.add_argument("theme", type=Path, help="Theme config (monolithic JSON or stage directory).")
@@ -1006,6 +1016,27 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
             print(f"found {len(found)} filing(s)")
+            return 0
+        if args.sources_command == "corpus":
+            forms = [f.strip() for f in args.forms.split(",") if f.strip()] if args.forms else None
+            try:
+                corpus = build_corpus(
+                    args.query,
+                    forms=forms,
+                    date_from=args.date_from,
+                    date_to=args.date_to,
+                    limit=args.limit,
+                    fetch_text=default_fetch_text if args.fetch_text else None,
+                )
+            except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as exc:
+                print(f"sources corpus: EDGAR request failed: {exc}")
+                return 1
+            if args.out is not None:
+                write_json(args.out, corpus)
+                print(args.out)
+            else:
+                print(json.dumps(corpus, ensure_ascii=False, indent=2, sort_keys=True))
+            print(f"corpus: {corpus['count']} document(s)")
             return 0
         parser.error(f"unknown sources command: {args.sources_command}")
         return 2

@@ -375,7 +375,9 @@ Two more signals sharpen it:
 - **Consensus proxy** (`--corpus <dated docs>`): scores how often each constraint is
   mentioned over time. A migration that is real *and* still barely mentioned is
   tagged `pre_consensus` — the window where it is not yet priced in; a rising trend
-  is flagged as likely already priced.
+  is flagged as likely already priced. Build the corpus automatically from EDGAR:
+  `fre sources corpus "<broad theme query>" --forms 10-K,10-Q --from ... --to ... --out corpus.json`
+  (`--fetch-text` pulls full filing text — heavier, needed for a real signal).
 - **Self-calibration** (`--register-predictions`): each migration call is written as
   a dated, falsifiable prediction; resolve it later with
   `fre calibrate <theme> --track-record <preds> --resolve <key> --outcome true|false`

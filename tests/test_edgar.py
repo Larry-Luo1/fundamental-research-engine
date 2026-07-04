@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import unittest
+import urllib.error
 
 from fundamental_research_engine.edgar import (
     _build_search_url,
     _parse_hit,
+    _retry,
     filing_to_evidence,
     search_filings,
 )
+
+
+def _http_error(code):
+    return urllib.error.HTTPError("url", code, "err", {}, None)
 
 # Shape mirrors a real EFTS hit (verified against efts.sec.gov).
 _HIT = {
@@ -46,6 +52,45 @@ class ParseHitTest(unittest.TestCase):
         hit = _parse_hit({"_id": "", "_source": {}})
         self.assertEqual(hit["url"], "")
         self.assertEqual(hit["form"], "")
+
+
+class RetryTest(unittest.TestCase):
+    def test_retries_transient_5xx_then_succeeds(self) -> None:
+        attempts = []
+        slept = []
+
+        def op():
+            attempts.append(1)
+            if len(attempts) < 3:
+                raise _http_error(500)
+            return {"ok": True}
+
+        result = _retry(op, retries=3, backoff=0.1, sleep=slept.append)
+        self.assertEqual(result, {"ok": True})
+        self.assertEqual(len(attempts), 3)
+        self.assertEqual(len(slept), 2)  # slept between the two failures
+
+    def test_4xx_is_not_retried(self) -> None:
+        attempts = []
+
+        def op():
+            attempts.append(1)
+            raise _http_error(404)
+
+        with self.assertRaises(urllib.error.HTTPError):
+            _retry(op, retries=3, backoff=0.1, sleep=lambda _: None)
+        self.assertEqual(len(attempts), 1)  # raised immediately
+
+    def test_gives_up_after_retries(self) -> None:
+        attempts = []
+
+        def op():
+            attempts.append(1)
+            raise _http_error(503)
+
+        with self.assertRaises(urllib.error.HTTPError):
+            _retry(op, retries=2, backoff=0.1, sleep=lambda _: None)
+        self.assertEqual(len(attempts), 2)
 
 
 class SearchFilingsTest(unittest.TestCase):
