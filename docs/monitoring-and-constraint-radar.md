@@ -81,3 +81,95 @@
 5. **约束雷达评分**:如何在现有 8 维瓶颈打分之上,表达"约束正在迁移"而不仅是"某环节评分高"?
 6. **校准闭环**:告警 → 生成/更新预测 → 事后兑现打分,如何自动串起来?
 7. **归属与架构**:监控是引擎内的 `fre watch`(CLI + 调度),还是独立的常驻服务?与 Web 层如何衔接?
+
+## 8. Codex 讨论后的暂定判断(2026-07-04)
+
+### 8.1 节奏:事件发现 + 周频雷达 + 季频深度重估
+
+不建议第一版做成"常驻大而全服务",也不建议每日全量重跑。更合适的节奏是三层:
+
+1. **轻量日频 / 事件监听**:只做 source discovery,不重跑完整分析。触发源包括
+   filing、财报、重大产品/产能公告、标准路线图、重要客户 capex 变化。
+2. **周频结构扫描**:重算约束雷达,比较本周 vs 上周的 bottleneck score、
+   causal edge、signpost、tracking signal。
+3. **季频深度重估**:财报季后重做完整主题分析、adversarial QC 和
+   calibration review。
+
+事件驱动负责早发现,周频扫描负责结构化复核,季频重估负责校准与方法论清账。
+第一版产品形态应先做可审计批处理,再升级为服务。
+
+### 8.2 潜伏瓶颈来源:三源合成,并分层管理
+
+相邻候选约束不应只靠模型生成,也不应只靠人工枚举。建议三源合成:
+
+1. **人工种子**:由 domain pack / ontology 定义候选约束,例如 HBM、CoWoS、
+   CPO、power、cooling、switching、substrate、EDA/IP、qualification、
+   grid interconnect。
+2. **自动派生**:从 `causal_map` 的 source/target、value chain 的
+   upstream/enabler、profit pool 的前置条件里抽取相邻约束。
+3. **模型扩展**:让模型基于机制链提出二阶候选,但必须进入 `candidate`
+   状态,不能直接进入正式雷达排名。
+
+约束池建议分三圈:
+
+- `current_binding`:当前已绑定或市场已经承认的约束。
+- `adjacent_latent`:如果当前约束被抬升,下一步最可能绑定的相邻环节。
+- `second_order_external`:电网、政策、地缘、客户预算、制造交付等外生约束。
+
+这能避免"模型想到什么就监控什么",也能避免只盯已有热门题材。
+
+### 8.3 告警口径:只报迁移、斜率、路标、退化
+
+告警不应是一个泛化总分,而应分为四类:
+
+1. `constraint_migration_alert`:潜伏约束分数跨过阈值,且周环比明显上升。
+2. `driver_slope_alert`:上游驱动斜率超出基准,例如算力/$、rack power、
+   capex、HBM attach、lead time。
+3. `signpost_alert`:已有 scenario trigger 被 quote-backed evidence 命中。
+4. `thesis_degradation_alert`:新证据削弱原 thesis,或原 causal edge 失效。
+
+每条告警至少需要:
+
+- quote-backed 来源。
+- 旧分数、新分数、变化原因。
+- 影响路径:哪个 driver -> 哪个 constraint -> 哪个 segment/company。
+- 反证条件:后续看到什么会撤销该告警。
+- 冷却期:同一主题同一原因不要反复报。
+
+告警级别建议三档:
+
+- `watch`:弱信号,进入周报,不打断。
+- `investigate`:多源确认或评分跨阈值,需要人工看。
+- `action`:高可靠来源 + 机制链闭合 + 约束迁移影响明确。
+
+### 8.4 第一版实现顺序
+
+建议按以下顺序落地,避免一开始就陷入调度、Web、消息系统:
+
+1. **`fre radar`**:读取主题,生成当前约束 + 潜伏约束排名,不接调度。
+2. **`fre watch --weekly`**:watchlist + 上次 run + diff + radar delta。
+3. **digest / 内控告警**:把 `watch` / `investigate` / `action` 输出成
+   quote-backed 摘要,再考虑 Web 层和消息推送。
+
+### 8.5 口径调整建议
+
+`publishable memo` 这个 tier 名称后续建议改成 `review-ready` 或
+`decision-review-ready`。监控层只应表达"约束在动、证据足够审查",
+不应表达"结论可发布 / 可交易"。这与内控口径一致:系统给过程信号,
+最终判断由人完成。
+
+### 8.6 给下一位实现者的接口建议
+
+第一轮可以新增独立模块,不要侵入既有 pipeline:
+
+- `radar.py`:约束池、候选来源、评分、迁移 delta。
+- `watch.py`:watchlist、上次运行状态、周频扫描、digest 生成。
+- `configs/watchlists/*.json`:声明要监控的主题、扫描节奏、候选约束种子。
+- `reports/watch/<date>/digest.md|json`:生成物,默认不提交。
+
+与现有能力的连接点:
+
+- 从 `theme.bottlenecks` 和 `theme.causal_map` 初始化当前约束。
+- 从 `segments` / `profit_pools` / `causal_map.target` 派生潜伏约束。
+- 复用 `quality_scorecard.causal_quality` 判断机制链是否足够可靠。
+- 复用 `calibration` 把重要告警转成可回测预测。

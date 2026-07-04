@@ -818,6 +818,38 @@ awaiting user): #3 causal_map is opt-in and absent from the guided/`--auto` flow
 (e.g. `review-ready`); #5 quote-presence != entailment (document + rely on
 adversarial QC / human review).
 
+## Monitoring / Constraint Radar Discussion Update (2026-07-04, Codex)
+
+User asked how to upgrade the engine from "static theme analysis" to
+"forecasting binding-constraint migration" and pointed to
+`docs/monitoring-and-constraint-radar.md`.
+
+Updated that document with Codex's provisional answers:
+
+- **Cadence**: use event discovery + weekly radar recomputation + quarterly deep
+  re-underwriting. Do not start with daily full reruns or a heavyweight daemon.
+- **Latent bottleneck sourcing**: combine human domain seeds, automatic
+  derivation from `causal_map` / value chain / profit pools, and model-generated
+  candidates that stay in `candidate` state until validated.
+- **Alert taxonomy**: split alerts into `constraint_migration_alert`,
+  `driver_slope_alert`, `signpost_alert`, and `thesis_degradation_alert`.
+  Each alert should include quote-backed evidence, old/new scores, causal
+  impact path, disconfirming condition, and cooldown.
+- **Implementation sequence**: start with `fre radar`, then `fre watch --weekly`,
+  then digest / internal-control alert outputs. Web/message integration should
+  come after the batch loop is auditable.
+- **Naming recommendation**: rename `publishable memo` to `review-ready` or
+  `decision-review-ready` later, because monitoring should emit process signals,
+  not imply tradable conclusions.
+
+Suggested next implementation units for Claude:
+
+1. Add `radar.py` and a `fre radar` CLI command that builds current + latent
+   constraint rankings from a theme.
+2. Add `configs/watchlists/*.json` only after the radar output contract is
+   stable.
+3. Keep generated watch reports under ignored `reports/watch/<date>/`.
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:
