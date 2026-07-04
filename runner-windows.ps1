@@ -258,6 +258,13 @@ try {
     }
 
     if ($local -ne $remote) {
+      $mergeBase = (& git merge-base HEAD "origin/$Branch").Trim()
+      if ($LASTEXITCODE -eq 0 -and $mergeBase -eq $remote) {
+        Write-Step "Local HEAD is ahead of origin/$Branch. Push local commits before enabling auto-reset." Yellow
+        Start-Sleep -Seconds $IntervalSec
+        continue
+      }
+
       $ts = Get-Date -Format "HH:mm:ss"
       Write-Step "[$ts] New commit found: $($local.Substring(0, 7)) -> $($remote.Substring(0, 7))" Yellow
       $changed = @(& git diff --name-only $local $remote)

@@ -29,6 +29,7 @@ powershell -ExecutionPolicy Bypass -File runner-windows.ps1
 - 默认只监听 `127.0.0.1:8000`，避免把服务暴露到公网网卡。
 - 如果 8000 端口已经被旧 Python 服务占用，默认会先停止旧监听，避免“一闪而退”。
 - 每 3 秒 `git fetch origin main`，发现新提交就 `git reset --hard origin/main`。
+- 如果本地有尚未推送的提交领先远端，脚本会暂停自动 reset 并提示先推送，避免把本地修复擦掉。
 - 如果 `pyproject.toml` 变了，会自动重装依赖。
 
 启动成功后访问：
