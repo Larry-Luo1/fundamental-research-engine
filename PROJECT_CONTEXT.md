@@ -598,9 +598,39 @@ for f in configs/themes/*.json; do PYTHONPATH=src python3 -m fundamental_researc
 ```
 
 Known limitations / next steps:
-- The verified rich fields (`quote`, `confidence`, `bears_on`, `verified`) currently live in the extraction report; the theme still stores only `list[str]` claims. Next step is to persist the rich provenance as a sidecar in `data/evidence/<theme>/claims.json`.
+- The verified rich fields (`quote`, `confidence`, `bears_on`, `verified`) still do not change the theme schema (`evidence[].claims` remains `list[str]`), but the next section implements sidecar persistence in `data/evidence/<theme>/claims.json`.
 - EDGAR source search and claim extraction are still separate commands; next step is a controlled batch path (`evidence-sync --discover-edgar` / `--extract-claims`) that defaults to candidate reports, not automatic theme mutation.
 - Real model extraction still needs `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`; CI remains hermetic through fake adapters and pre-authored JSON fixtures.
+
+## Rich Claim Provenance Sidecar (2026-07-04, Codex)
+
+Implemented the first post-review hardening step: quote-verified claim metadata
+can now be persisted in the evidence store, not just returned in an extraction
+report.
+
+- `src/fundamental_research_engine/evidence.py`:
+  - `claim_records(..., rich_claims=...)` now accepts rich claim metadata and merges it into `data/evidence/<theme>/claims.json`.
+  - Existing theme claims keep stable ids like `E1.C1` with `status: "applied"`.
+  - Verified rich claims not yet present in the theme are retained as candidate sidecar records like `E1.Q1` with `status: "candidate"`.
+  - Claim records now carry optional provenance fields: `quote`, `confidence`, `bears_on`, `verified`, `source_title`, `source_url`, `source_sha256`, `extracted_at`, `extraction_model`, `extraction_model_name`, and `extraction_attempts`.
+  - `manifest.json` now includes `quote_verified_claim_count` and `candidate_claim_count`.
+- `fre extract-claims`:
+  - added `--store` to write rich provenance into `data/evidence/<theme>/claims.json`;
+  - added `--store-root` to place the evidence store outside the project root when needed;
+  - `--apply --store` reloads the updated theme so rich metadata attaches to the stable `E*.C*` claim ids.
+- Docs updated: README and `docs/data-sources-design.md` now describe applied vs candidate claim provenance.
+
+Verification:
+```bash
+PYTHONPATH=src python3 -m py_compile src/fundamental_research_engine/evidence.py src/fundamental_research_engine/cli.py
+PYTHONPATH=src python3 -m unittest tests.test_evidence tests.test_cli
+PYTHONPATH=src python3 -m unittest discover -s tests            # 146 pass
+for f in configs/themes/*.json; do PYTHONPATH=src python3 -m fundamental_research_engine validate "$f" || exit 1; done
+```
+
+Next recommended step: add a `causal_map` stage whose edges must cite claim ids
+from this provenance store. That is the bridge from evidence collection to real
+industry-chain insight.
 
 ## Collaboration Rule
 

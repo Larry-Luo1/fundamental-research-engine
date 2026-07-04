@@ -266,27 +266,99 @@ def normalized_evidence_records(
     ]
 
 
+def _claim_text_key(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value)).strip()
+
+
+def _empty_claim_provenance(item: Evidence) -> dict[str, Any]:
+    return {
+        "status": "applied",
+        "quote": None,
+        "confidence": None,
+        "bears_on": [],
+        "verified": False,
+        "source_title": item.title,
+        "source_url": item.url,
+        "source_sha256": None,
+        "extracted_at": None,
+        "extraction_model": None,
+        "extraction_model_name": None,
+        "extraction_attempts": None,
+    }
+
+
+def _merge_rich_claims(records: list[dict[str, Any]], rich_claims: list[dict[str, Any]]) -> None:
+    by_claim_text = {
+        (str(record.get("evidence_id", "")), _claim_text_key(record.get("claim", ""))): record
+        for record in records
+    }
+    candidate_counts: Counter[str] = Counter()
+    for rich in rich_claims:
+        evidence_id = str(rich.get("evidence_id", "")).strip()
+        claim_text = _claim_text_key(rich.get("claim", rich.get("text", "")))
+        if not evidence_id or not claim_text:
+            continue
+
+        record = by_claim_text.get((evidence_id, claim_text))
+        if record is None:
+            candidate_counts[evidence_id] += 1
+            record = {
+                "theme_id": str(rich.get("theme_id", "")),
+                "claim_id": f"{evidence_id}.Q{candidate_counts[evidence_id]}",
+                "evidence_id": evidence_id,
+                "claim": claim_text,
+                "source_type": str(rich.get("source_type", "")),
+                "date": str(rich.get("date", "")),
+                "reliability": str(rich.get("reliability", "")),
+                "linked_owners": [],
+                "status": "candidate",
+            }
+            records.append(record)
+            by_claim_text[(evidence_id, claim_text)] = record
+        else:
+            record["status"] = "applied"
+
+        record.update(
+            {
+                "quote": rich.get("quote"),
+                "confidence": rich.get("confidence"),
+                "bears_on": [str(item) for item in rich.get("bears_on", [])],
+                "verified": bool(rich.get("verified")),
+                "source_title": rich.get("source_title"),
+                "source_url": rich.get("source_url"),
+                "source_sha256": rich.get("source_sha256"),
+                "extracted_at": rich.get("extracted_at"),
+                "extraction_model": rich.get("extraction_model"),
+                "extraction_model_name": rich.get("extraction_model_name"),
+                "extraction_attempts": rich.get("extraction_attempts"),
+            }
+        )
+
+
 def claim_records(
     theme_id: str,
     evidence: list[Evidence],
     owners_by_type: dict[str, list[EvidenceOwner]],
+    rich_claims: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     links_by_evidence = _owner_links(owners_by_type)
     records: list[dict[str, Any]] = []
     for item in evidence:
         for index, claim in enumerate(item.claims, start=1):
-            records.append(
-                {
-                    "theme_id": theme_id,
-                    "claim_id": f"{item.id}.C{index}",
-                    "evidence_id": item.id,
-                    "claim": claim,
-                    "source_type": item.source_type,
-                    "date": item.date,
-                    "reliability": item.reliability,
-                    "linked_owners": links_by_evidence.get(item.id, []),
-                }
-            )
+            record = {
+                "theme_id": theme_id,
+                "claim_id": f"{item.id}.C{index}",
+                "evidence_id": item.id,
+                "claim": claim,
+                "source_type": item.source_type,
+                "date": item.date,
+                "reliability": item.reliability,
+                "linked_owners": links_by_evidence.get(item.id, []),
+            }
+            record.update(_empty_claim_provenance(item))
+            records.append(record)
+    if rich_claims:
+        _merge_rich_claims(records, rich_claims)
     return records
 
 
@@ -297,6 +369,7 @@ def write_evidence_store(
     store_root: Path,
     fetch_sources: bool = False,
     fetch: Fetcher = default_fetch,
+    rich_claims: list[dict[str, Any]] | None = None,
 ) -> dict[str, str]:
     raw_dir = store_root / "data" / "raw_sources" / theme_id
     normalized_dir = store_root / "data" / "normalized" / theme_id
@@ -349,7 +422,7 @@ def write_evidence_store(
 
     owners_by_evidence = _owner_links(owners_by_type)
     normalized = normalized_evidence_records(theme_id, evidence, owners_by_type)
-    claims = claim_records(theme_id, evidence, owners_by_type)
+    claims = claim_records(theme_id, evidence, owners_by_type, rich_claims=rich_claims)
     audit = build_evidence_audit(evidence, owners_by_type)
     manifest = {
         "theme_id": theme_id,
@@ -361,6 +434,8 @@ def write_evidence_store(
         "audit_path": str(evidence_dir / "audit.json"),
         "evidence_count": len(evidence),
         "claim_count": len(claims),
+        "quote_verified_claim_count": sum(1 for item in claims if item.get("verified")),
+        "candidate_claim_count": sum(1 for item in claims if item.get("status") == "candidate"),
         "fetch_attempted": fetch_sources,
         "fetch_results": fetch_results,
         "linked_evidence_count": sum(1 for item in evidence if item.id in owners_by_evidence),

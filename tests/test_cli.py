@@ -274,6 +274,9 @@ class ExtractClaimsCliTest(unittest.TestCase):
                     "--claims",
                     str(claims_path),
                     "--apply",
+                    "--store",
+                    "--store-root",
+                    str(tmp_path),
                     "--out",
                     str(out_path),
                     "--project-root",
@@ -289,6 +292,24 @@ class ExtractClaimsCliTest(unittest.TestCase):
                 e1["claims"],
             )
             self.assertNotIn("NVIDIA said HBM supply is already unconstrained.", e1["claims"])
+            report = json.loads(out_path.read_text(encoding="utf-8"))
+            self.assertTrue(report["stored"])
+            claims_store = json.loads(
+                (tmp_path / "data" / "evidence" / "hbm4" / "claims.json").read_text(encoding="utf-8")
+            )
+            stored_claim = next(
+                item
+                for item in claims_store["records"]
+                if item["claim"]
+                == "NVIDIA reported data center revenue increased because AI customers are scaling infrastructure."
+            )
+            self.assertEqual(stored_claim["status"], "applied")
+            self.assertEqual(
+                stored_claim["quote"],
+                "NVIDIA reported data center revenue increased because AI customers are scaling infrastructure.",
+            )
+            self.assertTrue(stored_claim["verified"])
+            self.assertTrue(stored_claim["source_sha256"])
 
     def test_extract_claims_manual_mode_writes_prompt(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

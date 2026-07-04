@@ -91,7 +91,7 @@ This writes deterministic local records under `data/`:
 
 - `data/raw_sources/<theme_id>/<evidence_id>.json`: source snapshots from the theme config
 - `data/normalized/<theme_id>/evidence.json`: normalized evidence records
-- `data/evidence/<theme_id>/claims.json`: stable claim records such as `E1.C1`
+- `data/evidence/<theme_id>/claims.json`: claim records such as `E1.C1`, with optional quote provenance
 - `data/evidence/<theme_id>/coverage.json`: owner-level evidence coverage
 - `data/evidence/<theme_id>/audit.json`: full evidence audit report
 - `data/evidence/<theme_id>/manifest.json`: generated file manifest
@@ -302,11 +302,19 @@ PYTHONPATH=src python3 -m fundamental_research_engine extract-claims configs/the
 # Human-reviewed candidate JSON can be applied back to evidence[].claims.
 PYTHONPATH=src python3 -m fundamental_research_engine extract-claims configs/themes/hbm4.json \
   --source E1 --source-text nvidia-result.txt --claims claim-report.json --apply
+
+# Persist quote/confidence/bears_on provenance into the evidence store sidecar.
+PYTHONPATH=src python3 -m fundamental_research_engine extract-claims configs/themes/hbm4.json \
+  --source E1 --source-text nvidia-result.txt --claims claim-report.json --apply --store
 ```
 
 By default this command does not modify the theme; `--apply` appends only the
 verified claim text to the matched `evidence[]` item. The richer extraction
 report retains `quote`, `confidence`, `bears_on`, and `verified` for review.
+With `--store`, those fields are written to
+`data/evidence/<theme_id>/claims.json`. Claims already present in the theme keep
+stable ids like `E1.C1`; verified-but-unapplied candidates are stored as
+candidate records like `E1.Q1`.
 
 ## Methodology
 

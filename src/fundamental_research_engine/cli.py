@@ -183,6 +183,13 @@ def build_parser() -> argparse.ArgumentParser:
     extract.add_argument("--max-attempts", type=int, default=2, help="Maximum model attempts when JSON parsing or validation fails.")
     extract.add_argument("--max-tokens", type=int, default=None, help="Max output tokens for the openai/claude adapters.")
     extract.add_argument("--apply", action="store_true", help="Append verified claim text back to the matched evidence item.")
+    extract.add_argument("--store", action="store_true", help="Write rich quote provenance into data/evidence/<theme>/claims.json.")
+    extract.add_argument(
+        "--store-root",
+        type=Path,
+        default=None,
+        help="Root for the evidence store when --store is used. Defaults to --project-root.",
+    )
     extract.add_argument("--out", type=Path, default=None, help="Write extraction report here (defaults to stdout).")
     extract.add_argument("--project-root", type=Path, default=Path.cwd(), help="Project root containing knowledge/ and prompts/.")
 
@@ -297,6 +304,56 @@ def _apply_claim_texts(theme_path: Path, source_ref: str, texts: list[str], proj
     if errors:
         raise ValueError("updated theme failed validation: " + "; ".join(errors))
     write_json(target_path, data)
+
+
+def _store_owners(theme: Theme) -> dict[str, list[Any]]:
+    return {
+        "bottleneck": theme.bottlenecks,
+        "company": theme.companies,
+    }
+
+
+def _rich_claims_for_store(
+    theme: Theme,
+    evidence: Evidence,
+    claims: list[dict[str, Any]],
+    *,
+    source_title: str,
+    source_url: str,
+    source_text: str,
+    model: str,
+    model_name: str | None,
+    attempts: int,
+) -> list[dict[str, Any]]:
+    extracted_at = datetime.now(timezone.utc).isoformat()
+    source_sha256 = _sha256_text(source_text)
+    records: list[dict[str, Any]] = []
+    for claim in claims:
+        text = str(claim.get("text", "")).strip()
+        if not text:
+            continue
+        records.append(
+            {
+                "theme_id": theme.id,
+                "evidence_id": evidence.id,
+                "claim": text,
+                "quote": claim.get("quote"),
+                "confidence": claim.get("confidence"),
+                "bears_on": [str(item) for item in claim.get("bears_on", [])],
+                "verified": bool(claim.get("verified")),
+                "source_type": evidence.source_type,
+                "date": evidence.date,
+                "reliability": evidence.reliability,
+                "source_title": source_title,
+                "source_url": source_url,
+                "source_sha256": source_sha256,
+                "extracted_at": extracted_at,
+                "extraction_model": model,
+                "extraction_model_name": model_name,
+                "extraction_attempts": attempts,
+            }
+        )
+    return records
 
 
 def _sha256_text(value: str) -> str:
@@ -756,6 +813,8 @@ def main(argv: list[str] | None = None) -> int:
             "dropped_unverified": extraction["dropped_unverified"],
             "attempts": extraction["attempts"],
             "applied": False,
+            "stored": False,
+            "store": None,
         }
 
         if args.apply:
@@ -766,6 +825,36 @@ def main(argv: list[str] | None = None) -> int:
                 return 1
             report["applied"] = True
 
+        if args.store:
+            if evidence is None:
+                print("extract-claims: --store requires --source to match an existing evidence id or URL")
+                return 1
+            store_theme = load_and_validate_theme(args.theme, args.project_root) if args.apply else theme
+            store_evidence = _find_evidence(store_theme, args.source)
+            if store_evidence is None:
+                print("extract-claims: --store could not resolve the source evidence after applying claims")
+                return 1
+            rich_claims = _rich_claims_for_store(
+                store_theme,
+                store_evidence,
+                report["claims"],
+                source_title=source_title,
+                source_url=source_url,
+                source_text=source_text,
+                model=args.model,
+                model_name=args.model_name,
+                attempts=report["attempts"],
+            )
+            paths = write_evidence_store(
+                store_theme.id,
+                store_theme.evidence,
+                _store_owners(store_theme),
+                args.store_root or args.project_root,
+                rich_claims=rich_claims,
+            )
+            report["stored"] = True
+            report["store"] = paths
+
         if args.out is not None:
             write_json(args.out, report)
             print(args.out)
@@ -773,7 +862,8 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
         print(
             f"verified_claims={len(report['claims'])} "
-            f"dropped_unverified={report['dropped_unverified']} applied={report['applied']}"
+            f"dropped_unverified={report['dropped_unverified']} "
+            f"applied={report['applied']} stored={report['stored']}"
         )
         return 0
 

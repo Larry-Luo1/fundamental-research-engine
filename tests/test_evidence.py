@@ -85,6 +85,80 @@ class EvidenceAuditTest(unittest.TestCase):
             raw_e1 = json.loads(raw_e1.read_text(encoding="utf-8"))
             self.assertEqual(raw_e1["source_snapshot_type"], "theme_config_record")
 
+    def test_write_evidence_store_merges_rich_claim_provenance(self) -> None:
+        claim_text = self.theme.evidence[0].claims[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = write_evidence_store(
+                self.theme.id,
+                self.theme.evidence,
+                {
+                    "bottleneck": self.theme.bottlenecks,
+                    "company": self.theme.companies,
+                },
+                Path(tmp),
+                rich_claims=[
+                    {
+                        "theme_id": self.theme.id,
+                        "evidence_id": "E1",
+                        "claim": claim_text,
+                        "quote": "Data-center demand remains large",
+                        "confidence": "high",
+                        "bears_on": ["thesis", "bn-hbm4-capacity-and-qualification"],
+                        "verified": True,
+                        "source_title": self.theme.evidence[0].title,
+                        "source_url": self.theme.evidence[0].url,
+                        "source_sha256": "sourcehash",
+                        "extracted_at": "2026-07-04T00:00:00+00:00",
+                        "extraction_model": "manual",
+                        "extraction_model_name": None,
+                        "extraction_attempts": 0,
+                    }
+                ],
+            )
+
+            claims = json.loads(Path(paths["claims_path"]).read_text(encoding="utf-8"))
+            record = next(item for item in claims["records"] if item["claim_id"] == "E1.C1")
+            self.assertEqual(record["status"], "applied")
+            self.assertEqual(record["quote"], "Data-center demand remains large")
+            self.assertEqual(record["confidence"], "high")
+            self.assertEqual(record["bears_on"], ["thesis", "bn-hbm4-capacity-and-qualification"])
+            self.assertTrue(record["verified"])
+            self.assertEqual(record["source_sha256"], "sourcehash")
+
+            manifest = json.loads(Path(paths["manifest_path"]).read_text(encoding="utf-8"))
+            self.assertEqual(manifest["quote_verified_claim_count"], 1)
+            self.assertEqual(manifest["candidate_claim_count"], 0)
+
+    def test_write_evidence_store_keeps_unapplied_rich_claims_as_candidates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = write_evidence_store(
+                self.theme.id,
+                self.theme.evidence,
+                {"bottleneck": self.theme.bottlenecks, "company": self.theme.companies},
+                Path(tmp),
+                rich_claims=[
+                    {
+                        "theme_id": self.theme.id,
+                        "evidence_id": "E1",
+                        "claim": "A candidate claim not yet present in the theme.",
+                        "quote": "A candidate claim not yet present in the theme.",
+                        "confidence": "medium",
+                        "bears_on": ["thesis"],
+                        "verified": True,
+                    }
+                ],
+            )
+
+            claims = json.loads(Path(paths["claims_path"]).read_text(encoding="utf-8"))
+            candidate = next(item for item in claims["records"] if item["claim_id"] == "E1.Q1")
+            self.assertEqual(candidate["status"], "candidate")
+            self.assertEqual(candidate["claim"], "A candidate claim not yet present in the theme.")
+            self.assertTrue(candidate["verified"])
+
+            manifest = json.loads(Path(paths["manifest_path"]).read_text(encoding="utf-8"))
+            self.assertEqual(manifest["quote_verified_claim_count"], 1)
+            self.assertEqual(manifest["candidate_claim_count"], 1)
+
     def test_write_evidence_store_with_fetch_sources_uses_fetched_content(self) -> None:
         def fake_fetch(url: str) -> FetchResult:
             if url.endswith("E4"):
