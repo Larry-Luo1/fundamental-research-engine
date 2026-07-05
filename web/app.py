@@ -5,10 +5,11 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
+from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from . import auth
 from .config import load_config
@@ -115,6 +116,32 @@ class CritiqueBody(BaseModel):
 class RefineBody(BaseModel):
     stage: str
     instruction: str = ""
+
+
+class ClientLogBody(BaseModel):
+    level: str = "info"
+    message: str
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
+def _safe_client_context(context: dict[str, Any]) -> dict[str, str]:
+    safe: dict[str, str] = {}
+    for key, value in context.items():
+        if value is None:
+            continue
+        safe[str(key)[:80]] = str(value)[:500]
+    return safe
+
+
+@app.post("/api/client-log")
+def client_log(body: ClientLogBody, _: None = Depends(require_auth)) -> dict:
+    service.audit.write(
+        "client_log",
+        level=body.level[:40],
+        message=body.message[:1000],
+        context=_safe_client_context(body.context),
+    )
+    return {"ok": True}
 
 
 @app.get("/api/analyses")

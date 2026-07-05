@@ -89,6 +89,28 @@ async function api(path, opts={}) {
   if (!r.ok) { let d; try{d=await r.json();}catch(e){} throw new Error((d&&d.detail)||("HTTP "+r.status)); }
   return r.status===204 ? null : r.json();
 }
+async function clientLog(level, message, context={}) {
+  try {
+    await fetch("/api/client-log", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({level, message: String(message || "").slice(0, 1000), context})
+    });
+  } catch(e) {}
+}
+window.addEventListener("error", ev => {
+  clientLog("error", ev.message || "window error", {
+    source: ev.filename || location.href,
+    line: ev.lineno,
+    column: ev.colno,
+    stack: ev.error && ev.error.stack
+  });
+});
+window.addEventListener("unhandledrejection", ev => {
+  const reason = ev.reason || {};
+  clientLog("unhandledrejection", reason.message || String(reason), {stack: reason.stack});
+});
 function esc(s){ return (s==null?"":String(s)).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 const fmt = {
   hype: {

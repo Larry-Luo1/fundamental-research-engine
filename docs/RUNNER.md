@@ -38,6 +38,22 @@ powershell -ExecutionPolicy Bypass -File runner-windows.ps1
 http://localhost:8000
 ```
 
+## 远程查看本机运行日志
+如果需要让 VPS 查看 Windows 本机的前后端运行日志，另开一个窗口启动日志通道：
+```powershell
+powershell -ExecutionPolicy Bypass -File start-remote-log-channel.ps1
+```
+
+它会启动一个只读日志服务，并通过 `ssh -R` 映射给 VPS。连接成功后，在 VPS 上查看：
+```bash
+curl http://127.0.0.1:19024/logs
+curl "http://127.0.0.1:19024/tail?file=all&lines=100"
+curl "http://127.0.0.1:19024/tail?file=uvicorn-err&lines=200"
+curl "http://127.0.0.1:19024/tail?file=audit&lines=200"
+```
+
+详细说明见 `docs/REMOTE_LOGS.md`。
+
 如果要临时换端口：
 ```powershell
 powershell -ExecutionPolicy Bypass -File runner-windows.ps1 -Port 8001

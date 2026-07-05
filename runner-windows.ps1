@@ -29,12 +29,28 @@ param(
 $ErrorActionPreference = "Stop"
 Set-Location -LiteralPath $PSScriptRoot
 
+function Initialize-LogFiles {
+  $script:LogDir = Join-Path $PSScriptRoot "web_data\logs"
+  New-Item -ItemType Directory -Force -Path $script:LogDir | Out-Null
+  $script:RunnerLogPath = Join-Path $script:LogDir "runner.log"
+  $script:UvicornOutLogPath = Join-Path $script:LogDir "uvicorn.out.log"
+  $script:UvicornErrLogPath = Join-Path $script:LogDir "uvicorn.err.log"
+
+  $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+  Add-Content -LiteralPath $script:RunnerLogPath -Encoding UTF8 -Value ""
+  Add-Content -LiteralPath $script:RunnerLogPath -Encoding UTF8 -Value "=== runner session started $stamp ==="
+}
+
 function Write-Step {
   param(
     [string]$Message,
     [ConsoleColor]$Color = "Cyan"
   )
   Write-Host "[runner] $Message" -ForegroundColor $Color
+  if ($script:RunnerLogPath) {
+    $stamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    Add-Content -LiteralPath $script:RunnerLogPath -Encoding UTF8 -Value "$stamp [runner] $Message"
+  }
 }
 
 function Assert-Command {
@@ -288,6 +304,7 @@ function Stop-ProcessTree {
   Stop-Process -Id $RootProcessId -Force -ErrorAction SilentlyContinue
 }
 
+Initialize-LogFiles
 Assert-Command "git"
 Initialize-GitNetwork
 $pythonExe = Resolve-Python
@@ -296,12 +313,17 @@ Ensure-WebDependencies -PythonExe $pythonExe
 Stop-CompatibleListeners -ListenPort $Port
 
 Write-Step "Starting uvicorn at http://localhost:$Port ..."
-$uvicorn = Start-Process -PassThru -NoNewWindow -FilePath $pythonExe `
-  -ArgumentList @("-m", "uvicorn", "web.app:app", "--host", $HostAddress, "--port", "$Port", "--reload")
+Write-Step "Runner log: $script:RunnerLogPath"
+Write-Step "Uvicorn stdout log: $script:UvicornOutLogPath"
+Write-Step "Uvicorn stderr log: $script:UvicornErrLogPath"
+$uvicorn = Start-Process -PassThru -WindowStyle Hidden -FilePath $pythonExe `
+  -ArgumentList @("-m", "uvicorn", "web.app:app", "--host", $HostAddress, "--port", "$Port", "--reload", "--access-log") `
+  -RedirectStandardOutput $script:UvicornOutLogPath `
+  -RedirectStandardError $script:UvicornErrLogPath
 
 Start-Sleep -Seconds 2
 if ($uvicorn.HasExited) {
-  throw "uvicorn exited immediately. Check the error output above."
+  throw "uvicorn exited immediately. Check $script:UvicornErrLogPath"
 }
 
 Write-Step "Watching origin/$Branch every ${IntervalSec}s. Press Ctrl+C to stop."
@@ -357,4 +379,5 @@ finally {
     Stop-ProcessTree -RootProcessId $uvicorn.Id
   }
   Stop-PythonListenersOnPort -ListenPort $Port
+  Write-Step "Runner stopped."
 }
