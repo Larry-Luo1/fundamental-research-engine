@@ -330,13 +330,16 @@ A-share, Hong Kong, and US securities (AkShare-style coverage, stdlib-only, no
 
 ```bash
 PYTHONPATH=src python3 -m fundamental_research_engine sources quote '宁德时代' --as-of 2026-07-08
-PYTHONPATH=src python3 -m fundamental_research_engine sources quote 'AAPL'   # -> 苹果 (105.AAPL)
+PYTHONPATH=src python3 -m fundamental_research_engine sources quote 'AAPL'      # -> 苹果 (105.AAPL)
+PYTHONPATH=src python3 -m fundamental_research_engine sources quote '沪铜主连'  # commodity future (copper)
 ```
 
-The snapshot carries price, total/circulating market cap, P/E (TTM), and P/B in
+The snapshot carries price and daily change/pct-change always, plus total/
+circulating market cap, P/E (TTM), and P/B for equities (dropped for futures) in
 `claims[]`, plus the quote page `url` and the `as_of` date (defaults to today).
-Quotes are delayed; treat them as process input for `company_positioning`, not
-as live trading data.
+The same command resolves equities (A/HK/US) and commodity futures (e.g. SHFE
+copper), so it also feeds the supply/demand + commodity themes. Quotes are
+delayed; treat them as process input, not live trading data.
 
 ## Quote-Backed Claim Extraction
 

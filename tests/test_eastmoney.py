@@ -19,8 +19,14 @@ _SEARCH = {
 }
 _QUOTE = {
     "rc": 0,
-    "data": {"f43": 361.0, "f57": "300750", "f58": "宁德时代",
+    "data": {"f43": 361.0, "f57": "300750", "f58": "宁德时代", "f169": -2.5, "f170": -0.69,
              "f116": 1670220960821.0, "f117": 1536789898891.0, "f162": 20.14, "f167": 5.11},
+}
+# Futures snapshot: equity-only fields come back as "-" and must be dropped.
+_FUT_QUOTE = {
+    "rc": 0,
+    "data": {"f43": 102850.0, "f57": "cum", "f58": "沪铜主连", "f169": -110.0, "f170": -0.11,
+             "f116": "-", "f117": "-", "f162": "-", "f167": "-"},
 }
 
 
@@ -46,6 +52,18 @@ class QuoteTest(unittest.TestCase):
 
     def test_empty_payload_is_tolerated(self) -> None:
         self.assertEqual(quote("0.300750", http_get=lambda url: {"data": None}), {})
+
+    def test_futures_snapshot_keeps_price_change_drops_equity_fields(self) -> None:
+        q = quote("113.cum", http_get=lambda url: _FUT_QUOTE)
+        self.assertEqual(q["name"], "沪铜主连")
+        self.assertEqual(q["price"], 102850.0)
+        self.assertEqual(q["change"], -110.0)
+        ev = security_to_evidence({"mkt_num": "113", "code": "cum", "name": "沪铜主连"}, q,
+                                   as_of="2026-07-08", evidence_id="S1")
+        self.assertIn("price 102850.0", ev["claims"])
+        self.assertIn("change -110.0", ev["claims"])
+        # Equity-only "-" fields are filtered out of the metric claims.
+        self.assertFalse(any("PE(TTM)" in c or "market cap" in c for c in ev["claims"]))
 
 
 class QuotePageUrlTest(unittest.TestCase):

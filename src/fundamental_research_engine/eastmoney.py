@@ -101,7 +101,7 @@ def _quote_page_url(hit: dict[str, Any]) -> str:
 def quote(secid: str, *, http_get: HttpGet = default_em_get, ut: str = DEFAULT_UT) -> dict[str, Any]:
     """Fetch a delayed quote snapshot; return normalized numeric fields (or {})."""
     params = {"ut": ut, "fltt": "2", "invt": "2", "secid": secid,
-              "fields": "f43,f57,f58,f116,f117,f162,f167"}
+              "fields": "f43,f57,f58,f116,f117,f162,f167,f169,f170"}
     payload = http_get(f"{QUOTE_URL}?{urllib.parse.urlencode(params)}")
     data = (payload or {}).get("data") if isinstance(payload, dict) else None
     if not data:
@@ -110,6 +110,8 @@ def quote(secid: str, *, http_get: HttpGet = default_em_get, ut: str = DEFAULT_U
         "code": data.get("f57", ""),
         "name": data.get("f58", ""),
         "price": data.get("f43"),
+        "change": data.get("f169"),
+        "pct_change": data.get("f170"),
         "total_market_cap": data.get("f116"),
         "circulating_market_cap": data.get("f117"),
         "pe_ttm": data.get("f162"),
@@ -120,6 +122,8 @@ def quote(secid: str, *, http_get: HttpGet = default_em_get, ut: str = DEFAULT_U
 def _metric_claims(q: dict[str, Any]) -> list[str]:
     labels = [
         ("price", "price"),
+        ("change", "change"),
+        ("pct_change", "pct change"),
         ("total_market_cap", "total market cap"),
         ("circulating_market_cap", "circulating market cap"),
         ("pe_ttm", "PE(TTM)"),

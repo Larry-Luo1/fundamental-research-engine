@@ -995,10 +995,19 @@ Data collectors now cover both heads of the "中美两头" universe:
 - China disclosures: `cninfo.py` (`sources cn-search`)
 - Fundamentals A/HK/US: `eastmoney.py` (`sources quote`)
 
-Next recommended step: a macro/commodity series collector (FRED needs a free key;
-USGS is keyless but file-based) to feed the supply/demand themes and the
-constraint radar's tracking signals; and wire edgar/cninfo/eastmoney hits into the
-primer's `suggested_sources`.
+Update (same session): generalized `quote` to also cover **commodity futures**
+(added daily change/pct-change fields; equity-only mktcap/PE/PB come back as `"-"`
+for futures and are dropped). `sources quote 沪铜主连` returns a live keyless SHFE
+copper price snapshot, so the copper/supply-demand theme now has a commodity
+source. Verified live (宁德时代 equity + 沪铜主连 future).
+
+Macro time-series (FRED/World Bank) is deferred: FRED needs a free API key, and
+`api.worldbank.org` data paths return 502 from this box (metadata path works, so
+it's egress/proxy-specific, not a code issue). Commodity price snapshots via
+Eastmoney cover the near-term supply/demand need without a keyed/blocked source.
+
+Next recommended step: wire edgar/cninfo/eastmoney hits into the primer's
+`suggested_sources` (the remaining route item).
 
 ## Collaboration Rule
 
