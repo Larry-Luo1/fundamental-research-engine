@@ -932,6 +932,42 @@ Monitoring follow-ups completed (2026-07-04, Claude):
 Still open (lower priority): a front-end UI card / push notification for digests (Codex
 8.4 step 3 push part); extend the consensus corpus to non-filing sources (news).
 
+## China Source Collector — cninfo (2026-07-08, Claude)
+
+Added a free, zero-dependency China-market source collector as the counterpart to
+`edgar.py`, so the "both US + China" research universe is covered without any paid
+data subscription (US enterprise feeds like FactSet/S&P are not accessible).
+
+- `src/fundamental_research_engine/cninfo.py`: keyless full-text search over
+  official cninfo (巨潮资讯) Shenzhen/Shanghai disclosures via the public
+  `hisAnnouncement/query` JSON POST endpoint. Stdlib-only (`urllib`), injectable
+  `http_post` so tests are hermetic, <=8 rps throttle + browser UA, `<em>` strip,
+  Beijing (UTC+8) ms-timestamp → date, `finalpage` PDF URL build.
+  `announcement_to_evidence` emits the same evidence shape as `filing_to_evidence`
+  (`source_type: regulatory_filing`).
+- `fre sources cn-search "<query>" [--from --to] [--limit] [--column] [--out]`,
+  mirroring `sources search`. Full-text is cross-market (default `--column szse`
+  still returns Shanghai issuers); date range applied only when both bounds given.
+- `tests/test_cninfo.py` (7 tests, injected `http_post`, real-shape fixture).
+
+Verified LIVE from this box (cninfo is keyless; network works): `cn-search 固态电池`
+returned 3 real official disclosures (格林美/广东建工/金龙羽) with correct dates and
+`static.cninfo.com.cn` document URLs; grafting those evidence records onto
+`configs/themes/solid-state-battery.json` passes `validate_theme_dict` (schema +
+referential integrity).
+
+Context: this session also installed Anthropic's `financial-services` plugin
+marketplace (all 20 plugins) globally at the user level. Recommended low-cost data
+stack: EDGAR + cninfo + (future) AkShare/FRED/USGS collectors feeding the existing
+extract-claims/provenance/quality flow; US enterprise MCP connectors skipped.
+Financial skills (dcf/comps/earnings/initiating-coverage) used as offline
+methodology + Excel/deck output, not as data feeds.
+
+Next recommended step: add AkShare-style fundamentals and a macro/commodity source
+(FRED/USGS) as further stdlib-friendly collectors, and wire cninfo/EDGAR hits into
+the primer's `suggested_sources`. PDF body extraction for cninfo adjuncts remains
+out of scope for the zero-dependency core.
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:
@@ -943,19 +979,9 @@ Before ending a meaningful work session:
 
 ### Multi-agent note
 
-This repository is now being worked on by more than one independent agent
-session (Claude and Codex have both committed directly to `main`). Direct
-pushes to `main` have worked so far because sessions have been sequential,
-not concurrent, but that's luck, not a guarantee. Recommended practice going
-forward, once more than one agent/session might be active around the same
-time:
-
-- Work on a short-lived feature branch per session instead of committing
-  straight to `main`.
-- Before merging, pull `origin/main`, re-run the full test suite and sample
-  validation locally (or let CI do it), and resolve any conflicts by reading
-  both sides rather than blindly taking one.
-- Still fine to skip the branch for a genuinely solo, sequential session (as
-  every session so far has been) — this is a recommendation to reduce risk
-  as concurrency increases, not a hard rule retroactively applied to past
-  work.
+Both Codex and Claude now run **locally on the same host**, so work is
+effectively single-writer and sequential. Decision (2026-07-08, per the user):
+**work directly on `main`, no feature branches.** Before pushing, pull/rebase on
+`origin/main`, re-run the full test suite + sample validation, and resolve
+conflicts by reading both sides. The earlier feature-branch-per-session guidance
+is retired now that concurrency is no longer a real risk.

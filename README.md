@@ -303,6 +303,23 @@ Each result carries `source_type: regulatory_filing`, the filing date, and a
 direct document URL. This closes the "no source discovery" gap — sources are real
 filings rather than hand-typed or model-suggested URLs.
 
+### China disclosures (cninfo / 巨潮资讯)
+
+`fre sources cn-search` is the China-market counterpart to EDGAR: keyless
+full-text search over official Shenzhen/Shanghai-listed company disclosures on
+cninfo (the CSRC-designated disclosure platform). Same evidence tier, same
+evidence-shaped output — no paid data subscription.
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine sources cn-search \
+  '固态电池' --from 2026-01-01 --to 2026-06-30 --limit 8 --out cn-sources.json
+```
+
+Full-text search is cross-market (the default `--column szse` still returns
+Shanghai issuers); `--from`/`--to` apply only when both are given. Announcement
+bodies are usually PDFs, so the official headline is the quote-usable text; full
+PDF body extraction is out of scope for the zero-dependency core.
+
 ## Quote-Backed Claim Extraction
 
 `fre extract-claims` turns a source text into candidate evidence claims. Every

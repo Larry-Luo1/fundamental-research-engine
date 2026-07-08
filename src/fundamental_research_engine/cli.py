@@ -15,6 +15,7 @@ from .claims import claim_texts, extract_claims, validate_claims_shape, verify_q
 from .critique import summarize_critique, validate_critique_shape
 from .diff import default_diff_dir, diff_analysis, find_runs_for_theme, resolve_analysis_path
 from .corpus import build_corpus, default_fetch_text
+from .cninfo import announcement_to_evidence, search_announcements
 from .edgar import filing_to_evidence, search_filings
 from .evidence import build_evidence_audit, default_fetch, write_evidence_store
 from .io import read_json, write_json, write_text
@@ -186,6 +187,14 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--to", dest="date_to", default=None, help="Filed on/before (YYYY-MM-DD).")
     search.add_argument("--limit", type=int, default=10, help="Max filings to return.")
     search.add_argument("--out", type=Path, default=None, help="Write evidence-shaped results here (defaults to stdout).")
+
+    cn_search = sources_sub.add_parser("cn-search", help="Full-text search cninfo (巨潮资讯) China disclosures (keyless).")
+    cn_search.add_argument("query", help="Full-text query, e.g. '固态电池' or 'HBM'.")
+    cn_search.add_argument("--from", dest="date_from", default=None, help="Announced on/after (YYYY-MM-DD); applied only with --to.")
+    cn_search.add_argument("--to", dest="date_to", default=None, help="Announced on/before (YYYY-MM-DD); applied only with --from.")
+    cn_search.add_argument("--limit", type=int, default=10, help="Max announcements to return.")
+    cn_search.add_argument("--column", default="szse", help="cninfo query backend (default szse; full-text is cross-market).")
+    cn_search.add_argument("--out", type=Path, default=None, help="Write evidence-shaped results here (defaults to stdout).")
 
     corpus_cmd = sources_sub.add_parser("corpus", help="Build a dated document corpus from EDGAR for the consensus proxy (gear C).")
     corpus_cmd.add_argument("query", help="BROAD theme query (e.g. 'artificial intelligence accelerator'), not a per-constraint term.")
@@ -1027,6 +1036,23 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
             print(f"found {len(found)} filing(s)")
+            return 0
+        if args.sources_command == "cn-search":
+            try:
+                hits = search_announcements(
+                    args.query, date_from=args.date_from, date_to=args.date_to, limit=args.limit, column=args.column
+                )
+            except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as exc:
+                print(f"sources cn-search: cninfo request failed: {exc}")
+                return 1
+            found = [announcement_to_evidence(hit, evidence_id=f"S{index}") for index, hit in enumerate(hits, start=1)]
+            report = {"query": args.query, "count": len(found), "sources": found}
+            if args.out is not None:
+                write_json(args.out, report)
+                print(args.out)
+            else:
+                print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+            print(f"found {len(found)} announcement(s)")
             return 0
         if args.sources_command == "corpus":
             forms = [f.strip() for f in args.forms.split(",") if f.strip()] if args.forms else None
