@@ -968,6 +968,38 @@ Next recommended step: add AkShare-style fundamentals and a macro/commodity sour
 the primer's `suggested_sources`. PDF body extraction for cninfo adjuncts remains
 out of scope for the zero-dependency core.
 
+## Eastmoney Fundamentals Collector (2026-07-08, Claude)
+
+Second free collector, after cninfo: an "AkShare-style" fundamentals layer built
+stdlib-only (no akshare/pandas), so the financial-analysis skills (comps/DCF) get
+the numeric inputs they need on the same evidence rail as edgar/cninfo.
+
+- `src/fundamental_research_engine/eastmoney.py`: keyless Eastmoney (东方财富)
+  endpoints. `search_security` (searchadapter suggest → resolve name/ticker to a
+  `MktNum.Code` secid), `quote` (push2delay delayed snapshot: price, total/circ
+  market cap, PE(TTM), PB), `security_to_evidence` → evidence record with
+  `source_type: market_data`, metrics in `claims[]`, quote-page `url`, `as_of`
+  date. Stdlib `urllib`, injectable `http_get`, <=8 rps, browser UA + Referer.
+  Note: `push2.eastmoney.com` dropped connections from this box; `push2delay`
+  works — used it deliberately (delayed data is fine for research).
+- `fre sources quote "<name|ticker>" [--as-of] [--out]`.
+- `tests/test_eastmoney.py` (6 tests, injected http_get, real-shape fixtures).
+
+Verified LIVE from this box (all keyless): `quote 宁德时代` → 0.300750, PE 20.14 /
+PB 5.11; `quote AAPL` → 105.AAPL (苹果); `quote 腾讯控股` → 116.00700 — A-share +
+US + HK all resolve. The `market_data` evidence record passes `validate_theme_dict`
+when grafted onto a theme (`source_type` is not enum-restricted; reliability is).
+
+Data collectors now cover both heads of the "中美两头" universe:
+- US filings: `edgar.py` (`sources search`)
+- China disclosures: `cninfo.py` (`sources cn-search`)
+- Fundamentals A/HK/US: `eastmoney.py` (`sources quote`)
+
+Next recommended step: a macro/commodity series collector (FRED needs a free key;
+USGS is keyless but file-based) to feed the supply/demand themes and the
+constraint radar's tracking signals; and wire edgar/cninfo/eastmoney hits into the
+primer's `suggested_sources`.
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:

@@ -320,6 +320,24 @@ Shanghai issuers); `--from`/`--to` apply only when both are given. Announcement
 bodies are usually PDFs, so the official headline is the quote-usable text; full
 PDF body extraction is out of scope for the zero-dependency core.
 
+### Fundamentals snapshots (Eastmoney / 东方财富)
+
+`fre sources quote` resolves a company name or ticker to a keyless Eastmoney
+market-data snapshot — the numeric input the financial-analysis skills (comps,
+DCF) need — and returns it as an evidence-shaped `market_data` record. Covers
+A-share, Hong Kong, and US securities (AkShare-style coverage, stdlib-only, no
+`akshare`/`pandas`).
+
+```bash
+PYTHONPATH=src python3 -m fundamental_research_engine sources quote '宁德时代' --as-of 2026-07-08
+PYTHONPATH=src python3 -m fundamental_research_engine sources quote 'AAPL'   # -> 苹果 (105.AAPL)
+```
+
+The snapshot carries price, total/circulating market cap, P/E (TTM), and P/B in
+`claims[]`, plus the quote page `url` and the `as_of` date (defaults to today).
+Quotes are delayed; treat them as process input for `company_positioning`, not
+as live trading data.
+
 ## Quote-Backed Claim Extraction
 
 `fre extract-claims` turns a source text into candidate evidence claims. Every

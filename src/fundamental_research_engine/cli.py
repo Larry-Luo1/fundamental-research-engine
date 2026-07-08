@@ -16,6 +16,8 @@ from .critique import summarize_critique, validate_critique_shape
 from .diff import default_diff_dir, diff_analysis, find_runs_for_theme, resolve_analysis_path
 from .corpus import build_corpus, default_fetch_text
 from .cninfo import announcement_to_evidence, search_announcements
+from .eastmoney import quote as em_quote
+from .eastmoney import search_security, security_to_evidence
 from .edgar import filing_to_evidence, search_filings
 from .evidence import build_evidence_audit, default_fetch, write_evidence_store
 from .io import read_json, write_json, write_text
@@ -195,6 +197,11 @@ def build_parser() -> argparse.ArgumentParser:
     cn_search.add_argument("--limit", type=int, default=10, help="Max announcements to return.")
     cn_search.add_argument("--column", default="szse", help="cninfo query backend (default szse; full-text is cross-market).")
     cn_search.add_argument("--out", type=Path, default=None, help="Write evidence-shaped results here (defaults to stdout).")
+
+    quote_cmd = sources_sub.add_parser("quote", help="Resolve a name/ticker to an Eastmoney market-data snapshot (A/HK/US, keyless).")
+    quote_cmd.add_argument("query", help="Company name or ticker, e.g. '宁德时代', '300750', 'AAPL'.")
+    quote_cmd.add_argument("--as-of", dest="as_of", default=None, help="Snapshot date (YYYY-MM-DD); defaults to today (UTC).")
+    quote_cmd.add_argument("--out", type=Path, default=None, help="Write the evidence-shaped snapshot here (defaults to stdout).")
 
     corpus_cmd = sources_sub.add_parser("corpus", help="Build a dated document corpus from EDGAR for the consensus proxy (gear C).")
     corpus_cmd.add_argument("query", help="BROAD theme query (e.g. 'artificial intelligence accelerator'), not a per-constraint term.")
@@ -1053,6 +1060,26 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
             print(f"found {len(found)} announcement(s)")
+            return 0
+        if args.sources_command == "quote":
+            as_of = args.as_of or datetime.now(timezone.utc).date().isoformat()
+            try:
+                hit = search_security(args.query)
+                if hit is None:
+                    print(f"sources quote: no security matched '{args.query}'")
+                    return 1
+                snapshot = em_quote(hit["secid"])
+            except (urllib.error.URLError, urllib.error.HTTPError, ValueError) as exc:
+                print(f"sources quote: Eastmoney request failed: {exc}")
+                return 1
+            evidence = security_to_evidence(hit, snapshot, as_of=as_of, evidence_id="S1")
+            report = {"query": args.query, "count": 1, "sources": [evidence]}
+            if args.out is not None:
+                write_json(args.out, report)
+                print(args.out)
+            else:
+                print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+            print(f"resolved {hit.get('name') or args.query} ({hit.get('secid')})")
             return 0
         if args.sources_command == "corpus":
             forms = [f.strip() for f in args.forms.split(",") if f.strip()] if args.forms else None
