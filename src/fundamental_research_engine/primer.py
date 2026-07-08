@@ -20,11 +20,14 @@ Design constraints, consistent with the rest of the engine:
 from __future__ import annotations
 
 import json
+import urllib.error
 import urllib.request
 from datetime import date
 from pathlib import Path
 from typing import Any, Callable
 
+from .cninfo import announcement_to_evidence, search_announcements
+from .edgar import filing_to_evidence, search_filings
 from .evidence import DEFAULT_FETCH_TIMEOUT_SECONDS, FetchResult, default_fetch
 from .llm_json import complete_json_with_retry
 
@@ -34,6 +37,35 @@ PRIMER_USER_AGENT = "fundamental-research-engine-primer/0.1 (+lawful-sources-onl
 
 HttpGet = Callable[[str], Any]
 Fetcher = Callable[[str], FetchResult]
+Discoverer = Callable[[str], list]
+
+_DISCOVERY_ERRORS = (urllib.error.URLError, urllib.error.HTTPError, ValueError)
+
+
+def default_discover(topic: str, *, edgar_limit: int = 3, cninfo_limit: int = 3) -> list[dict[str, Any]]:
+    """Discover real primary sources for a topic from EDGAR (US) + cninfo (China).
+
+    Best-effort and network-robust: each collector is tried independently and any
+    request failure yields no records from that source rather than raising, so a
+    flaky feed never breaks primer generation. Records are evidence-shaped and
+    tagged with the discovering collector.
+    """
+    records: list[dict[str, Any]] = []
+    try:
+        for i, hit in enumerate(search_filings(topic, limit=edgar_limit), start=1):
+            rec = filing_to_evidence(hit, evidence_id=f"US{i}")
+            rec["discovery"] = "edgar"
+            records.append(rec)
+    except _DISCOVERY_ERRORS:
+        pass
+    try:
+        for i, hit in enumerate(search_announcements(topic, limit=cninfo_limit), start=1):
+            rec = announcement_to_evidence(hit, evidence_id=f"CN{i}")
+            rec["discovery"] = "cninfo"
+            records.append(rec)
+    except _DISCOVERY_ERRORS:
+        pass
+    return records
 
 
 def default_http_get(url: str, timeout: float = DEFAULT_FETCH_TIMEOUT_SECONDS) -> Any:
@@ -188,6 +220,7 @@ def build_primer(
     fetch: Fetcher = default_fetch,
     max_attempts: int = 2,
     fetch_suggested: bool = True,
+    discover: Discoverer | None = None,
 ) -> dict[str, Any]:
     """Fetch seed sources, organize with the model, and return a structured primer.
 
@@ -232,12 +265,22 @@ def build_primer(
                 }
             )
 
+    discovered_sources: list[dict[str, Any]] = []
+    if discover is not None:
+        for record in discover(topic):
+            if not isinstance(record, dict):
+                continue
+            discovered = {**record, "fetch_status": "discovered", "extract_chars": 0}
+            discovered_sources.append(discovered)
+            fetched_sources.append(discovered)
+
     return {
         "topic": topic,
         "resolved_title": seed["title"] if seed else topic,
         "seed_used": bool(seed),
         "primer": primer,
         "fetched_sources": fetched_sources,
+        "discovered_sources": discovered_sources,
         "unverified_claims": _unverified_claims(primer),
     }
 

@@ -21,7 +21,7 @@ from fundamental_research_engine.critique import validate_critique_shape
 from fundamental_research_engine.diff import diff_analysis
 from fundamental_research_engine.io import read_json, write_json
 from fundamental_research_engine.pipeline import default_ontology_path, run_pipeline
-from fundamental_research_engine.primer import build_primer, framing_to_theme_definition
+from fundamental_research_engine.primer import build_primer, default_discover, framing_to_theme_definition
 from fundamental_research_engine.prompts import default_methodology_path, render_critique_prompt
 from fundamental_research_engine.stages import (
     STAGE_ORDER,
@@ -459,6 +459,7 @@ class Service:
                             ontology=ontology,
                             prompts_dir=self.project_root / "prompts",
                             max_attempts=self.config.max_attempts,
+                            discover=default_discover,
                         ),
                     )
                 except ManualCompletionPending:

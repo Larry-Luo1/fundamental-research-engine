@@ -1006,8 +1006,41 @@ Macro time-series (FRED/World Bank) is deferred: FRED needs a free API key, and
 it's egress/proxy-specific, not a code issue). Commodity price snapshots via
 Eastmoney cover the near-term supply/demand need without a keyed/blocked source.
 
-Next recommended step: wire edgar/cninfo/eastmoney hits into the primer's
-`suggested_sources` (the remaining route item).
+## Primer Auto-Discovery Wiring (2026-07-08, Claude)
+
+Completed the final route item: the primer now auto-discovers **real primary
+sources** for a fuzzy topic instead of relying only on model-suggested URLs.
+
+- `primer.default_discover(topic)`: queries EDGAR (US filings) + cninfo (China
+  disclosures), returns evidence-shaped records tagged `discovery: edgar|cninfo`.
+  Best-effort/network-robust — each collector is independent and swallows request
+  errors, so a flaky feed never breaks primer generation.
+- `build_primer(..., discover=None)`: new opt-in param. When a discoverer is
+  passed, its records are merged into `fetched_sources` (marked
+  `fetch_status: "discovered"`) and also returned as `discovered_sources`. Default
+  stays off, so existing hermetic tests are unchanged.
+- `web/service.py` passes `discover=default_discover` on the live primer path, so
+  the web Primer surfaces real China+US filings.
+- `tests/test_primer.py`: +2 tests (discovery folds records in; off by default).
+
+Verified LIVE from this box: `default_discover("high bandwidth memory")` returned
+real EDGAR filings (cninfo empty for the English term); `default_discover("固态电池")`
+returned 3 real cninfo disclosures (格林美/广东建工/金龙羽). 228 tests pass.
+
+Route status ("先按记忆里的路线完成"): DONE.
+- US filings collector (`edgar.py`) — pre-existing.
+- China disclosures collector (`cninfo.py` / `sources cn-search`).
+- Fundamentals + commodity collector (`eastmoney.py` / `sources quote`, A/HK/US +
+  SHFE futures).
+- Primer auto-discovery wiring (this section).
+Deferred with documented reason: macro time-series (FRED needs a key; World Bank
+data paths 502 from this box) — revisit when a keyless/reachable macro series
+source or a FRED key is available. Eastmoney commodity snapshots cover the
+near-term supply/demand need.
+
+Eastmoney fundamentals eastmoney hits are not yet wired into `default_discover`
+(it takes a topic, and quote needs a resolved ticker); a future step could add a
+company-name → quote discovery path.
 
 ## Collaboration Rule
 

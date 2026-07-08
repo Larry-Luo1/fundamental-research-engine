@@ -33,7 +33,11 @@ analyze yet**, start with the **Primer** entry: type a fuzzy topic ("HBM",
 (Wikipedia + suggested primary sources) and organizes a fast orientation —
 plain-language explainer, glossary, value-chain landscape, maturity, key debates,
 and 2–4 concrete candidate framings you click to drop straight into the analysis
-pipeline. A primer is an explicitly *unverified map*: factual claims are flagged
+pipeline. Alongside the model's suggested URLs, the primer **auto-discovers real
+primary sources** for the topic from EDGAR (US filings) and cninfo (China
+disclosures) via `default_discover`, tagged by collector in `discovered_sources`
+— so the orientation is anchored in real filings, not only model-guessed links.
+A primer is an explicitly *unverified map*: factual claims are flagged
 for verification and handed to the grounding layer. The core engine stays
 dependency-free; only the web layer needs `fastapi`/`uvicorn`.
 

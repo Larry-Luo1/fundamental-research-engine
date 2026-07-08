@@ -125,6 +125,41 @@ class BuildPrimerTest(unittest.TestCase):
         # only the unsupported/verify claim is surfaced as unverified
         self.assertEqual(result["unverified_claims"], ["ASPs will rise 20%."])
 
+    def test_discover_folds_real_sources_into_result(self) -> None:
+        adapter = mock.Mock()
+        adapter.complete.return_value = json.dumps(_valid_primer())
+        fetch = mock.Mock(return_value=FetchResult(ok=True, status="fetched", text="hello world"))
+        discover = mock.Mock(return_value=[
+            {"id": "US1", "title": "Micron 10-K", "source_type": "regulatory_filing",
+             "date": "2025-01-01", "url": "https://sec.gov/x", "reliability": "high",
+             "claims": [], "discovery": "edgar"},
+            {"id": "CN1", "title": "长鑫 公告", "source_type": "regulatory_filing",
+             "date": "2026-01-01", "url": "http://static.cninfo.com.cn/y", "reliability": "high",
+             "claims": [], "discovery": "cninfo"},
+        ])
+
+        result = build_primer(
+            "HBM", adapter, ontology=ONTOLOGY, prompts_dir=PROJECT_ROOT / "prompts",
+            http_get=_fake_http_get, fetch=fetch, discover=discover,
+        )
+
+        discover.assert_called_once_with("HBM")
+        self.assertEqual([s["id"] for s in result["discovered_sources"]], ["US1", "CN1"])
+        self.assertEqual({s["discovery"] for s in result["discovered_sources"]}, {"edgar", "cninfo"})
+        # discovered sources are also merged into the unified fetched_sources list
+        ids = [s["id"] for s in result["fetched_sources"]]
+        self.assertEqual(ids, ["S-wiki", "S1", "US1", "CN1"])
+        self.assertTrue(all(s["fetch_status"] == "discovered" for s in result["discovered_sources"]))
+
+    def test_discovery_off_by_default(self) -> None:
+        adapter = mock.Mock()
+        adapter.complete.return_value = json.dumps(_valid_primer())
+        result = build_primer(
+            "HBM", adapter, ontology=ONTOLOGY, prompts_dir=PROJECT_ROOT / "prompts",
+            http_get=_fake_http_get, fetch=mock.Mock(return_value=FetchResult(ok=True, status="fetched", text="x")),
+        )
+        self.assertEqual(result["discovered_sources"], [])
+
     def test_raises_on_invalid_model_output(self) -> None:
         adapter = mock.Mock()
         adapter.complete.return_value = json.dumps({"explainer": "x"})
