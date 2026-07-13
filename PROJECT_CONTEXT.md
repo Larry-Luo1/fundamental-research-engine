@@ -141,10 +141,13 @@ Supported theme types:
     `OpenAIAdapter` and `ClaudeAdapter` (real HTTP calls via stdlib
     `urllib`, no new dependencies, API key from `OPENAI_API_KEY` /
     `ANTHROPIC_API_KEY` unless passed explicitly). Both accept an injectable
-    `transport` callable so tests never hit the network.
+    `transport` callable so tests never hit the network. `ClaudeCliAdapter`
+    runs local Claude Code (`claude -p`) for subscription-backed usage and
+    strips `ANTHROPIC_API_KEY` from the child environment to avoid accidental
+    API billing.
   - `get_adapter(name, model_name)` factory; `model_name` is required for
     `openai`/`claude` (no baked-in default model id, to avoid asserting a
-    model that may not exist).
+    model that may not exist) and optional for `claude-cli`.
   - new `fre fill <theme_dir>` CLI command: finds the first stage file
     missing from the directory (or `--stage`), builds its prompt, and either
     calls the chosen adapter or (manual mode, the default) writes
@@ -1076,6 +1079,48 @@ Local demo runtime (not committed; `web_data/`, `.env`, `.venv` are gitignored):
 was taken by an unrelated process), plus a seeded session under
 `web_data/sessions/` copying the 2026-07-08 solid-state-battery run so the
 redesigned page shows real data.
+
+## Web Claude Code Adapter Wiring (2026-07-13, Codex)
+
+- Web config now supports `FRE_MODEL=claude-cli` and defaults to it for new
+  `.env.example` installs. This uses local Claude Code (`claude -p`) via the
+  engine's `ClaudeCliAdapter`, so it can spend the local Claude subscription
+  login instead of requiring `ANTHROPIC_API_KEY`.
+- `model_config_issue` treats `claude-cli` as keyless; `/api/config` returns
+  `requires_api_key`; the frontend only displays "未配置 API Key" for API-backed
+  providers. `python -m web` also prints `api_key=not required` for keyless
+  mode.
+- Local `.env` on this machine was switched to `FRE_MODEL=claude-cli` and
+  `FRE_MODEL_NAME=`; the running web process still must be restarted because
+  config is loaded at process startup.
+- Verified targeted tests:
+  `PYTHONPATH=src:. python3 -m pytest tests/test_web_primer.py tests/test_web_watch.py tests/test_adapters.py tests/test_cli.py -q`
+  (69 passed) plus `git diff --check`.
+
+## Codex Subscription Adapter (2026-07-13, Claude)
+
+Added `codex` as a model backend so analysis drafting can run on the local
+Codex CLI subscription login (no OPENAI_API_KEY), the direct counterpart of
+Codex's `claude-cli` wiring from earlier today (found uncommitted in the tree;
+committed together with this work — same files, interleaved changes).
+
+- `CodexCliAdapter` (`adapters.py`): runs `codex exec` non-interactively.
+  Prompt on stdin (stage prompts exceed argv comfort), final message read via
+  `--output-last-message` tempfile (codex mixes progress logs into stdout).
+  Flags: `--skip-git-repo-check --ephemeral --sandbox read-only --color never`
+  so a completion can never write files or leave session state. Strips
+  `OPENAI_API_KEY` from the child env so the subscription login always wins.
+  `CODEX_CLI_CMD` overrides the binary; injectable `runner` for tests.
+- Wiring: `get_adapter("codex")`, CLI `--model codex`, web `FRE_MODEL=codex`
+  (keyless; `model_config_issue` checks the binary is on PATH), `.env.example`
+  documented. 5 new tests in `tests/test_adapters.py` (fake runner writes the
+  `-o` file); also fixed the file's missing `import unittest.mock` (previously
+  passed only via side-effect import in full-suite runs).
+- Verified: 240 tests pass; LIVE end-to-end through the real engine path —
+  `fre critique configs/themes_staged/hbm4 --stage mechanism_analysis --model
+  codex` returned a valid structured critique in ~28s on the subscription
+  login. Local `.env` switched to `FRE_MODEL=codex`; web restarted on :8010,
+  `/api/config` reports `model=codex, requires_api_key=false, no error`.
 
 ## Collaboration Rule
 

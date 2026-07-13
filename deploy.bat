@@ -1,6 +1,6 @@
 @echo off
 REM One-click setup for Windows. After `git clone`, run: deploy.bat
-REM Then edit .env (password + API key) and run run.bat
+REM Then edit .env (password + model settings) and run run.bat
 setlocal
 cd /d "%~dp0"
 
@@ -20,7 +20,7 @@ if not exist .env (
 
 echo.
 echo Setup complete.
-echo NEXT: edit .env (set FRE_WEB_PASSWORD and ANTHROPIC_API_KEY), then run run.bat
+echo NEXT: edit .env (set FRE_WEB_PASSWORD and model settings), then run run.bat
 goto :eof
 
 :err

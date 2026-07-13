@@ -295,7 +295,8 @@ async function showApp(){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   try {
     const c = await api("/api/config");
-    $("#modelinfo").textContent = c.model_name + (c.config_error?"（配置异常）":(c.has_key?"":"（未配置 API Key）"));
+    const modelLabel = c.model_name ? `${c.model}:${c.model_name}` : c.model;
+    $("#modelinfo").textContent = modelLabel + (c.config_error?"（配置异常）":(c.requires_api_key&&!c.has_key?"（未配置 API Key）":""));
     $("#modelinfo").title = c.config_error || "";
   } catch(e){}
   refreshSessions(); showPrimer();

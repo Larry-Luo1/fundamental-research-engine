@@ -96,7 +96,13 @@ def me(request: Request) -> dict:
 @app.get("/api/config")
 def get_config(_: None = Depends(require_auth)) -> dict:
     issue = service.model_config_issue()
-    return {"model": config.model, "model_name": config.model_name, "has_key": config.has_key, "config_error": issue}
+    return {
+        "model": config.model,
+        "model_name": config.model_name,
+        "has_key": config.has_key,
+        "requires_api_key": config.requires_api_key,
+        "config_error": issue,
+    }
 
 
 @app.get("/api/audit/events")

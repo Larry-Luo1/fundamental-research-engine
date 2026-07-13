@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-click setup for Linux/macOS. After `git clone`, run: ./deploy.sh
-# Then edit .env (password + API key) and run ./run.sh
+# Then edit .env (password + model settings) and run ./run.sh
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -31,8 +31,8 @@ fi
 
 echo ""
 echo "Setup complete."
-if grep -q "change-me" .env || ! grep -q "^ANTHROPIC_API_KEY=..*" .env; then
-  echo "NEXT: edit .env — set FRE_WEB_PASSWORD and ANTHROPIC_API_KEY — then run ./run.sh"
+if grep -q "change-me" .env; then
+  echo "NEXT: edit .env — set FRE_WEB_PASSWORD and model settings — then run ./run.sh"
 else
   echo "NEXT: ./run.sh"
 fi

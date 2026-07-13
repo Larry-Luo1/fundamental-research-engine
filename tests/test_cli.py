@@ -609,6 +609,31 @@ class FillCliTest(unittest.TestCase):
             self.assertEqual(metadata["model_name"], "gpt-test")
             self.assertEqual(metadata["attempts"], 1)
 
+    def test_claude_cli_model_does_not_require_model_name(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            theme_dir = self._theme_dir_with_definition_only(Path(tmp))
+
+            fake_adapter = unittest.mock.Mock()
+            fake_adapter.complete.return_value = json.dumps({"mechanism": "local claude mechanism"})
+
+            with patch("fundamental_research_engine.cli.get_adapter", return_value=fake_adapter) as get_adapter:
+                exit_code = main(
+                    [
+                        "fill",
+                        str(theme_dir),
+                        "--model",
+                        "claude-cli",
+                        "--project-root",
+                        str(self.project_root),
+                    ]
+                )
+
+            self.assertEqual(exit_code, 0)
+            get_adapter.assert_called_with("claude-cli", None, None)
+            metadata = json.loads((theme_dir / "mechanism_analysis.meta.json").read_text(encoding="utf-8"))
+            self.assertEqual(metadata["model"], "claude-cli")
+            self.assertIsNone(metadata["model_name"])
+
     def test_mocked_adapter_accepts_json_inside_markdown_fence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             theme_dir = self._theme_dir_with_definition_only(Path(tmp))

@@ -8,6 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import functools
+import os
+import shlex
+import shutil
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -50,6 +53,12 @@ def _brief_prefix(brief: str, instruction: str | None = None) -> str:
 
 
 def model_config_issue(config: Config) -> str | None:
+    if config.model == "claude-cli":
+        return None
+    if config.model == "codex":
+        if shutil.which(shlex.split(os.environ.get("CODEX_CLI_CMD", "codex exec"))[0]) is None:
+            return "codex CLI 未安装或不在 PATH 中；请安装 Codex 并运行 codex login。"
+        return None
     if config.model == "claude":
         if not config.api_key:
             return "Claude 模型未配置 ANTHROPIC_API_KEY。"
@@ -66,7 +75,7 @@ def model_config_issue(config: Config) -> str | None:
         if not config.api_key:
             return "OpenAI 模型未配置 OPENAI_API_KEY。"
         return None
-    return f"未知模型适配器 '{config.model}'。可选值：claude、openai、deepseek。"
+    return f"未知模型适配器 '{config.model}'。可选值：claude-cli、codex、claude、openai、deepseek。"
 
 
 class Service:

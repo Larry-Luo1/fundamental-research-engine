@@ -14,7 +14,7 @@ from dataclasses import replace
 from pathlib import Path
 from unittest import mock
 
-from web.config import Config
+from web.config import Config, load_config
 from web.service import Service, model_config_issue
 
 
@@ -133,6 +133,28 @@ class PrimerServiceTest(unittest.TestCase):
                 api_key="sk-deepseek-looking-key",
             )
             self.assertIsNone(model_config_issue(config))
+
+    def test_model_config_issue_accepts_claude_cli_without_api_key(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = replace(_config(Path(tmp)), model="claude-cli", model_name="", api_key="")
+            self.assertIsNone(model_config_issue(config))
+            self.assertFalse(config.requires_api_key)
+
+    def test_load_config_defaults_to_claude_cli(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.dict(
+                "os.environ",
+                {
+                    "FRE_WEB_PASSWORD": "pw",
+                    "FRE_WEB_DATA_DIR": tmp,
+                },
+                clear=True,
+            ):
+                config = load_config()
+
+        self.assertEqual(config.model, "claude-cli")
+        self.assertEqual(config.model_name, "")
+        self.assertFalse(config.requires_api_key)
 
 
 if __name__ == "__main__":

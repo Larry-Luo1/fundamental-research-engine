@@ -178,7 +178,19 @@ PYTHONPATH=src python3 -m fundamental_research_engine fill configs/themes_staged
   --model claude --model-name claude-sonnet-5
 PYTHONPATH=src python3 -m fundamental_research_engine fill configs/themes_staged/hbm4 \
   --model openai --model-name gpt-4.1
+
+# Use your local Claude Code login instead of the Anthropic API.
+PYTHONPATH=src python3 -m fundamental_research_engine fill configs/themes_staged/hbm4 \
+  --model claude-cli
 ```
+
+The `claude` adapter uses the Anthropic API and `ANTHROPIC_API_KEY`; it does
+not use a Claude Pro/Max subscription. To spend local Claude Code subscription
+allocation instead, install Claude Code, run `claude login`, and use
+`--model claude-cli`. That adapter shells out to `claude -p`, strips
+`ANTHROPIC_API_KEY` from the child process environment to avoid accidental API
+billing, and accepts an optional `--model-name` which is passed to Claude Code
+as `--model`.
 
 The `claude`/`openai` adapters call the model with a sensible output-token
 default (16000 for Claude — enough headroom for large stages like

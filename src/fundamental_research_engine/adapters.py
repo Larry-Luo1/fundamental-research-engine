@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
+import subprocess
+import tempfile
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol
 
 Transport = Callable[[str, dict[str, str], dict[str, Any]], dict[str, Any]]
+CliRunner = Callable[..., subprocess.CompletedProcess[str]]
 
 
 class ModelAdapter(Protocol):
@@ -136,6 +140,123 @@ class ClaudeAdapter:
             raise AdapterError(f"unexpected Claude response shape: {response}") from exc
 
 
+@dataclass
+class ClaudeCliAdapter:
+    """Run Claude Code locally through its CLI instead of the Anthropic API."""
+
+    model: str | None = None
+    command: str | None = None
+    timeout_seconds: int = 600
+    strip_api_key_env: bool = True
+    runner: CliRunner = subprocess.run
+
+    def complete(self, prompt: str) -> str:
+        command = self.command or os.environ.get("CLAUDE_CLI_CMD", "claude -p")
+        argv = shlex.split(command)
+        if self.model:
+            argv.extend(["--model", self.model])
+        argv.append(prompt)
+
+        env = os.environ.copy()
+        if self.strip_api_key_env:
+            env.pop("ANTHROPIC_API_KEY", None)
+
+        try:
+            completed = self.runner(
+                argv,
+                capture_output=True,
+                text=True,
+                timeout=self.timeout_seconds,
+                env=env,
+            )
+        except FileNotFoundError as exc:
+            raise AdapterError("claude CLI was not found; install Claude Code and run `claude login`") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise AdapterError(f"claude CLI timed out after {self.timeout_seconds} seconds") from exc
+
+        stdout = completed.stdout or ""
+        stderr = completed.stderr or ""
+        if completed.returncode != 0:
+            detail = (stderr or stdout).strip()
+            suffix = f": {detail}" if detail else ""
+            raise AdapterError(f"claude CLI failed with exit code {completed.returncode}{suffix}")
+        if not stdout.strip():
+            raise AdapterError("claude CLI returned an empty response")
+        return stdout.strip()
+
+
+@dataclass
+class CodexCliAdapter:
+    """Run OpenAI Codex locally through its CLI (ChatGPT subscription login, no API key).
+
+    Uses `codex exec` non-interactively: the prompt goes in on stdin (stage
+    prompts are large; argv has size limits) and the final assistant message
+    comes back through --output-last-message, because codex mixes progress
+    logs into stdout. Runs read-only/ephemeral so a completion can never touch
+    the filesystem or leave session files behind.
+    """
+
+    model: str | None = None
+    command: str | None = None
+    timeout_seconds: int = 600
+    strip_api_key_env: bool = True
+    runner: CliRunner = subprocess.run
+
+    def complete(self, prompt: str) -> str:
+        command = self.command or os.environ.get("CODEX_CLI_CMD", "codex exec")
+        argv = shlex.split(command)
+        if self.model:
+            argv.extend(["--model", self.model])
+
+        env = os.environ.copy()
+        if self.strip_api_key_env:
+            # With OPENAI_API_KEY present codex may bill the API instead of
+            # the subscription; drop it so the login in ~/.codex is used.
+            env.pop("OPENAI_API_KEY", None)
+
+        with tempfile.TemporaryDirectory(prefix="fre-codex-") as tmp_dir:
+            out_path = os.path.join(tmp_dir, "last-message.txt")
+            argv.extend(
+                [
+                    "--skip-git-repo-check",
+                    "--ephemeral",
+                    "--sandbox",
+                    "read-only",
+                    "--color",
+                    "never",
+                    "--output-last-message",
+                    out_path,
+                    "-",
+                ]
+            )
+            try:
+                completed = self.runner(
+                    argv,
+                    input=prompt,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.timeout_seconds,
+                    env=env,
+                )
+            except FileNotFoundError as exc:
+                raise AdapterError("codex CLI was not found; install Codex and run `codex login`") from exc
+            except subprocess.TimeoutExpired as exc:
+                raise AdapterError(f"codex CLI timed out after {self.timeout_seconds} seconds") from exc
+
+            if completed.returncode != 0:
+                detail = ((completed.stderr or "") or (completed.stdout or "")).strip()
+                suffix = f": {detail}" if detail else ""
+                raise AdapterError(f"codex CLI failed with exit code {completed.returncode}{suffix}")
+
+            output = ""
+            if os.path.exists(out_path):
+                with open(out_path, encoding="utf-8") as handle:
+                    output = handle.read()
+        if not output.strip():
+            raise AdapterError("codex CLI returned an empty response")
+        return output.strip()
+
+
 def get_adapter(name: str, model_name: str | None = None, max_tokens: int | None = None) -> ModelAdapter:
     if name == "manual":
         return ManualAdapter()
@@ -160,4 +281,8 @@ def get_adapter(name: str, model_name: str | None = None, max_tokens: int | None
         if max_tokens is not None:
             adapter.max_tokens = max_tokens
         return adapter
+    if name == "claude-cli":
+        return ClaudeCliAdapter(model=model_name)
+    if name == "codex":
+        return CodexCliAdapter(model=model_name)
     raise ValueError(f"unknown adapter '{name}'")

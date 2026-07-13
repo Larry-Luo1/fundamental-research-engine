@@ -15,7 +15,7 @@
 git clone <repo-url>
 cd fundamental-research-engine
 ./deploy.sh          # 建 venv、装依赖、生成 .env
-nano .env            # 填 FRE_WEB_PASSWORD，并选择一种模型 API Key
+nano .env            # 填 FRE_WEB_PASSWORD，并选择模型配置
 ./run.sh             # 启动，默认 http://0.0.0.0:8000
 ```
 
@@ -24,7 +24,7 @@ nano .env            # 填 FRE_WEB_PASSWORD，并选择一种模型 API Key
 git clone <repo-url>
 cd fundamental-research-engine
 deploy.bat
-notepad .env         REM 填 FRE_WEB_PASSWORD，并选择一种模型 API Key
+notepad .env         REM 填 FRE_WEB_PASSWORD，并选择模型配置
 run.bat
 ```
 
@@ -37,15 +37,19 @@ run.bat
 | 变量 | 必填 | 说明 |
 |---|---|---|
 | `FRE_WEB_PASSWORD` | ✅ | 所有人登录用的共享口令 |
-| `FRE_MODEL` | ✅（用 LLM 时） | `claude` / `openai` / `deepseek` |
-| `ANTHROPIC_API_KEY` | 使用 Claude 时 | 服务器统一一个 key，所有用户共享 |
+| `FRE_MODEL` | ✅（用 LLM 时） | `claude-cli` / `claude` / `openai` / `deepseek` |
+| `ANTHROPIC_API_KEY` | 使用 Claude API 时 | 服务器统一一个 key，所有用户共享 |
 | `OPENAI_API_KEY` | 使用 OpenAI 时 | 设 `FRE_MODEL=openai` 时读取 |
 | `DEEPSEEK_API_KEY` | 使用 DeepSeek 时 | 设 `FRE_MODEL=deepseek` 时读取 |
-| `FRE_MODEL_NAME` | | 模型 id，Claude 默认 `claude-opus-4-8`，DeepSeek 默认 `deepseek-v4-pro` |
+| `FRE_MODEL_NAME` | | 模型 id；`claude-cli` 可留空，Claude API 默认 `claude-opus-4-8`，DeepSeek 默认 `deepseek-v4-pro` |
 | `FRE_MAX_CONCURRENCY` | | 同时进行的起草任务数，小机器保持 1-2 |
 | `FRE_MAX_TOKENS` | | 单次输出 token 上限，默认 16000 |
 | `PORT` / `FRE_HOST` | | 监听端口/地址 |
 | `FRE_WEB_DATA_DIR` | | 会话与产物存放目录，默认 `./web_data` |
+
+本地 Claude 订阅用法：先在同一台机器运行 `claude login`，然后设置
+`FRE_MODEL=claude-cli`、`FRE_MODEL_NAME=`。这种模式不需要
+`ANTHROPIC_API_KEY`，会调用本机 `claude -p`。
 
 ---
 

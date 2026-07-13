@@ -37,6 +37,10 @@ class Config:
     def has_key(self) -> bool:
         return bool(self.api_key)
 
+    @property
+    def requires_api_key(self) -> bool:
+        return self.model in {"claude", "openai", "deepseek"}
+
 
 def load_config() -> Config:
     password = os.environ.get("FRE_WEB_PASSWORD", "").strip()
@@ -46,12 +50,14 @@ def load_config() -> Config:
             "password (and ANTHROPIC_API_KEY), then start the server."
         )
 
-    model = os.environ.get("FRE_MODEL", "claude").strip()
+    model = os.environ.get("FRE_MODEL", "claude-cli").strip()
     default_model_name = {
         "claude": "claude-opus-4-8",
+        "claude-cli": "",
+        "codex": "",
         "deepseek": "deepseek-v4-pro",
         "openai": "gpt-4.1",
-    }.get(model, "claude-opus-4-8")
+    }.get(model, "")
     model_name = os.environ.get("FRE_MODEL_NAME", default_model_name).strip()
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     if model == "openai":
