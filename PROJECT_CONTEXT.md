@@ -1042,6 +1042,41 @@ Eastmoney fundamentals eastmoney hits are not yet wired into `default_discover`
 (it takes a topic, and quote needs a resolved ticker); a future step could add a
 company-name → quote discovery path.
 
+## Web Result-Page Readability Redesign (2026-07-13, Claude)
+
+Problem: the web UI showed only a fraction of `analysis.json` (theme card, two
+thin tables, memo as raw `<pre>`), and raw English enums everywhere — unreadable
+for someone unfamiliar with the theme. Redesigned the analysis result page in
+`web/static/index.html` (frontend-only; no pipeline/service changes):
+
+- Four-part reading flow with sticky anchor nav: ① 结论摘要 (thesis, top
+  bottleneck, top companies, top counter-thesis, quality tier) → ② 论证
+  (drivers/mechanism, bottleneck scores with per-dimension 0-5 bars +
+  positive/risk decomposition, causal map table, value-chain segments, profit
+  pools, rich company cards with moat/risks/product/stack_position) → ③ 风险与验证
+  (scenarios with triggers/implications, counter-theses, tracking signals,
+  quality scorecard with grounding/corroboration bars + disconfirmation status)
+  → ④ memo rendered as markdown body (small inline md parser: headings, tables,
+  lists, bold/code/links; raw text kept in a collapsed `<details>`) → ⑤ evidence
+  appendix (linked titles, source type, reliability, per-evidence claims) → ⑥
+  author tools (critique/refine, collapsed by default, stages in Chinese).
+- All enums now have Chinese labels + hover tooltips (`fmt` map): rating,
+  positioning_label, exposure/capture quality, beneficiary_class, direction,
+  confidence/reliability, source_type, scenario names, bottleneck dimensions,
+  quality tiers. Negative scoring dimensions marked 减分项.
+- Evidence traceability: `evidence_ids`/`claim_ids` render as `[E1]` superscript
+  anchors jumping to the appendix row (`#ev-E1`).
+- Verified: `node --check` on the extracted script; dry-run of the render
+  helpers + full enum-coverage check against the real
+  `runs/2026-07-08-solid-state-battery/analysis.json` (all values mapped); 228
+  tests still pass (no backend change).
+
+Local demo runtime (not committed; `web_data/`, `.env`, `.venv` are gitignored):
+`deploy.sh` venv, `.env` with `FRE_WEB_PASSWORD=fre2026` and `PORT=8010` (8000
+was taken by an unrelated process), plus a seeded session under
+`web_data/sessions/` copying the 2026-07-08 solid-state-battery run so the
+redesigned page shows real data.
+
 ## Collaboration Rule
 
 Before ending a meaningful work session:

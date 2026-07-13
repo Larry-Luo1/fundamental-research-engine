@@ -20,7 +20,7 @@
   header .muted { color:var(--muted); font-size:12px; }
   #layout { display:flex; height:calc(100vh - 49px); }
   #side { width:290px; border-right:1px solid var(--line); padding:12px; overflow:auto; }
-  #main { flex:1; overflow:auto; padding:18px 24px; }
+  #main { flex:1; overflow:auto; padding:18px 24px; scroll-behavior:smooth; }
   .sess { padding:8px 10px; border:1px solid var(--line); border-radius:6px; margin-bottom:8px; cursor:pointer; }
   .sess:hover { border-color:var(--accent); }
   .sess .brief { font-size:13px; }
@@ -47,6 +47,35 @@
   .ok { color:var(--good); }
   small.muted { color:var(--muted); }
   ul.tight { margin:6px 0; padding-left:18px; }
+  /* ---- result-page reading experience ---- */
+  .nav { position:sticky; top:-18px; z-index:5; background:var(--bg); padding:10px 0 8px; display:flex; gap:8px; flex-wrap:wrap; }
+  .nav a { font-size:12px; padding:3px 11px; border:1px solid var(--line); border-radius:12px; color:var(--muted); text-decoration:none; }
+  .nav a:hover { color:var(--accent); border-color:var(--accent); }
+  h2.sec { font-size:15px; margin:24px 0 10px; padding-left:9px; border-left:3px solid var(--accent); scroll-margin-top:46px; }
+  h2.sec small { color:var(--muted); font-weight:400; font-size:12px; margin-left:8px; }
+  .summary { border-color:var(--accent); }
+  .kv { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 2px; }
+  .tipd { border-bottom:1px dotted var(--muted); cursor:help; }
+  .bar { display:inline-block; width:96px; height:8px; background:#0c0f13; border:1px solid var(--line); border-radius:4px; vertical-align:middle; overflow:hidden; }
+  .bar .fill { display:block; height:100%; background:var(--accent); }
+  .fill.good{background:var(--good);} .fill.warn{background:var(--warn);} .fill.bad{background:var(--bad);} .fill.muted{background:var(--muted);}
+  .dimrow { display:flex; align-items:center; gap:8px; font-size:12.5px; padding:2px 0; }
+  .dimrow .dn { flex:0 0 200px; color:var(--muted); }
+  sup.evref a { color:var(--muted); font-size:10px; margin-left:2px; text-decoration:none; }
+  sup.evref a:hover { color:var(--accent); }
+  .cocard { background:#0c0f13; border:1px solid var(--line); border-radius:6px; padding:10px 12px; margin:8px 0; }
+  .cocard b.nm { font-size:14px; }
+  .scn { border-left:3px solid var(--line); padding:6px 12px; margin:10px 0; }
+  .scn.bull{border-color:var(--good);} .scn.bear{border-color:var(--bad);} .scn.base{border-color:var(--accent);}
+  details.ops summary { cursor:pointer; color:var(--muted); font-size:13px; }
+  tr[id] { scroll-margin-top:52px; }
+  .md h2 { font-size:16px; border-bottom:1px solid var(--line); padding-bottom:4px; margin:18px 0 8px; }
+  .md h3 { font-size:14px; margin:14px 0 6px; }
+  .md h4 { font-size:13px; margin:12px 0 4px; }
+  .md p { margin:6px 0; }
+  .md table { margin:8px 0; }
+  .md code { background:#0c0f13; border:1px solid var(--line); border-radius:4px; padding:0 4px; font-size:12px; }
+  .md .tblwrap { overflow-x:auto; }
 </style>
 </head>
 <body>
@@ -112,6 +141,8 @@ window.addEventListener("unhandledrejection", ev => {
   clientLog("unhandledrejection", reason.message || String(reason), {stack: reason.stack});
 });
 function esc(s){ return (s==null?"":String(s)).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+// ---- 枚举中文化：label = 显示文本，tip = 悬停解释 ----
 const fmt = {
   hype: {
     trigger: "技术触发期",
@@ -129,11 +160,62 @@ const fmt = {
     macro_cycle: "宏观周期",
     geopolitics_security: "地缘安全"
   },
-  status: { pending:"待启动", running:"运行中", done:"完成", error:"异常" }
+  status: { pending:"待启动", running:"运行中", done:"完成", error:"异常" },
+  stage: {
+    theme_definition:"主题定义", mechanism_analysis:"机制分析", bottleneck_diagnosis:"瓶颈诊断",
+    value_chain_map:"价值链映射", company_positioning:"公司卡位", scenario_analysis:"情景分析"
+  },
+  rating: {
+    critical:{label:"关键", cls:"bad",   tip:"卡脖子级瓶颈（≥4.1 分）：短期无替代方案，掌控方定价权最强"},
+    strong:  {label:"强",   cls:"warn",  tip:"强瓶颈（≥3.2 分）：明确的供给约束，值得重点跟踪"},
+    watch:   {label:"观察", cls:"accent",tip:"观察级（≥2.2 分）：存在约束但强度一般，需跟踪演变方向"},
+    weak:    {label:"弱",   cls:"muted", tip:"弱瓶颈（<2.2 分）：约束较弱，供给方议价能力有限"}
+  },
+  positioning: {
+    "core bottleneck owner":{label:"核心瓶颈掌控者", tip:"掌握产业最紧缺环节，定价权与业绩弹性最强"},
+    "qualified leader":     {label:"认证领先者",     tip:"已通过客户认证、份额领先，替换成本高"},
+    "capacity enabler":     {label:"产能赋能者",     tip:"提供全行业扩产所需的设备/材料/产能"},
+    "capex beneficiary":    {label:"资本开支受益者", tip:"受益于产业投资周期，但弹性随资本开支波动"},
+    "architecture option":  {label:"架构期权",       tip:"押注新技术路线：路线成则大赢，不成则价值归零"},
+    "risk hedge":           {label:"风险对冲",       tip:"无论技术路线之争谁赢，都能受益或对冲损失"},
+    "theme-only":           {label:"纯题材",         tip:"与主题只有概念关联，缺乏实质业务敞口"}
+  },
+  beneficiary: {
+    "first-order":"一阶受益", "second-order":"二阶受益", enabler:"赋能环节",
+    substitute:"替代路线", "risk hedge":"风险对冲", "theme-only":"纯题材"
+  },
+  quality: { low:"低", medium:"中", "medium-high":"中高", high:"高", "option value":"期权价值" },
+  level: { high:"高", medium:"中", low:"低" },
+  direction: { positive:"正向 ↑", negative:"负向 ↓" },
+  sourceType: {
+    company_disclosure:"公司披露", regulatory_filing:"监管公告", market_data:"市场数据",
+    news:"新闻", industry_report:"行业报告", expert_interview:"专家访谈", academic:"学术文献"
+  },
+  scenario: {
+    bull:{label:"乐观情景", cls:"bull"}, base:{label:"基准情景", cls:"base"}, bear:{label:"悲观情景", cls:"bear"}
+  },
+  dimension: {
+    demand_growth_speed:"需求增长速度",
+    capacity_expansion_difficulty:"扩产难度",
+    technology_substitution_difficulty:"技术替代难度",
+    yield_material_equipment_constraint:"良率/材料/设备约束",
+    customer_qualification_lock_in:"客户认证锁定",
+    supplier_pricing_power:"供应商定价权",
+    rapid_supply_release_risk:"供给快速释放风险（减分项）",
+    architecture_bypass_risk:"架构绕过风险（减分项）"
+  },
+  tier: {
+    draft:"草稿", "evidence-backed":"有证据支撑", "quote-verified":"引文已核验",
+    "multi-source causal map":"多源因果图", "review-ready":"可评审"
+  }
 };
+const NEG_DIMS = ["rapid_supply_release_risk", "architecture_bypass_risk"];
 function cnHype(v){ return fmt.hype[v] || v || ""; }
 function cnThemeType(v){ return fmt.themeType[v] || v || ""; }
 function cnStatus(v){ return fmt.status[v] || v || ""; }
+function cnStage(v){ return fmt.stage[v] || v || ""; }
+function cnQuality(v){ return fmt.quality[v] || v || ""; }
+function cnLevel(v){ return fmt.level[v] || v || ""; }
 function cnEvent(v){
   return ({
     http_request:"HTTP 请求", login_succeeded:"登录成功", login_failed:"登录失败", logout:"退出登录",
@@ -144,6 +226,63 @@ function cnEvent(v){
     framing_promoted:"立题转深度分析", critique_started:"审阅开始", critique_finished:"审阅完成", critique_failed:"审阅失败",
     refine_started:"优化开始", refine_finished:"优化完成", refine_failed:"优化失败"
   })[v] || v || "";
+}
+function ratingBadge(r){
+  const m = fmt.rating[r];
+  if(!m) return esc(r||"");
+  return `<span class="rate-${esc(r)} tipd" title="${esc(m.tip)}">${m.label}<small class="muted">（${esc(r)}）</small></span>`;
+}
+function posLabel(v){
+  const m = fmt.positioning[v];
+  return m ? `<span class="tipd" title="${esc(m.tip)}">${m.label}</span>` : esc(v||"");
+}
+function bar(v, max, cls){
+  const pct = Math.max(0, Math.min(100, (Number(v)||0)/max*100));
+  return `<span class="bar"><span class="fill ${cls||""}" style="width:${pct}%"></span></span>`;
+}
+// 证据角标：E1 → 跳到证据附录；E1.C1 之类的 claim id 跳到其所属证据行
+function evSup(ids){
+  if(!ids || !ids.length) return "";
+  return '<sup class="evref">' + ids.map(x =>
+    `<a href="#ev-${esc(String(x).split(".")[0])}" title="跳到证据附录 ${esc(x)}">[${esc(x)}]</a>`).join("") + '</sup>';
+}
+
+// ---- 轻量 markdown 渲染（标题/加粗/代码/链接/列表/表格），用于 memo 正文 ----
+function mdInline(s){
+  s = esc(s);
+  s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  s = s.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  return s;
+}
+function mdToHtml(md){
+  const lines = String(md||"").split(/\r?\n/);
+  let html = "", i = 0, inList = false;
+  const closeList = () => { if(inList){ html += "</ul>"; inList = false; } };
+  while(i < lines.length){
+    const L = lines[i];
+    if(/^\s*$/.test(L)){ closeList(); i++; continue; }
+    const h = L.match(/^(#{1,4})\s+(.*)/);
+    if(h){ closeList(); const lv = Math.min(h[1].length, 3) + 1; html += `<h${lv}>${mdInline(h[2])}</h${lv}>`; i++; continue; }
+    if(/^\|/.test(L) && i+1 < lines.length && /^\|[\s:|-]+\|?\s*$/.test(lines[i+1])){
+      closeList();
+      const cells = r => r.replace(/^\||\|\s*$/g,"").split("|").map(c=>c.trim());
+      const headers = cells(L);
+      i += 2;
+      let rows = [];
+      while(i < lines.length && /^\|/.test(lines[i])){ rows.push(cells(lines[i])); i++; }
+      html += '<div class="tblwrap"><table><tr>' + headers.map(c=>`<th>${mdInline(c)}</th>`).join("") + "</tr>"
+        + rows.map(r=>"<tr>"+r.map(c=>`<td>${mdInline(c)}</td>`).join("")+"</tr>").join("") + "</table></div>";
+      continue;
+    }
+    if(/^[-*]\s+/.test(L)){
+      if(!inList){ html += '<ul class="tight">'; inList = true; }
+      html += `<li>${mdInline(L.replace(/^[-*]\s+/,""))}</li>`; i++; continue;
+    }
+    closeList(); html += `<p>${mdInline(L)}</p>`; i++;
+  }
+  closeList();
+  return html;
 }
 
 // ---- auth ----
@@ -220,7 +359,7 @@ function runStream(id, brief){
     <div class="card">
       <h3>正在分析</h3>
       <p class="muted">${esc(brief)}</p>
-      <div class="stagebar" id="chips">${STAGES.map(s=>`<span class="chip" id="c-${s}">${s}</span>`).join("")}</div>
+      <div class="stagebar" id="chips">${STAGES.map(s=>`<span class="chip" id="c-${s}" title="${esc(s)}">${cnStage(s)}</span>`).join("")}</div>
       <div class="prog" id="prog"></div>
     </div>`;
   const log = (html,cls="") => { const d=document.createElement("div"); d.className="row "+cls; d.innerHTML=html; $("#prog").appendChild(d); };
@@ -230,7 +369,7 @@ function runStream(id, brief){
     if(e.event==="queued"){ log('<span class="tag">已连接，等待空闲槽位/准备中 …</span>');
     } else if(e.event==="stage"){
       const chip=$("#c-"+e.stage);
-      if(e.status==="drafting"){ log(`<span class="tag">[${e.index}/${e.total}]</span> 起草 ${e.stage} …`); if(chip)chip.style.borderColor="var(--warn)"; }
+      if(e.status==="drafting"){ log(`<span class="tag">[${e.index}/${e.total}]</span> 起草 ${cnStage(e.stage)} …`); if(chip)chip.style.borderColor="var(--warn)"; }
       if(e.status==="done"||e.status==="kept"){ if(chip){chip.style.color="var(--good)";chip.style.borderColor="var(--good)";} }
     } else if(e.event==="validating"){ log("校验主题结构 …");
     } else if(e.event==="running"){ log("运行流水线、生成备忘录 …");
@@ -242,6 +381,7 @@ function runStream(id, brief){
 }
 
 // ---- open + render results ----
+// 阅读动线：① 结论摘要 → ② 论证 → ③ 风险与验证 → ④ 研究备忘录 → ⑤ 证据附录 → ⑥ 作者工具
 async function openSession(id){
   const data = await api("/api/analyses/"+id);
   const m = data.meta, a = data.analysis;
@@ -252,38 +392,149 @@ async function openSession(id){
   html += `</div>`;
 
   if(a){
-    const t=a.theme||{};
-    html += `<div class="card"><h3>${esc(t.title||"")}</h3>
-      <p><b>核心问题：</b>${esc(t.core_question||"")}</p>
-      <p><b>论点：</b>${esc(t.thesis||"")}</p>
-      <p><small class="muted">类型 ${esc(cnThemeType(t.theme_type))} · 领域 ${esc(t.domain)} · 产业阶段 ${esc(cnHype(t.hype_stage))} · TRL ${esc(t.technology_readiness_level)} · as_of ${esc(t.as_of)}</small></p>
-      ${(t.drivers||[]).length?`<b>驱动：</b><ul class="tight">${t.drivers.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
+    const t = a.theme || {};
+    const bs = a.bottleneck_scores || [];
+    const co = a.companies || [];
+    const ct = a.counter_theses || [];
+    const scn = a.scenarios || [];
+    const seg = a.segments || [];
+    const pp = a.profit_pools || [];
+    const ts = a.tracking_signals || [];
+    const cm = a.causal_map || [];
+    const ev = a.evidence || [];
+    const qs = a.quality_scorecard || null;
+
+    html += `<div class="nav">
+      <a href="#sec-summary">① 结论摘要</a><a href="#sec-argument">② 论证</a>
+      <a href="#sec-risk">③ 风险与验证</a><a href="#sec-memo">④ 研究备忘录</a>
+      <a href="#sec-evidence">⑤ 证据附录</a><a href="#sec-ops">⑥ 作者工具</a>
     </div>`;
 
-    const bs=a.bottleneck_scores||[];
-    if(bs.length) html += `<div class="card"><h3>瓶颈评分</h3><table><tr><th>瓶颈</th><th>分数</th><th>评级</th></tr>
-      ${bs.map(b=>`<tr><td>${esc(b.name)}</td><td>${esc(b.score)}</td><td class="rate-${esc(b.rating)}">${esc(b.rating)}</td></tr>`).join("")}</table></div>`;
+    // ---- ① 结论摘要 ----
+    const topB = bs.slice().sort((x,y)=>(y.score||0)-(x.score||0))[0];
+    html += `<h2 class="sec" id="sec-summary">① 结论摘要 <small>不熟悉这个主题？先读这一屏</small></h2>
+      <div class="card summary"><h3>${esc(t.title||"")}</h3>
+      <p><b>核心问题：</b>${esc(t.core_question||"")}</p>
+      <p><b>论点：</b>${esc(t.thesis||"")}</p>
+      <div class="kv">
+        <span class="chip" title="主题的驱动类型">${esc(cnThemeType(t.theme_type))}</span>
+        <span class="chip" title="所属领域">${esc(t.domain||"")}</span>
+        <span class="chip" title="产业成熟度所处阶段（技术成熟度曲线）">${esc(cnHype(t.hype_stage))}</span>
+        <span class="chip" title="技术成熟度等级，1-9：6 = 相关环境中完成原型验证">TRL ${esc(t.technology_readiness_level)}</span>
+        <span class="chip" title="分析基准日期">截至 ${esc(t.as_of)}</span>
+      </div>
+      <table style="margin-top:8px">
+        ${topB?`<tr><th style="width:120px">最硬的瓶颈</th><td>${esc(topB.name)} — ${ratingBadge(topB.rating)}，${esc(topB.score)} / 5 分</td></tr>`:""}
+        ${co.length?`<tr><th>值得关注的公司</th><td>${co.slice(0,3).map(c=>`${esc(c.name)}（${posLabel(c.positioning_label)}）`).join(" · ")}</td></tr>`:""}
+        ${ct.length?`<tr><th>最大的反方观点</th><td>${esc(ct[0])}</td></tr>`:""}
+        ${qs&&qs.quality_status?`<tr><th>证据等级</th><td><span class="tipd" title="研究流程健康度信号，不代表论点为真">${esc(fmt.tier[qs.quality_status.tier]||qs.quality_status.tier||"")}</span></td></tr>`:""}
+      </table></div>`;
 
-    const co=a.companies||[];
-    if(co.length) html += `<div class="card"><h3>公司卡位</h3><table><tr><th>公司</th><th>卡位</th><th>敞口质量</th></tr>
-      ${co.map(c=>`<tr><td>${esc(c.name)}</td><td>${esc(c.positioning_label)}</td><td>${esc(c.exposure_quality)}</td></tr>`).join("")}</table></div>`;
+    // ---- ② 论证 ----
+    html += `<h2 class="sec" id="sec-argument">② 论证 <small>机制 → 瓶颈 → 价值链 → 公司</small></h2>`;
+
+    html += `<div class="card"><h3>驱动与机制 <small class="muted">这个主题为什么会发生</small></h3>
+      ${(t.drivers||[]).length?`<b>驱动因素：</b><ul class="tight">${t.drivers.map(d=>`<li>${esc(d)}</li>`).join("")}</ul>`:""}
+      ${t.mechanism?`<p><b>传导机制：</b>${esc(t.mechanism)}</p>`:""}</div>`;
+
+    if(bs.length) html += `<div class="card"><h3>瓶颈评分 <small class="muted">谁掐着产业的脖子，掐得多紧</small></h3>
+      ${bs.map(b=>`<div style="margin:6px 0 14px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <b>${esc(b.name)}</b> ${ratingBadge(b.rating)}
+          <span>${bar(b.score,5,(fmt.rating[b.rating]||{}).cls)} <b>${esc(b.score)}</b> / 5</span>
+          <small class="muted tipd" title="总分 = 加权正向约束分 − 风险减分。评级：≥4.1 关键 · ≥3.2 强 · ≥2.2 观察 · 其余为弱">正向 ${esc(b.positive_score)} − 风险 ${esc(b.risk_penalty)}</small>
+        </div>
+        ${b.dimensions?Object.entries(b.dimensions).sort((x,y)=>y[1]-x[1]).map(([k,v])=>`
+          <div class="dimrow"><span class="dn">${esc(fmt.dimension[k]||k)}</span>${bar(v,5,NEG_DIMS.includes(k)?"bad":"")}<span>${esc(v)}</span></div>`).join(""):""}
+      </div>`).join("")}
+      <small class="muted">各维度 0–5 分：0 不存在 · 1 弱 · 2 观察 · 3 明确 · 4 强 · 5 关键。"减分项"越高，瓶颈越可能被绕开或被快速释放的供给稀释。</small></div>`;
+
+    if(cm.length) html += `<div class="card"><h3>因果传导图 <small class="muted">什么推动什么、多快见效、有多确定</small></h3>
+      <div class="md"><div class="tblwrap"><table><tr><th>起因</th><th>作用</th><th>结果</th><th>方向</th><th>时滞</th><th>置信度</th><th>证据</th></tr>
+      ${cm.map(e=>`<tr><td>${esc(e.source)}</td><td>${esc(e.relationship)}${e.transmission?`<br><small class="muted">${esc(e.transmission)}</small>`:""}</td>
+        <td>${esc(e.target)}</td><td class="${e.direction==="positive"?"ok":"err"}">${esc(fmt.direction[e.direction]||e.direction)}</td>
+        <td>${esc(e.lag||"")}</td><td>${esc(cnLevel(e.confidence))}</td><td>${evSup(e.claim_ids)}</td></tr>`).join("")}</table></div></div></div>`;
+
+    if(seg.length) html += `<div class="card"><h3>价值链版图 <small class="muted">产业里都有谁、各自扮演什么角色</small></h3>
+      <table><tr><th>环节</th><th>层级</th><th>受益级别</th><th>角色</th><th>代表公司</th></tr>
+      ${seg.map(s=>`<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.layer)}</td>
+        <td>${esc(fmt.beneficiary[s.beneficiary_class]||s.beneficiary_class)}</td>
+        <td>${esc(s.role)}</td><td>${esc((s.representative_companies||[]).join("、"))}</td></tr>`).join("")}</table></div>`;
+
+    if(pp.length) html += `<div class="card"><h3>利润池 <small class="muted">钱最终被谁赚走、为什么</small></h3>
+      <table><tr><th>利润池</th><th style="width:80px"><span class="tipd" title="该环节把主题红利转化为持续利润的能力">捕获质量</span></th><th>逻辑</th><th>受益方</th></tr>
+      ${pp.map(p=>`<tr><td><b>${esc(p.name)}</b></td><td>${esc(cnQuality(p.capture_quality))}</td>
+        <td>${esc(p.rationale)}</td><td>${esc((p.beneficiaries||[]).join("、"))}</td></tr>`).join("")}</table></div>`;
+
+    if(co.length) html += `<div class="card"><h3>公司卡位 <small class="muted">每家公司凭什么参与这个主题、风险在哪</small></h3>
+      ${co.map(c=>`<div class="cocard">
+        <b class="nm">${esc(c.name)}</b> · ${posLabel(c.positioning_label)}
+        <span class="chip" title="敞口质量：该公司业绩与主题兑现的关联强度">${esc(cnQuality(c.exposure_quality))}</span>
+        ${evSup(c.evidence_ids)}
+        ${c.product?`<p style="margin:6px 0"><b>产品/业务：</b>${esc(c.product)}${c.stack_position?` <small class="muted">（产业链位置：${esc(c.stack_position)}）</small>`:""}</p>`:""}
+        ${(c.moat||[]).length?`<p style="margin:6px 0"><b>护城河：</b>${c.moat.map(x=>`<span class="chip">${esc(x)}</span>`).join(" ")}</p>`:""}
+        ${(c.risks||[]).length?`<p style="margin:6px 0"><b class="err">风险：</b>${c.risks.map(x=>`<span class="chip" style="border-color:var(--bad);color:var(--bad)">${esc(x)}</span>`).join(" ")}</p>`:""}
+      </div>`).join("")}</div>`;
+
+    // ---- ③ 风险与验证 ----
+    html += `<h2 class="sec" id="sec-risk">③ 风险与验证 <small>这个判断哪里可能错、接下来盯什么</small></h2>`;
+
+    if(scn.length) html += `<div class="card"><h3>情景推演</h3>
+      ${scn.map(s=>{ const meta=fmt.scenario[s.name]||{label:s.name,cls:"base"};
+        return `<div class="scn ${meta.cls}"><b>${esc(meta.label)}</b> ${evSup(s.evidence_ids)}
+          <p style="margin:4px 0">${esc(s.description)}</p>
+          ${(s.triggers||[]).length?`<small class="muted">触发条件：</small><ul class="tight">${s.triggers.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}
+          ${(s.implications||[]).length?`<small class="muted">若发生，意味着：</small><ul class="tight">${s.implications.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}
+        </div>`;}).join("")}</div>`;
+
+    if(ct.length) html += `<div class="card"><h3>反方观点 <small class="muted">看空/证伪这个主题的理由</small></h3>
+      <ul class="tight">${ct.map(x=>`<li>⚠️ ${esc(x)}</li>`).join("")}</ul></div>`;
+
+    if(ts.length) html += `<div class="card"><h3>跟踪信号 <small class="muted">后续验证或推翻论点要盯的指标</small></h3>
+      <ul class="tight">${ts.map(x=>`<li>👁 ${esc(x)}</li>`).join("")}</ul></div>`;
+
+    if(qs){
+      const st = qs.quality_status||{}, dc = qs.disconfirmation||{}, gr = qs.grounding||{};
+      html += `<div class="card"><h3>分析质量记分卡 <small class="muted">这份分析本身有多可信（流程健康度，不代表论点为真）</small></h3>
+        <table>
+          <tr><th style="width:140px"><span class="tipd" title="关键论点主体（瓶颈/公司等）有证据支撑的比例">证据接地率</span></th>
+            <td>${bar(qs.grounding_score,1,"good")} ${esc(Math.round((qs.grounding_score||0)*100))}%</td></tr>
+          <tr><th><span class="tipd" title="有多源交叉印证的论点主体比例">多源印证率</span></th>
+            <td>${bar(gr.corroboration_ratio,1,"good")} ${esc(Math.round((gr.corroboration_ratio||0)*100))}%</td></tr>
+          <tr><th>已达成等级</th><td>${(st.satisfied||[]).map(x=>`<span class="chip" style="color:var(--good);border-color:var(--good)">${esc(fmt.tier[x]||x)}</span>`).join(" ")||"—"}</td></tr>
+          <tr><th>对抗性审查</th><td>${dc.premortem_done?'<span class="ok">✓ 事前验尸</span>':'<span class="muted">未做事前验尸</span>'} · ${dc.steelman_done?'<span class="ok">✓ 钢人论证</span>':'<span class="muted">未做钢人论证</span>'} · 未决问题：严重 ${esc(dc.open_critical??0)} / 重要 ${esc(dc.open_major??0)}</td></tr>
+          ${(st.blockers||[]).length?`<tr><th>距下一等级</th><td><small class="muted">${st.blockers.map(esc).join("；")}</small></td></tr>`:""}
+        </table></div>`;
+    }
+
+    // ---- ④ 研究备忘录（完整叙事正文） ----
+    if(data.memo) html += `<h2 class="sec" id="sec-memo">④ 研究备忘录 <small>完整叙事版本，适合从头到尾阅读</small></h2>
+      <div class="card"><div class="md">${mdToHtml(data.memo)}</div>
+      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer;font-size:12px">查看 memo.md 原文</summary><pre>${esc(data.memo)}</pre></details></div>`;
+
+    // ---- ⑤ 证据附录 ----
+    if(ev.length) html += `<h2 class="sec" id="sec-evidence">⑤ 证据附录 <small>每条结论出自哪里 — 点击正文中的 [E*] 角标可跳到这里</small></h2>
+      <div class="card"><table><tr><th>编号</th><th>来源</th><th>类型</th><th><span class="tipd" title="来源可靠性：官方披露/监管文件为高，媒体转述为中低">可靠性</span></th><th>日期</th><th>其中的关键陈述</th></tr>
+      ${ev.map(e=>`<tr id="ev-${esc(e.id)}"><td class="mono">${esc(e.id)}</td>
+        <td>${e.url?`<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>`:esc(e.title)}</td>
+        <td>${esc(fmt.sourceType[e.source_type]||e.source_type)}</td><td>${esc(cnLevel(e.reliability))}</td>
+        <td class="mono">${esc(e.date||"")}</td><td>${(e.claims||[]).map(c=>`<div>· ${esc(c)}</div>`).join("")}</td></tr>`).join("")}</table></div>`;
 
     const ea=a.evidence_audit||{}; const su=ea.summary||{};
-    const evc=(ea.raw_evidence||[]).length, clc=(ea.claims||[]).length;
-    html += `<div class="card"><h3>证据审计</h3>
-      <p class="muted">证据 ${evc} · 声明 ${clc} · 平均覆盖 ${esc(su.average_coverage_score)} · owners ${esc(su.owners_count)}（缺 ${esc(su.missing_owners_count)} / 部分 ${esc(su.partial_owners_count)}）</p>
+    if(ea.raw_evidence||ea.claims) html += `<div class="card"><h3>证据审计摘要</h3>
+      <p class="muted">证据 ${(ea.raw_evidence||[]).length} 条 · 提取陈述 ${(ea.claims||[]).length} 条 · 平均覆盖 ${esc(su.average_coverage_score)} · 论点主体 ${esc(su.owners_count)} 个（缺证据 ${esc(su.missing_owners_count)} / 部分覆盖 ${esc(su.partial_owners_count)}）</p>
       <small class="muted">覆盖率是研究流程健康信号，不是论点真值。</small></div>`;
 
-    const stageCards = STAGES.map(s => `
-      <div style="margin:6px 0">
-        <b>${s}</b>
-        <button onclick="doCritique('${id}','${s}')">审阅(critique)</button>
-        <button onclick="doRefine('${id}','${s}')">优化(refine)</button>
+    // ---- ⑥ 作者工具（默认折叠，避免干扰阅读） ----
+    html += `<h2 class="sec" id="sec-ops">⑥ 作者工具</h2>
+      <div class="card"><details class="ops"><summary>逐阶段审阅（critique）与优化（refine） — 供分析作者使用，展开操作</summary>
+      ${STAGES.map(s => `
+      <div style="margin:10px 0">
+        <b>${cnStage(s)}</b> <small class="muted mono">${s}</small>
+        <button onclick="doCritique('${id}','${s}')">审阅</button>
+        <button onclick="doRefine('${id}','${s}')">优化</button>
         <div id="crit-${s}"></div>
-      </div>`).join("");
-    html += `<div class="card"><h3>逐阶段操作</h3>${stageCards}</div>`;
-
-    if(data.memo) html += `<div class="card"><h3>研究备忘录 (memo.md)</h3><pre>${esc(data.memo)}</pre></div>`;
+      </div>`).join("")}</details></div>`;
   }
   $("#main").innerHTML = html;
 }
